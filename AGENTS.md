@@ -1,14 +1,27 @@
 # AGENTS.md
 
-Conventions for AI agents and humans contributing to **Mistral Vibe** — a Python 3.12+ CLI coding assistant managed with `uv`.
+Conventions for AI agents and humans contributing to **vibe-local-debian** — a local-only hard fork of Mistral Vibe, a Python 3.12+ CLI coding assistant managed with `uv`, targeting **Debian 13** with a **local llama.cpp backend** (Ornith 1.5, alias `ornith`, at `http://192.168.1.116:8080/v1`).
+
+This fork does **not** track upstream. All changes are made directly here.
+
+## Local-only constraints (read first)
+
+- The only inference backend is the local llama.cpp server (OpenAI-compatible API, `--jinja` enabled for tool-calling). Never add code paths that call Mistral cloud APIs, and never introduce dependencies on cloud services.
+- Voice mode, telemetry, OTEL, update-checks, and auto-update are intentionally disabled via config (`enable_telemetry = false`, `enable_otel = false`, etc.). Do not re-enable them.
+- No Mistral API key is required or expected; the `llamacpp` provider has no `api_key_env_var`.
+- When touching provider/backend code, assume: `reasoning_field_name = "reasoning_content"`, `emits_finish_reason = true`, `api_style = "openai"`.
+- The model has 256k context; auto-compaction is set at 200k tokens. Keep prompts and context handling efficient; avoid wasteful re-reading of large files.
+- Never test against, or point configs at, anything other than the local backend or loopback test servers.
+
+## Layout
 
 Layout: `vibe/core` is the engine (agent loop, tools, LLM backends, config); `vibe/cli` is the Textual TUI; `vibe/acp` bridges to the Agent Client Protocol; `vibe/setup` runs first-run wizards. Tests live in `tests/` with autouse fixtures in `conftest.py` and test doubles in `tests/stubs/`.
 
+Fork-specific files: `install.sh` (Debian 13 installer: Kitty + uv + CLI), `.vibe/config.toml` (project config pointing to the local backend).
+
 ## Architecture Decisions
 
-Before architecture-affecting changes, read the matching ADR. If a change fits the current code but conflicts with ADR direction, flag it to the user before implementing. When creating or editing an ADR, follow the `write-vibe-adr` skill.
-
-When creating or editing an ADR, follow the `write-vibe-adr` skill and keep the standard sections.
+Before architecture-affecting changes, read the matching ADR. If a change fits the current code but conflicts with ADR direction, flag it to the user before implementing. When creating or editing an ADR, follow the `write-vibe-adr` skill and keep the standard sections.
 
 | Change area | ADR |
 | --- | --- |
@@ -40,6 +53,7 @@ Always go through `uv` — never invoke bare `python` or `pip`.
 - `uv run ruff check --fix .` and `uv run ruff format .` — run both after every code change and report the files modified.
 - `uv run pre-commit run --all-files` — full lint pass. Install once with `uv tool install pre-commit && uv run pre-commit install`.
 - Useful uv basics: `uv sync --all-extras`, `uv add <pkg>`, `uv remove <pkg>`.
+- Verify the local backend is reachable before debugging inference issues: `curl -s http://192.168.1.116:8080/v1/models` must list `ornith`.
 
 ## Project layout & module conventions
 
@@ -54,4 +68,4 @@ Always go through `uv` — never invoke bare `python` or `pip`.
 - When a change request can be generalized as a rule, prefer adding it to the relevant `.agents/skills/` SKILL.md rather than appending to AGENTS.md. AGENTS.md should stay small and universal; domain-specific conventions belong in skills so they load only when needed. Create a new skill when no existing one fits.
 - Suggest updates to the README.md file according to feature changes or additions.
 - Keep the builtin Vibe Skill (`vibe/core/skills/builtins/vibe.py`) up-to-date. It documents the CLI's features, such as args, flags, config options and persistence, commands, built-in agents, file discovery logic.
-- When adding or changing Vibe config fields, check whether Settings Manager's Vibe Code managed-config UI and Le Chat Web's backend allowlist/schema must be updated. If no update is needed, say so explicitly in the change notes.
+- When adding or changing Vibe config fields, check whether Settings Manager's Vibe Code managed-config UI needs updating. If no update is needed, say so explicitly in the change notes. Ignore Le Chat Web backend allowlists — this fork has no cloud surface.
