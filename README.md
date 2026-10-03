@@ -72,7 +72,7 @@ Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), t
 
 ## AGENTS.md
 
-L'`AGENTS.md` présent est celui de l'amont : conventions pour **contribuer au code du CLI** (ADRs, `uv run pytest`, ruff/pyright). Il s'applique si tu modifies le code du fork. Pour orienter l'agent dans **tes projets**, crée plutôt un `AGENTS.md` à la racine de chaque projet.
+L'`AGENTS.md` du dépôt est adapté au fork : contraintes local-only (pas de cloud, backend llama.cpp, télémétrie désactivée) + conventions de contribution au code du CLI (ADRs, `uv run pytest`, ruff/pyright). Il guide l'agent quand il travaille dans ce dépôt. Pour orienter l'agent dans **tes projets**, crée plutôt un `AGENTS.md` à la racine de chaque projet.
 
 ## Points de vigilance
 

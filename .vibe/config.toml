@@ -4,6 +4,13 @@
 # ── Modèle actif : Ornith 1.5 sur ton llama-server ──────────────────────────
 active_model = "ornith"
 
+# ── Cloud désactivé ─────────────────────────────────────────────────────────
+enable_telemetry = false
+enable_otel = false
+otel_endpoint = ""
+enable_update_checks = false
+enable_auto_update = false
+
 [[providers]]
 name = "llamacpp"
 api_base = "http://192.168.1.116:8080/v1"
@@ -23,10 +30,3 @@ input_price = 0.0
 output_price = 0.0
 # Compaction automatique du contexte avant saturation (256k tokens côté serveur)
 auto_compact_threshold = 200000
-
-# ── Cloud désactivé ─────────────────────────────────────────────────────────
-enable_telemetry = false
-enable_otel = false
-otel_endpoint = ""
-enable_update_checks = false
-enable_auto_update = false
