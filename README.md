@@ -63,14 +63,14 @@ Points clés : `--jinja` (tool-calling), `--alias worker` (modèle exposé), `-c
 
 ## Modèles supportés
 
-La config de projet expose **deux modèles interchangeables** sous l'alias unique `worker` — bascule = un seul changement dans `.vibe/config.toml` :
+La config de projet expose **deux modèles interchangeables** vers le même serveur llama.cpp (alias serveur unique `worker`) — bascule = un seul changement dans `.vibe/config.toml` :
 
 | active_model | Modèle | Points forts | Quant recommandé |
 |---|---|---|---|
 | `worker-ornith` | Ornith 1.5 35B-A3B | Raisonnement long, chasse aux bugs | Q4_K_M (déjà en place) |
 | `worker-kat` | KAT-Coder V2.5 Dev | Tool-calls réguliers, économe en tokens, variance faible | [mudler APEX-I-Compact](https://huggingface.co/mudler/KAT-Coder-V2.5-Dev-APEX-GGUF) (Q4, ~15,4 Go) |
 
-Même architecture (Qwen 35B MoE A3B) → même unit systemd, seul le `-m` et l'`--alias worker` changent.
+Même architecture (Qwen 35B MoE A3B) → même unit systemd, seul le `-m` change (`--alias worker` reste identique).
 
 ```bash
 # KAT : téléchargement du quant APEX-I-Compact (base Q4_K_M + imatrix)

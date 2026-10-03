@@ -1,8 +1,9 @@
 # vibe — configuration locale, backend llama.cpp uniquement
 # Fichier de projet : chargé en priorité sur ~/.vibe/config.toml
 #
-# Deux modèles disponibles sur le même serveur, exposés sous l'alias unique
-# « worker ». Basculer l'un/l'autre = changer uniquement active_model.
+# Les deux modèles pointent vers le même serveur llama.cpp (alias serveur unique
+# « worker », envoyé comme nom de modèle dans les requêtes API). Côté client,
+# chaque modèle a son alias distinct : basculer = changer uniquement active_model.
 
 # ── Modèle actif : "worker-ornith" ou "worker-kat" ───────────────────────────
 active_model = "worker-kat"
@@ -29,9 +30,9 @@ emits_finish_reason = true
 #   top_p/top_k côté serveur (llama.cpp) ; alternative benchs : temp 1.0.
 #   Modèle de raisonnement : thinking natif, le serveur renvoie reasoning_content.
 [[models]]
-name = "worker-ornith"
+name = "worker"
 provider = "llamacpp"
-alias = "worker"
+alias = "worker-ornith"
 display_name = "Ornith 1.5 35B (local)"
 temperature = 0.6
 input_price = 0.0
@@ -44,9 +45,9 @@ auto_compact_threshold = 200000
 #   Thinking plus court qu'Ornith → tours plus rapides, compaction plus tardive.
 #   Alternative si trop créatif : temp 0.3 (APEX-I-Quality) ; min_p 0.05 possible serveur.
 [[models]]
-name = "worker-kat"
+name = "worker"
 provider = "llamacpp"
-alias = "worker"
+alias = "worker-kat"
 display_name = "KAT-Coder V2.5 Dev (local)"
 temperature = 0.6
 input_price = 0.0
