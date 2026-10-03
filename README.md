@@ -31,12 +31,34 @@ Si nécessaire : `export PATH="$HOME/.local/bin:$PATH"` dans `~/.bashrc`.
 
 ## Backend llama.cpp
 
-Sur la machine GPU, lance ton serveur avec `--jinja` (indispensable pour le tool-calling) :
+Le serveur tourne sur la machine GPU (`192.168.1.116`) via l'unit systemd `ornith15-35B-solo.service` (llama.cpp compilé local, RTX 2060, CUDA) :
+
+```ini
+# /etc/systemd/system/ornith15-35B-solo.service (machine GPU)
+[Service]
+Type=simple
+WorkingDirectory=/home/fabien/llama.cpp
+Environment=CUDA_VISIBLE_DEVICES=0
+ExecStart=/home/fabien/llama.cpp/build/bin/llama-server \
+  -m /home/fabien/models/Ornith-1.5-35B-A3B-Q4_K_M.gguf \
+  --host 0.0.0.0 --port 8080 --alias ornith \
+  -c 262144 -np 1 --split-mode none --main-gpu 0 -ngl all \
+  --n-cpu-moe 40 --fit off --load-mode mmap -fa on \
+  -ctk q8_0 -ctv q8_0 -b 2048 -ub 512 -t 8 -tb 8 \
+  --jinja
+Restart=on-failure
+RestartSec=2
+```
+
+Points clés : `--jinja` (tool-calling), `--alias ornith` (modèle exposé), `-c 262144` (256k contexte), `-ctk/-ctv q8_0` + `-fa on` (tenir 256k en 6 Go de VRAM), `-np 1` (une session à la fois).
+
+**Paramètres d'échantillonnage recommandés par la model card Ornith 1.5** — à fixer côté serveur (le client n'envoie que la température) : `--temp 0.6 --top-p 0.95 --top-k 20`. Le `top_k` par défaut de llama.cpp est 40 : passe-le à 20 dans l'unit systemd. Les benchmarks ont été tournés à `temperature=1.0` ; si les réponses semblent trop conservatrices, c'est la valeur à essayer en second.
+
+Gestion du service (machine GPU) :
 
 ```bash
-llama-server -m /chemin/Ornith-1.5-35B-A3B-Q4_K_M.gguf \
-  --host 0.0.0.0 --port 8080 --alias ornith \
-  -c 262144 --jinja
+sudo systemctl enable --now ornith15-35B-solo.service
+systemctl status ornith15-35B-solo.service
 ```
 
 Vérification depuis la machine Debian :
@@ -44,6 +66,8 @@ Vérification depuis la machine Debian :
 ```bash
 curl -s http://192.168.1.116:8080/v1/models   # doit lister "ornith"
 ```
+
+⚠️ `--host 0.0.0.0` expose le port sur le LAN : ne publie pas le port 8080 sur Internet.
 
 `--host 0.0.0.0` expose le port sur le LAN : ne publie pas le port 8080 sur Internet.
 

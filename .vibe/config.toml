@@ -26,6 +26,9 @@ name = "ornith"
 provider = "llamacpp"
 alias = "ornith"
 display_name = "Ornith 1.5 35B (local)"
+# Recommandation model card Ornith 1.5 : temperature 0.6, top_p 0.95, top_k 20.
+# top_p/top_k ne sont pas exposés par le client : défauts du serveur llama.cpp.
+temperature = 0.6
 input_price = 0.0
 output_price = 0.0
 # Compaction automatique du contexte avant saturation (256k tokens côté serveur)
