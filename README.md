@@ -59,7 +59,7 @@ Points clés : `--jinja` (tool-calling), `--alias worker` (modèle exposé), `-c
 | Modèle | temp client | top_p (serveur) | top_k (serveur) | Notes |
 |---|---|---|---|---|
 | Ornith 1.5 35B | 0.6 | 0.95 | 20 | Model card officielle ; les benchs ont été tournés à temp 1.0 — essayer en second si trop conservateur |
-| KAT-Coder V2.5 Dev | 0.3 (APEX-Quality) à 0.6 | 0.90 | 40 | Communauté : min_p 0.05 en plus si le serveur l'accepte ; thinking court → tours plus rapides |
+| KAT-Coder V2.5 Dev | 0.6 | 0.95 | 20 | Unifiés avec Ornith ; alternative si trop créatif : temp 0.3 (APEX-I-Quality) |
 
 ## Modèles supportés
 
@@ -116,7 +116,7 @@ Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), t
 
 - Projet : `.vibe/config.toml` (versionné ici).
 - Globale : `~/.vibe/config.toml` (installé par `install.sh`).
-- Le provider `llamacpp` pointe sur `http://192.168.1.116:8080/v1` ; les modèles sont exposés sous l'alias `worker` (`worker-ornith` actif par défaut), compaction auto à 200k tokens.
+- Le provider `llamacpp` pointe sur `http://192.168.1.116:8080/v1` ; les modèles sont exposés sous l'alias `worker` (`worker-kat` actif par défaut), compaction auto à 200k tokens.
 - Surcharges rapides : copie du fichier et édition de `api_base` / `alias`.
 
 ## AGENTS.md

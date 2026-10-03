@@ -5,7 +5,7 @@
 # « worker ». Basculer l'un/l'autre = changer uniquement active_model.
 
 # ── Modèle actif : "worker-ornith" ou "worker-kat" ───────────────────────────
-active_model = "worker-ornith"
+active_model = "worker-kat"
 
 # ── Cloud désactivé ─────────────────────────────────────────────────────────
 enable_telemetry = false
@@ -39,9 +39,10 @@ output_price = 0.0
 auto_compact_threshold = 200000
 
 # ── KAT-Coder V2.5 Dev (Kwaipilot) — tool-calls réguliers, économe en tokens ─
-# Optimaux (communauté HF/bartowski) : temp 0.3-0.6, min_p 0.05, top_p 0.90, top_k 40.
-#   Config recommandée APEX-I-Quality : temp 0.3 ; Q4 : temp 0.6 par défaut.
+# Paramètres appliqués : temp 0.6, top_p 0.95, top_k 20 (unifiés avec Ornith).
+#   top_p/top_k côté serveur (--top-p 0.95 --top-k 20 dans l'unit systemd).
 #   Thinking plus court qu'Ornith → tours plus rapides, compaction plus tardive.
+#   Alternative si trop créatif : temp 0.3 (APEX-I-Quality) ; min_p 0.05 possible serveur.
 [[models]]
 name = "worker-kat"
 provider = "llamacpp"
