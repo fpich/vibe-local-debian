@@ -1,0 +1,32 @@
+# vibe — configuration locale, backend llama.cpp uniquement
+# Fichier de projet : chargé en priorité sur ~/.vibe/config.toml
+
+# ── Modèle actif : Ornith 1.5 sur ton llama-server ──────────────────────────
+active_model = "ornith"
+
+[[providers]]
+name = "llamacpp"
+api_base = "http://192.168.1.116:8080/v1"
+api_key_env_var = ""
+api_style = "openai"
+backend = "generic"
+reasoning_field_name = "reasoning_content"
+# llama-server termine correctement les streams avec un finish_reason
+emits_finish_reason = true
+
+[[models]]
+name = "ornith"
+provider = "llamacpp"
+alias = "ornith"
+display_name = "Ornith 1.5 35B (local)"
+input_price = 0.0
+output_price = 0.0
+# Compaction automatique du contexte avant saturation (256k tokens côté serveur)
+auto_compact_threshold = 200000
+
+# ── Cloud désactivé ─────────────────────────────────────────────────────────
+enable_telemetry = false
+enable_otel = false
+otel_endpoint = ""
+enable_update_checks = false
+enable_auto_update = false
