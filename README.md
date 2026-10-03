@@ -54,6 +54,13 @@ Points clés : `--jinja` (tool-calling), `--alias worker` (modèle exposé), `-c
 
 **Paramètres d'échantillonnage** — à fixer côté serveur (le client n'envoie que la température) : `--temp 0.6 --top-p 0.95 --top-k 20`. Le `top_k` par défaut de llama.cpp est 40 : passe-le à 20 dans l'unit systemd.
 
+**Optimaux par modèle** (détail dans `.vibe/config.toml`) :
+
+| Modèle | temp client | top_p (serveur) | top_k (serveur) | Notes |
+|---|---|---|---|---|
+| Ornith 1.5 35B | 0.6 | 0.95 | 20 | Model card officielle ; les benchs ont été tournés à temp 1.0 — essayer en second si trop conservateur |
+| KAT-Coder V2.5 Dev | 0.3 (APEX-Quality) à 0.6 | 0.90 | 40 | Communauté : min_p 0.05 en plus si le serveur l'accepte ; thinking court → tours plus rapides |
+
 ## Modèles supportés
 
 La config de projet expose **deux modèles interchangeables** sous l'alias unique `worker` — bascule = un seul changement dans `.vibe/config.toml` :

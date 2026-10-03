@@ -25,7 +25,9 @@ reasoning_field_name = "reasoning_content"
 emits_finish_reason = true
 
 # ── Ornith 1.5 35B (DeepReinforce) — raisonnement long, chasse aux bugs ──────
-# Recommandation model card : temp 0.6, top_p 0.95, top_k 20 (à fixer serveur).
+# Optimaux (model card officielle) : temp 0.6, top_p 0.95, top_k 20.
+#   top_p/top_k côté serveur (llama.cpp) ; alternative benchs : temp 1.0.
+#   Modèle de raisonnement : thinking natif, le serveur renvoie reasoning_content.
 [[models]]
 name = "worker-ornith"
 provider = "llamacpp"
@@ -37,7 +39,9 @@ output_price = 0.0
 auto_compact_threshold = 200000
 
 # ── KAT-Coder V2.5 Dev (Kwaipilot) — tool-calls réguliers, économe en tokens ─
-# Même base A3B ; temp 0.6 (consensus communauté ; 0.3 si trop créatif).
+# Optimaux (communauté HF/bartowski) : temp 0.3-0.6, min_p 0.05, top_p 0.90, top_k 40.
+#   Config recommandée APEX-I-Quality : temp 0.3 ; Q4 : temp 0.6 par défaut.
+#   Thinking plus court qu'Ornith → tours plus rapides, compaction plus tardive.
 [[models]]
 name = "worker-kat"
 provider = "llamacpp"
