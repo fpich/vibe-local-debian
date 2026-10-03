@@ -17,6 +17,12 @@ fi
 
 echo "==> Système: ${PRETTY_NAME:-Debian 13}"
 
+echo "==> Dépendances de build (compilateur Rust du CLI)"
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+  build-essential pkg-config cmake rustc cargo \
+  libasound2-dev
+
 echo "==> Installation de Kitty (terminal)"
 if ! dpkg -s kitty >/dev/null 2>&1; then
   sudo apt-get update
@@ -66,4 +72,4 @@ echo
 echo "Terminé. Utilisation:"
 echo "  kitty            # terminal recommandé"
 echo "  vibe              # agent dans n'importe quel projet"
-echo "  curl -s http://192.168.1.116:8080/v1/models   # backend llama.cpp doit lister ornith"
+echo "  curl -s http://192.168.1.116:8080/v1/models   # backend llama.cpp doit lister worker"
