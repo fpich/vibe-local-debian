@@ -9,7 +9,8 @@ Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai
 | Fichier | Rôle |
 |---|---|
 | `install.sh` | Installation Debian 13 : Kitty + uv + CLI vibe + config globale |
-| `.vibe/config.toml` | Config de projet : providers `llamacpp-worker1`/`llamacpp-worker2` → alias `worker1`/`worker2`, télémétrie/updates coupés, compaction auto à 64k |
+| `.vibe/config.toml` | Config de projet : providers `llamacpp-worker1`/`llamacpp-worker2` → alias `worker1`/`worker2`, télémétrie/updates coupés, compaction auto à 90k |
+| `uninstall.sh` | Désinstallation complète : retire le CLI et supprime toutes les données (`~/.vibe`) |
 
 Tout le reste est le vendor de l'amont (`mistral-vibe` 2.25.8 au moment du fork), licence Apache-2.0 conservée.
 
@@ -94,9 +95,11 @@ cd ~/mon-projet
 vibe
 ```
 
-Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), todo, sous-agents, agents intégrés, skills, sessions, thèmes, rendu Markdown/diffs, autocomplétion `@` et `/`. La **compaction automatique se déclenche à 64k tokens**.
+Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), todo, sous-agents, agents intégrés, skills, sessions, thèmes, rendu Markdown/diffs, autocomplétion `@` et `/`. La **compaction automatique se déclenche à 90k tokens**.
 
-**Commandes masquées temporairement** (code intact, réactivables dans `vibe/cli/commands.py` via `HIDDEN_COMMANDS`) : `/connectors`, `/mcp`, `/proxy-setup`, `/remote-project`, `/teleport`, `/voice`, `/whoami`.
+**Compteurs masqués dans la bannière d'accueil** (réversibles via `HIDDEN_BANNER_COUNTERS` dans `vibe/cli/textual_ui/widgets/banner/banner.py`) : connectors et MCP servers.
+
+**Commandes masquées temporairement** (code intact, réactivables dans `vibe/cli/commands.py` via `HIDDEN_COMMANDS`) : `/connectors`, `/mcp`, `/proxy-setup`, `/remote-project`, `/teleport`, `/voice`, `/whoami`, `/leanstall`, `/unleanstall`.
 
 **Désactivé volontairement** (config) :
 - voice mode (transcription cloud non configurée) ;
@@ -109,7 +112,7 @@ Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), t
 
 - Projet : `.vibe/config.toml` (versionné ici).
 - Globale : `~/.vibe/config.toml` (installée par `install.sh`).
-- Providers : `llamacpp-worker1` → `http://192.168.1.116:8080/v1`, `llamacpp-worker2` → `http://192.168.1.116:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 64k tokens.
+- Providers : `llamacpp-worker1` → `http://192.168.1.116:8080/v1`, `llamacpp-worker2` → `http://192.168.1.116:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 90k tokens.
 - Surcharges rapides : copie du fichier et édition de `api_base` / `alias`.
 
 ## AGENTS.md
