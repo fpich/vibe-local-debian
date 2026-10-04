@@ -64,7 +64,7 @@ fi
 
 if ! grep -q '.local/bin' <<<"$PATH"; then
   echo
-  echo "Ajoute ceci à ton ~/.bashrc puis recharge:"
+  echo "Ajoutez ceci à votre ~/.bashrc puis rechargez:"
   echo '  export PATH="$HOME/.local/bin:$PATH"'
 fi
 

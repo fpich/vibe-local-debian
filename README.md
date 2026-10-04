@@ -1,8 +1,8 @@
 # vibe-local-debian — hard fork local de Mistral Vibe
 
-Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai/mistral-vibe) : le contenu amont est vendé ici en commit racine unique, **aucune synchronisation avec l'amont n'est prévue**. Évolutions à ta discrétion, directement dans ce dépôt.
+Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai/mistral-vibe) : le contenu amont est vendé ici en commit racine unique, **aucune synchronisation avec l'amont n'est prévue**. Les évolutions se font directement dans ce dépôt.
 
-**Objectif** : agent de code CLI 100 % local sur Debian 13, backends `llama.cpp` — **worker1 (KAT)** sur `127.0.0.1:8080` et **worker2 (Qwen3.5)** sur `127.0.0.1:8081`, alias serveur `worker` sur chaque port. Aucune API cloud.
+**Objectif** : agent de code CLI sur Debian 13 avec backends `llama.cpp` auto-hébergés — **worker1 (KAT)** et **worker2 (Qwen3.5)**, alias serveur `worker` sur chaque port. Aucune API cloud : les serveurs llama.cpp peuvent tourner en localhost ou sur une machine distante du réseau local (il suffit d'adapter `api_base`).
 
 ## Ce qui est spécifique à ce fork
 
@@ -14,7 +14,7 @@ Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai
 
 Tout le reste est le vendor de l'amont (`mistral-vibe` 2.25.8 au moment du fork), licence Apache-2.0 conservée.
 
-## Installation (Debian 13, XFCE)
+## Installation (Debian 13)
 
 ```bash
 git clone https://github.com/fpich/vibe-local-debian.git
@@ -32,7 +32,7 @@ Si nécessaire : `export PATH="$HOME/.local/bin:$PATH"` dans `~/.bashrc`.
 
 ## Backends llama.cpp
 
-Deux serveurs tournent en local (`127.0.0.1`), chacun avec l'alias `--alias worker` (côté client, les modèles sont distingués par leur `api_base`) :
+Deux serveurs llama.cpp sont requis, chacun avec l'alias `--alias worker` (côté client, les modèles sont distingués par leur `api_base`). Ils peuvent tourner **en localhost ou sur une machine distante** du réseau local — la config par défaut de ce dépôt pointe vers `127.0.0.1` ; pour un serveur distant, remplacer par son adresse IP dans `api_base` :
 
 - **worker1** — KAT sur le port `8080` ;
 - **worker2** — Qwen3.5 sur le port `8081`.
@@ -43,10 +43,10 @@ Exemple d'unit systemd (adapter le `-m` et le port par serveur) :
 # /etc/systemd/system/llama-worker.service (machine GPU)
 [Service]
 Type=simple
-WorkingDirectory=/home/fabien/llama.cpp
+WorkingDirectory=/opt/llama.cpp
 Environment=CUDA_VISIBLE_DEVICES=0
-ExecStart=/home/fabien/llama.cpp/build/bin/llama-server \
-  -m /home/fabien/models/<modele>.gguf \
+ExecStart=/usr/local/bin/llama-server \
+  -m /opt/models/<modele>.gguf \
   --host 127.0.0.1 --port 8080 --alias worker \
   -c 262144 -np 1 --split-mode none --main-gpu 0 -ngl all \
   --n-cpu-moe 40 --fit off --load-mode mmap -fa on \
@@ -71,7 +71,7 @@ La config de projet expose **deux modèles** vers deux serveurs llama.cpp (alias
 | `worker1` | KAT | `127.0.0.1:8080` | 1.0 | 0.95 | 20 | 0 | 1.5 | 1.0 | ON (preserve_thinking ON) |
 | `worker2` | Qwen3.5 | `127.0.0.1:8081` | 0.7 | 0.8 | 20 | 0 | 1.5 | 1.0 | OFF |
 
-Gestion des services (machine GPU) :
+Gestion des services (sur la machine qui héberge llama.cpp) :
 
 ```bash
 sudo systemctl enable --now llama-worker1.service
@@ -90,7 +90,7 @@ curl -s http://127.0.0.1:8081/v1/models   # doit lister "worker"
 
 ## Utilisation — démarrer dans un projet
 
-Dans le répertoire de ton projet (le dossier où tu veux que l'agent travaille) :
+Dans le répertoire du projet (le dossier où l'agent doit travailler) :
 
 ```bash
 cd ~/mon-projet
@@ -129,12 +129,12 @@ C'est tout. L'agent ouvre un TUI interactif, lit les fichiers du répertoire cou
 
 ### Pour être productif
 
-- **Crée un `AGENTS.md` à la racine de ton projet** : l'agent le lit automatiquement au démarrage et suit tes consignes (style de code, commandes de build/test, conventions). C'est le meilleur levier de productivité.
-- **Donne des tâches ciblées** : une tâche = un objectif clair. Les tâches larges (« améliore le projet ») diluent les petits contextes locaux.
+- **Créer un `AGENTS.md` à la racine du projet** : l'agent le lit automatiquement au démarrage et suit les consignes qu'il contient (style de code, commandes de build/test, conventions). C'est le meilleur levier de productivité.
+- **Donner des tâches ciblées** : une tâche = un objectif clair. Les tâches larges (« améliore le projet ») diluent les petits contextes locaux.
 - **worker1 (KAT) pour l'analyse et le refactoring** (thinking ON) ; **worker2 (Qwen3.5) pour les tâches simples et rapides**. Bascule via `/model`.
 - **Le compteur de contexte est affiché** (`X/90k tokens`) : la **compaction automatique se déclenche à 90k tokens** — au-delà, l'agent résume et continue. Pas besoin de gérer.
 - **`@fichier`** dans le message pour pointer un fichier directement ; **`/`** pour l'autocomplétion des commandes.
-- Les sessions sont **rattachées au dossier** : relance `vibe` au même endroit pour retrouver ton historique (`/resume`).
+- Les sessions sont **rattachées au dossier** : relancer `vibe` au même endroit retrouve l'historique (`/resume`).
 
 **Compteurs masqués dans la bannière d'accueil** (réversibles via `HIDDEN_BANNER_COUNTERS` dans `vibe/cli/textual_ui/widgets/banner/banner.py`) : connectors et MCP servers.
 
@@ -156,7 +156,7 @@ C'est tout. L'agent ouvre un TUI interactif, lit les fichiers du répertoire cou
 
 ## AGENTS.md
 
-L'`AGENTS.md` du dépôt est adapté au fork : contraintes local-only (pas de cloud, backends llama.cpp, télémétrie désactivée) + conventions de contribution au code du CLI (ADRs, `uv run pytest`, ruff/pyright). Il guide l'agent quand il travaille dans ce dépôt. Pour orienter l'agent dans **tes projets**, crée plutôt un `AGENTS.md` à la racine de chaque projet.
+L'`AGENTS.md` du dépôt est adapté au fork : contraintes self-hosted (pas de cloud, backends llama.cpp, télémétrie désactivée) + conventions de contribution au code du CLI (ADRs, `uv run pytest`, ruff/pyright). Il guide l'agent quand il travaille dans ce dépôt. Pour orienter l'agent dans **d'autres projets**, créer un `AGENTS.md` à la racine de chaque projet.
 
 ## Points de vigilance
 
