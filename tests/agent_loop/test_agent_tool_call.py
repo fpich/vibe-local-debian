@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncGenerator
 import json
+from pathlib import Path
 from typing import cast
 
 from pydantic import BaseModel
@@ -15,7 +16,7 @@ from tests.stubs.fake_interaction_requests import ApprovalRequestHandler
 from tests.stubs.fake_tool import FakeTool
 from vibe.core.agent_loop import AgentLoop
 from vibe.core.agents.models import BuiltinAgentName
-from vibe.core.config import VibeConfigSchema
+from vibe.core.config import SessionLoggingConfig, VibeConfigSchema
 from vibe.core.hooks.manager import HooksManager
 from vibe.core.tools.base import ToolPermission
 from vibe.core.tools.builtins.todo import TodoItem
@@ -1065,3 +1066,54 @@ async def test_pending_injected_message_continues_loop_after_tool_result() -> No
         m for m in reversed(agent_loop.messages) if m.role == Role.assistant
     )
     assert "Acting on the injected guidance" in (last_assistant.content or "")
+
+
+class TestRequestToolsUsageFilter:
+    def _loop(self, tmp_path: Path) -> AgentLoop:
+        session_logging = SessionLoggingConfig(
+            save_dir=str(tmp_path / "sessions"), session_prefix="session", enabled=True
+        )
+        config = build_test_vibe_config(session_logging=session_logging)
+        backend = FakeBackend([[mock_llm_chunk(content="ok")]])
+        return build_test_agent_loop(config=config, backend=backend)
+
+    def test_first_request_of_epoch_carries_all_tools(self, tmp_path: Path) -> None:
+        loop = self._loop(tmp_path)
+        tools = loop._request_tools()
+        assert tools == loop._available_tools_snapshot()
+        assert loop._tools_epoch_requests == 1
+
+    def test_unused_remote_tools_drop_after_first_request(self, tmp_path: Path) -> None:
+        loop = self._loop(tmp_path)
+        loop._request_tools()
+        loop.tool_manager.is_remote_tool_name = lambda name: name == "remote_tool"  # type: ignore[method-assign]
+        loop._record_tool_usage("bash")
+        tools = loop._request_tools()
+        names = [t.function.name for t in tools]
+        assert "bash" in names
+        assert "remote_tool" not in names
+
+    def test_used_remote_tool_stays_included(self, tmp_path: Path) -> None:
+        from vibe.core.types import AvailableFunction, AvailableTool
+
+        loop = self._loop(tmp_path)
+        snapshot = [
+            AvailableTool(
+                function=AvailableFunction(
+                    name="remote_tool", description="d", parameters={}
+                )
+            )
+        ]
+        loop._available_tools_snapshot = lambda: snapshot  # type: ignore[method-assign]
+        loop.tool_manager.is_remote_tool_name = lambda name: name == "remote_tool"  # type: ignore[method-assign]
+        loop._request_tools()
+        loop._record_tool_usage("remote_tool")
+        tools = loop._request_tools()
+        assert [t.function.name for t in tools] == ["remote_tool"]
+
+    def test_usage_reset_reopens_discovery(self, tmp_path: Path) -> None:
+        loop = self._loop(tmp_path)
+        loop._request_tools()
+        loop._reset_tool_usage()
+        tools = loop._request_tools()
+        assert tools == loop._available_tools_snapshot()

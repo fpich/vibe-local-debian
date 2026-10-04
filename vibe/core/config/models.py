@@ -77,6 +77,22 @@ class SessionLoggingConfig(BaseSettings):
     # deployment (dedicated/on-prem), where these calls return 400s, so titling
     # is opt-in.
     generate_titles: bool = False
+    # Session title source: "llm" runs background LLM generations,
+    # "first_message" derives the title from the first user message (no LLM
+    # call), "off" keeps the message preview. ``generate_titles`` is the
+    # legacy boolean: true maps to "llm", false to "first_message" unless
+    # ``auto_title`` is set explicitly.
+    auto_title: Literal["first_message", "llm", "off"] | None = None
+
+    @model_validator(mode="after")
+    def _resolve_auto_title(self) -> SessionLoggingConfig:
+        if self.auto_title is None:
+            self.auto_title = "llm" if self.generate_titles else "first_message"
+        elif self.auto_title == "llm":
+            self.generate_titles = True
+        elif self.auto_title in {"first_message", "off"}:
+            self.generate_titles = False
+        return self
 
     @field_validator("save_dir", mode="before")
     @classmethod

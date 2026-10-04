@@ -1542,8 +1542,10 @@ class TestCompactionModel:
                 api_key_env_var="MISTRAL_API_KEY",
             ),
         ]
-        with pytest.raises(ValueError, match="must share the same provider"):
-            make_config(compaction_model=compaction, providers=providers)
+        cfg = make_config(compaction_model=compaction, providers=providers)
+        assert any(
+            "runs on provider 'other'" in warning for warning in cfg.validation_warnings
+        )
 
     def test_compaction_model_provider_must_exist(
         self, make_config: Callable[..., VibeConfigSchema]

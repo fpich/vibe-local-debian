@@ -13,6 +13,12 @@ enable_otel = false
 otel_endpoint = ""
 enable_update_checks = false
 enable_auto_update = false
+# ── Compaction & utilitaires sure worker2 (Qwen, thinking OFF) ──────────────
+# Résumés de compaction et appels utility (titres, résumés teleport, noms de
+# worktree) routés vers worker2 : moins de tokens de raisonnement, et le cache
+compaction_model = { name = "worker", provider = "llamacpp-worker2", alias = "worker2-compact", temperature = 0.2, thinking = "off" }
+utility_model = { name = "worker", provider = "llamacpp-worker2", alias = "worker2-utility", temperature = 0.2, thinking = "off" }
+
 
 # ── Serveur 1 : 127.0.0.1:8080 (KAT) ───────────────────────────────────
 [[providers]]
@@ -48,7 +54,7 @@ temperature = 1.0
 thinking = "high"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 90000
+auto_compact_threshold = 180000
 
 # ── Worker 2 : Qwen3.5 (127.0.0.1:8081) ────────────────────────────────
 # Paramètres serveur llama.cpp : top_p 0.8, top_k 20, min_p 0,
@@ -62,4 +68,11 @@ temperature = 0.7
 thinking = "off"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 90000
+auto_compact_threshold = 180000
+
+
+# ── Titres de session ─────────────────────────────────────────────────────
+# "first_message" : titre dérivé du premier message utilisateur, zéro appel LLM
+# (défaut local). "llm" : génération en arrière-plan (worker2). "off" : aperçu.
+[session_logging]
+auto_title = "first_message"

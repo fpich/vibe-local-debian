@@ -35,6 +35,9 @@ def select_utility_model(
     """
     active = config.get_active_model()
     active_provider = config.get_provider_for_model(active)
+    configured = getattr(config, "utility_model", None)
+    if configured is not None:
+        return configured, config.get_provider_for_model(configured)
     utility_provider = _fast_utility_provider(config)
     if utility_provider is not None:
         return _FAST_MODEL, utility_provider
@@ -48,7 +51,12 @@ def is_fast_utility_model(config: VibeConfigSchema) -> bool:
     and expensive, so callers can throttle background use accordingly.
     """
     model, _ = select_utility_model(config)
-    return model.name == _FAST_MODEL.name
+    if model.name == _FAST_MODEL.name:
+        return True
+    # An explicitly configured utility model is by design a cheap, separate
+    # worker (e.g. a second local llama.cpp server), so periodic titles are
+    # affordable and the active model's cache stays untouched.
+    return getattr(config, "utility_model", None) is not None
 
 
 def _fast_utility_provider(config: VibeConfigSchema) -> ProviderConfig | None:

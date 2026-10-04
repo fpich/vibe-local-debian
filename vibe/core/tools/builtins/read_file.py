@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from vibe.core.types import ToolResultEvent
 
 _KB = 1024
-DEFAULT_LINE_LIMIT = 2000
+DEFAULT_LINE_LIMIT = 800
 MAX_BYTES = 50 * _KB
 
 

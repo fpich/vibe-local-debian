@@ -585,6 +585,12 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         self._ready_telemetry_pending: bool = defer_heavy_init
         self._last_init_duration_ms: int | None = None
         self._auto_title_task: asyncio.Task[None] | None = None
+        # Memoized available-tools snapshot: rebuilding the serialized tool
+        # list on every request is wasted CPU when tool state did not change,
+        # and any byte-level drift in it invalidates the backend prompt cache.
+        self._tools_snapshot: list[AvailableTool] | None = None
+        self._tools_usage: dict[str, int] = {}
+        self._tools_epoch_requests: int = 0
         # Background title results land here. An app-server drain surfaces them
         # immediately (between turns); otherwise the next turn drains them.
         self._out_of_band_events: asyncio.Queue[BaseEvent] = asyncio.Queue()
@@ -756,9 +762,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             stats_getter=lambda: self.stats,
             config_getter=lambda: self.config,
             complete=self._complete,
-            available_tools=lambda: self.format_handler.get_available_tools(
-                self.tool_manager
-            ),
+            available_tools=self._request_tools,
             tool_choice=self.format_handler.get_tool_choice,
             save=self._save_messages,
             telemetry_client=self.telemetry_client,
@@ -1443,6 +1447,51 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
 
     def _build_system_prompt(self) -> str:
         return self._render_system_prompt(self.skill_manager)
+
+    def _available_tools_snapshot(self) -> list[AvailableTool]:
+        """Memoized ``get_available_tools`` keyed on the serialized descriptors.
+
+        Rebuilding an unchanged tool list each request is pure overhead and
+        risks byte-level drift that would invalidate the backend prompt cache,
+        so the snapshot is rebuilt only when its serialization actually
+        changes.
+        """
+        snapshot = self.format_handler.get_available_tools(self.tool_manager)
+        new_hash = hash(tuple(t.model_dump_json() for t in snapshot))
+        if self._tools_snapshot is not None and new_hash == self._tools_snapshot_hash:
+            return self._tools_snapshot
+        self._tools_snapshot = snapshot
+        self._tools_snapshot_hash = new_hash
+        return snapshot
+
+    def _request_tools(self) -> list[AvailableTool]:
+        """Tools for the next model request, usage-filtered.
+
+        The first request of a context epoch carries every tool so the model
+        can discover remote (MCP/connector) ones; afterwards only remote tools
+        actually invoked in this epoch stay in the payload, cutting prompt
+        tokens on large MCP surfaces. Builtins are always kept. A new context
+        (compaction envelope, session reset) reopens discovery.
+        """
+        snapshot = self._available_tools_snapshot()
+        if self._tools_epoch_requests:
+            used = self._tools_usage
+            snapshot = [
+                t
+                for t in snapshot
+                if t.function.name in used
+                or not self.tool_manager.is_remote_tool_name(t.function.name)
+            ]
+        self._tools_epoch_requests += 1
+        return snapshot
+
+    def _record_tool_usage(self, tool_name: str) -> None:
+        self._tools_usage[tool_name] = self._tools_usage.get(tool_name, 0) + 1
+
+    def _reset_tool_usage(self) -> None:
+        """Start a new context epoch: remote tools become discoverable again."""
+        self._tools_usage.clear()
+        self._tools_epoch_requests = 0
 
     @requires_init
     async def refresh_system_prompt(self) -> None:
@@ -2209,11 +2258,16 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             ticket=ticket,
         )
 
+    def _auto_title_mode(self) -> Literal["first_message", "llm", "off"]:
+        return self.config.session_logging.auto_title or "first_message"
+
     def _title_generation_is_blocked(self) -> bool:
         if (
             os.environ.get(_DISABLE_AUTO_TITLE_ENV_VAR) == "1"
             or not self._auto_title_enabled
         ):
+            return True
+        if self._auto_title_mode() == "off":
             return True
         if (
             not self.session_logger.enabled
@@ -2234,16 +2288,22 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         # session_id pins the conversation this title was generated for: a /new or
         # /clear reset swaps the loop (and its in-place logger) to a new id mid
         # flight, and this title must not land on it.
-        from vibe.core.session.title_model import generate_session_title
+        from vibe.core.session.title_model import (
+            first_message_title as _first_message_title,
+            generate_session_title,
+        )
 
         try:
             await start_gate.wait()
-            title = await generate_session_title(
-                messages,
-                config=self.config,
-                previous_title=self.session_logger.title,
-                policy=self._title_policy,
-            )
+            if self._auto_title_mode() == "first_message":
+                title = _first_message_title(messages)
+            else:
+                title = await generate_session_title(
+                    messages,
+                    config=self.config,
+                    previous_title=self.session_logger.title,
+                    policy=self._title_policy,
+                )
             if title is None:
                 self._title_cadence.restore(ticket)
                 return
@@ -2835,6 +2895,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         span: trace.Span,
     ) -> AsyncGenerator[ToolResultEvent | ToolStreamEvent | HookEvent]:
         self.stats.tool_calls_agreed += 1
+        self._record_tool_usage(tool_call.tool_name)
 
         snapshot = await asyncio.to_thread(
             tool_instance.get_file_snapshot, tool_call.validated_args
@@ -3125,7 +3186,9 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         )
         self.telemetry_client.send_request_sent(
             model=model.alias,
-            nb_context_chars=sum(len(m.content or "") for m in backend_messages),
+            nb_context_chars=lambda: sum(
+                len(m.content or "") for m in backend_messages
+            ),
             nb_context_messages=len(backend_messages),
             nb_prompt_chars=len(last_user_message.content or "")
             if last_user_message
@@ -3211,7 +3274,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         result = await self._complete(
             model=active_model,
             messages=self.messages,
-            tools=self.format_handler.get_available_tools(self.tool_manager),
+            tools=self._request_tools(),
             tool_choice=self.format_handler.get_tool_choice(),
             call_type=call_type,
         )
@@ -3233,14 +3296,16 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         provider = self.config.get_active_provider()
         backend_metadata = self._build_backend_metadata()
 
-        available_tools = self.format_handler.get_available_tools(self.tool_manager)
+        available_tools = self._request_tools()
         tool_choice = self.format_handler.get_tool_choice()
         backend_messages = self._messages_for_backend(self.messages, active_model)
 
         last_user_message = self._last_user_message_from(backend_messages)
         self.telemetry_client.send_request_sent(
             model=active_model.alias,
-            nb_context_chars=sum(len(m.content or "") for m in backend_messages),
+            nb_context_chars=lambda: sum(
+                len(m.content or "") for m in backend_messages
+            ),
             nb_context_messages=len(backend_messages),
             nb_prompt_chars=len(last_user_message.content or "")
             if last_user_message
@@ -3451,6 +3516,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         self.parent_session_id = parent_session_id
         self.replace_session_lease(lease)
         self._reset_title_state()
+        self._reset_tool_usage()
         await self.initialize_experiments()
         self.emit_new_session_telemetry()
 
@@ -3585,6 +3651,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
 
         self.middleware_pipeline.reset()
         self.tool_manager.reset_all()
+        self._reset_tool_usage()
         await self._reset_session(keep_parent=False)
 
     @requires_init
@@ -3596,6 +3663,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             await self._save_messages()
             summary = await self.compaction_manager.compact(extra_instructions)
             self.middleware_pipeline.reset(reset_reason=ResetReason.COMPACT)
+            self._reset_tool_usage()
             # A compacted conversation reads very differently from its first
             # turn; force a title refresh at the next scheduling point.
             self._title_cadence.mark_compaction()

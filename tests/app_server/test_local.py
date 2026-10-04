@@ -2379,8 +2379,10 @@ async def test_build_runtime_applies_cli_overrides_inside_harness(
         pytest.param("desktop", True, True, id="desktop-enabled"),
         pytest.param("acp", True, False, id="acp-disabled"),
         pytest.param("programmatic", True, False, id="programmatic-disabled"),
-        pytest.param("cli", False, False, id="cli-config-disabled"),
-        pytest.param("desktop", False, False, id="desktop-config-disabled"),
+        # generate_titles=False maps to auto_title="first_message": the
+        # derived title costs no LLM call, so scheduling stays enabled.
+        pytest.param("cli", False, True, id="cli-config-first-message"),
+        pytest.param("desktop", False, True, id="desktop-config-first-message"),
     ],
 )
 async def test_legacy_root_runtime_auto_title_policy(

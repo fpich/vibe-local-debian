@@ -642,8 +642,10 @@ def test_compaction_model_provider_must_match_active() -> None:
         ),
     ]
     compaction = ModelConfig(name="compact-model", provider="other", alias="compact")
-    with pytest.raises(ValueError, match="must share the same provider"):
-        VibeConfigSchema(compaction_model=compaction, providers=providers)
+    cfg = VibeConfigSchema(compaction_model=compaction, providers=providers)
+    assert any(
+        "runs on provider 'other'" in warning for warning in cfg.validation_warnings
+    )
 
 
 def test_vision_model_must_support_images() -> None:

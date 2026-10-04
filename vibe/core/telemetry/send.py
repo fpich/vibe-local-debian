@@ -483,13 +483,19 @@ class TelemetryClient:
         self,
         *,
         model: str,
-        nb_context_chars: int,
+        nb_context_chars: int | Callable[[], int],
         nb_context_messages: int,
         nb_prompt_chars: int,
         call_type: TelemetryCallType,
         message_id: str | None = None,
         attachment_counts: dict[AttachmentKind, int] | None = None,
     ) -> None:
+        # Lazy char counting: the call site may pass a callable so a disabled
+        # telemetry config skips the O(context) sum entirely.
+        if not self._is_enabled():
+            return
+        if callable(nb_context_chars):
+            nb_context_chars = nb_context_chars()
         payload = {
             "model": model,
             "nb_context_chars": nb_context_chars,

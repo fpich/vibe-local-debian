@@ -10,7 +10,7 @@ This fork does **not** track upstream. All changes are made directly here.
 - Voice mode, telemetry, OTEL, update-checks, and auto-update are intentionally disabled via config (`enable_telemetry = false`, `enable_otel = false`, etc.). Do not re-enable them.
 - No Mistral API key is required or expected; the `llamacpp` provider has no `api_key_env_var`.
 - When touching provider/backend code, assume: `reasoning_field_name = "reasoning_content"`, `emits_finish_reason = true`, `api_style = "openai"`.
-- Models have 256k context; auto-compaction is set at 64k tokens. Keep prompts and context handling efficient; avoid wasteful re-reading of large files.
+- Models have 256k context; auto-compaction is set at 180k tokens. Keep prompts and context handling efficient; avoid wasteful re-reading of large files.
 - Never test against, or point configs at, anything other than the local backend or loopback test servers.
 
 ## Layout

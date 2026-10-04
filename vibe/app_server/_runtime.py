@@ -662,7 +662,7 @@ class _RootRuntimeBlueprint:
             # Other clients retain the preview, and config can disable generation.
             auto_title_enabled=(
                 self.client_info.entrypoint in {"cli", "desktop"}
-                and self.config.session_logging.generate_titles
+                and (self.config.session_logging.auto_title or "first_message") != "off"
             ),
         )
         cached = load_cached_eval_response(self.config)
@@ -1594,9 +1594,8 @@ class HarnessProcess:
             # Match the legacy policy: only interactive terminal/desktop clients
             # get background titles; other clients keep the message preview.
             auto_title_enabled = (
-                config.session_logging.generate_titles
-                and entrypoint in {"cli", "desktop"}
-            )
+                config.session_logging.auto_title or "first_message"
+            ) != "off" and entrypoint in {"cli", "desktop"}
             compaction_policy = (
                 RustAutomaticCompactionPolicy(
                     token_threshold=active_model.auto_compact_threshold

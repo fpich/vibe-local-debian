@@ -123,9 +123,11 @@ model it stays bounded — one title at the start plus one after a compaction, a
 couple at most — so a large model isn't re-invoked every few turns. The refresh
 keeps the opening intent and the latest exchange in view and feeds the previous
 title back so it refines rather than restarts. `/rename <title>` sets a `manual`
-title that auto-generation never overwrites. Automatic titles are off by
-default; set `session_logging.generate_titles = true` to enable them (otherwise
-the `--resume` list and tab use the message preview). The current title also
+title that auto-generation never overwrites. The title source is
+`session_logging.auto_title`: `"first_message"` (default) derives the title
+from the first user message with no LLM call, `"llm"` runs the background
+generation (on the utility model when configured), `"off"` keeps the message
+preview. The legacy `generate_titles = true` maps to `"llm"`. The current title also
 drives the terminal tab/window title
 (OSC), updated on rename, auto-title changes, and resume; it never blocks a turn.
 
@@ -524,7 +526,8 @@ disabled_tools = ["delete_issue"] # Hide selected tools only
 enabled = true
 save_dir = ""                     # Defaults to ~/.vibe/logs/session
 session_prefix = "session"
-generate_titles = false           # Background LLM session titles (opt-in); default off uses the message preview
+generate_titles = false           # Legacy switch: true = "llm", false = "first_message"
+auto_title = "first_message"       # "first_message" | "llm" | "off" (title source)
 ```
 
 ### Browser Sign-In
@@ -949,7 +952,7 @@ behavior then depends on the mention kind:
 - **Text files** trigger a synthetic `read_file` tool call injected right
   after your message, so the file content arrives as a fresh tool result
   every turn (no caching/dedup). The same limits as the `read_file` tool
-  apply (~2000 lines / 50 KB per call; larger files are truncated or
+  apply (~800 lines / 50 KB per call; larger files are truncated or
   reported as an error result). Re-mentioning a file always re-reads it.
 - **Folders** are not read automatically — the path stays in your message
   text and the agent can `read_file`/`grep` it on demand.

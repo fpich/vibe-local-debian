@@ -138,3 +138,14 @@ def test_iteration_is_stable_under_concurrent_prompt_insert() -> None:
         worker.join()
 
     assert errors == []
+
+
+def test_update_system_prompt_noop_keeps_identical_content() -> None:
+    messages = MessageList()
+    messages.update_system_prompt("same prompt")
+    first = messages[0]
+    messages.update_system_prompt("same prompt")
+    assert messages[0] is first
+    messages.update_system_prompt("changed prompt")
+    assert messages[0] is not first
+    assert messages[0].content == "changed prompt"

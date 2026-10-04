@@ -9,7 +9,7 @@ Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai
 | Fichier | Rôle |
 |---|---|
 | `install.sh` | Installation Debian 13 : Kitty + uv + CLI vibe + config globale |
-| `.vibe/config.toml` | Config de projet : providers `llamacpp-worker1`/`llamacpp-worker2` → alias `worker1`/`worker2`, télémétrie/updates coupés, compaction auto à 90k |
+| `.vibe/config.toml` | Config de projet : providers `llamacpp-worker1`/`llamacpp-worker2` → alias `worker1`/`worker2`, télémétrie/updates coupés, compaction auto à 180k |
 | `uninstall.sh` | Désinstallation complète : retire le CLI et supprime toutes les données (`~/.vibe`) |
 
 Tout le reste est le vendor de l'amont (`mistral-vibe` 2.25.8 au moment du fork), licence Apache-2.0 conservée.
@@ -132,7 +132,7 @@ C'est tout. L'agent ouvre un TUI interactif, lit les fichiers du répertoire cou
 - **Créer un `AGENTS.md` à la racine du projet** : l'agent le lit automatiquement au démarrage et suit les consignes qu'il contient (style de code, commandes de build/test, conventions). C'est le meilleur levier de productivité.
 - **Donner des tâches ciblées** : une tâche = un objectif clair. Les tâches larges (« améliore le projet ») diluent les petits contextes locaux.
 - **worker1 (KAT) pour l'analyse et le refactoring** (thinking ON) ; **worker2 (Qwen3.5) pour les tâches simples et rapides**. Bascule via `/model`.
-- **Le compteur de contexte est affiché** (`X/90k tokens`) : la **compaction automatique se déclenche à 90k tokens** — au-delà, l'agent résume et continue. Pas besoin de gérer.
+- **Le compteur de contexte est affiché** (`X/180k tokens`) : la **compaction automatique se déclenche à 180k tokens** — au-delà, l'agent résume et continue. Pas besoin de gérer.
 - **`@fichier`** dans le message pour pointer un fichier directement ; **`/`** pour l'autocomplétion des commandes.
 - Les sessions sont **rattachées au dossier** : relancer `vibe` au même endroit retrouve l'historique (`/resume`).
 
@@ -151,7 +151,7 @@ C'est tout. L'agent ouvre un TUI interactif, lit les fichiers du répertoire cou
 
 - Projet : `.vibe/config.toml` (versionné ici).
 - Globale : `~/.vibe/config.toml` (installée par `install.sh`).
-- Providers : `llamacpp-worker1` → `http://127.0.0.1:8080/v1`, `llamacpp-worker2` → `http://127.0.0.1:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 90k tokens.
+- Providers : `llamacpp-worker1` → `http://127.0.0.1:8080/v1`, `llamacpp-worker2` → `http://127.0.0.1:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 180k tokens.
 - Surcharges rapides : copie du fichier et édition de `api_base` / `alias`.
 
 ## AGENTS.md

@@ -353,6 +353,17 @@ class VibeConfigSchema(ConfigSchema):
         ),
     )
     compaction_model: Annotated[ModelConfig | None, WithShallowMerge()] = None
+    utility_model: Annotated[ModelConfig | None, WithShallowMerge()] = Field(
+        default=None,
+        description=(
+            "Model for background utility completions (session titles, teleport"
+            " summaries, worktree names). Defaults to the cheap fast model when a"
+            " Mistral provider is usable, else the active model. Set this to route"
+            " utility calls away from the active model, e.g. a second local"
+            " llama.cpp worker with thinking off, to spare the active model's"
+            " prompt cache and reasoning tokens."
+        ),
+    )
     vision_model: Annotated[ModelConfig | None, WithShallowMerge()] = Field(
         default=None,
         description=(
@@ -975,10 +986,21 @@ class VibeConfigSchema(ConfigSchema):
         except ValueError:
             return self
         if active_provider.name != compaction_provider.name:
-            raise ValueError(
-                f"Compaction model '{self.compaction_model.alias}' uses provider "
-                f"'{compaction_provider.name}' but active model uses provider "
-                f"'{active_provider.name}'. They must share the same provider."
+            # Cross-provider compaction is intentional on local multi-worker
+            # setups: the summary runs on the secondary worker (thinking off)
+            # while token usage stays accounted through the loop. Warn instead
+            # of raising so the deliberate offload is not blocked.
+            logger.warning(
+                "Compaction model '%s' runs on provider '%s' while the active "
+                "model uses provider '%s'.",
+                self.compaction_model.alias,
+                compaction_provider.name,
+                active_provider.name,
+            )
+            self._validation_warnings.append(
+                f"Compaction model '{self.compaction_model.alias}' runs on provider "
+                f"'{compaction_provider.name}' instead of the active model's "
+                f"'{active_provider.name}' — prompts will not share a cache."
             )
         return self
 
