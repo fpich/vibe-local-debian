@@ -88,14 +88,53 @@ curl -s http://192.168.1.116:8081/v1/models   # doit lister "worker"
 
 ⚠️ `--host 0.0.0.0` expose les ports sur le LAN : ne les publie pas sur Internet.
 
-## Utilisation
+## Utilisation — démarrer dans un projet
+
+Dans le répertoire de ton projet (le dossier où tu veux que l'agent travaille) :
 
 ```bash
 cd ~/mon-projet
 vibe
 ```
 
-Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), todo, sous-agents, agents intégrés, skills, sessions, thèmes, rendu Markdown/diffs, autocomplétion `@` et `/`. La **compaction automatique se déclenche à 90k tokens**.
+C'est tout. L'agent ouvre un TUI interactif, lit les fichiers du répertoire courant et travaille dedans. Il faut lancer `vibe` **depuis la racine du projet** — c'est le dossier de travail de l'agent, et les sessions sont rattachées à ce dossier.
+
+### Session de travail type
+
+1. Décris la tâche en language naturel : « corrige le bug dans src/auth.py », « ajoute un test pour la fonction X ».
+2. L'agent explore (outils read/grep), propose ou applique des modifications, te montre les diffs.
+3. Approuve ou refuse chaque action sensible selon le profil d'agent choisi.
+4. Termine par « commit » ou fais-le toi-même.
+
+### Commandes de démarrage utiles
+
+| Commande | Usage |
+|---|---|
+| `vibe` | Session interactive dans le dossier courant |
+| `vibe --continue` | Reprend la dernière session de ce dossier |
+| `vibe --resume` | Ouvre un sélecteur des sessions **de ce dossier** |
+| `vibe -p "fais X"` | Mode one-shot : exécute et sort (idéal scripts/cron) |
+| `vibe --agent NAME` | Profile spécifique (`plan` = lecture seule, `auto-approve` = tout approuvé) |
+
+### En session — les commandes essentielles
+
+| Commande | Effet |
+|---|---|
+| `/help` | Liste toutes les commandes disponibles |
+| `/model` | Bascule worker1 (KAT) ↔ worker2 (Qwen3.5) sans quitter |
+| `Shift+Tab` | Cycle les profils d'agent (ask → plan → accept-edits…) |
+| `/resume` ou `/continue` | Reprend une session précédente |
+| `/clear` (alias `/new`) | Nouvelle conversation à zéro (suit le modèle par défaut) |
+| `/exit` | Quitter (ou `exit`, `quit`, `:q`) |
+
+### Pour être productif
+
+- **Crée un `AGENTS.md` à la racine de ton projet** : l'agent le lit automatiquement au démarrage et suit tes consignes (style de code, commandes de build/test, conventions). C'est le meilleur levier de productivité.
+- **Donne des tâches ciblées** : une tâche = un objectif clair. Les tâches larges (« améliore le projet ») diluent les petits contextes locaux.
+- **worker1 (KAT) pour l'analyse et le refactoring** (thinking ON) ; **worker2 (Qwen3.5) pour les tâches simples et rapides**. Bascule via `/model`.
+- **Le compteur de contexte est affiché** (`X/90k tokens`) : la **compaction automatique se déclenche à 90k tokens** — au-delà, l'agent résume et continue. Pas besoin de gérer.
+- **`@fichier`** dans le message pour pointer un fichier directement ; **`/`** pour l'autocomplétion des commandes.
+- Les sessions sont **rattachées au dossier** : relance `vibe` au même endroit pour retrouver ton historique (`/resume`).
 
 **Compteurs masqués dans la bannière d'accueil** (réversibles via `HIDDEN_BANNER_COUNTERS` dans `vibe/cli/textual_ui/widgets/banner/banner.py`) : connectors et MCP servers.
 
