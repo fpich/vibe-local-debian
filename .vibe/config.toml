@@ -1,55 +1,65 @@
 # vibe — configuration locale, backend llama.cpp uniquement
-# Fichier de projet : chargé en priorité sur ~/.vibe/config.toml
-#
-# Les deux modèles pointent vers le même serveur llama.cpp (alias serveur unique
-# « worker », envoyé comme nom de modèle dans les requêtes API). Côté client,
-# chaque modèle a son alias distinct : basculer = changer uniquement active_model.
+# Fichier de project : chargé en priorité sure ~/.vibe/config.toml
 
-# ── Modèle actif : "worker-ornith" ou "worker-kat" ───────────────────────────
-active_model = "worker-kat"
+# Deux serveurs llama.cpp locaux (alias serveur « worker » sure chaque port).
+# Côté client, chaque modèle a son alias distinct : basculer = changer
+# uniquement active_model.
+# ── Modèle actif : "worker1" ou "worker2" ─────────────────────────────────
+active_model = "worker1"
 
-# ── Cloud désactivé ─────────────────────────────────────────────────────────
+# ── Cloud désactivé ────────────────────────────────────────────────────────
 enable_telemetry = false
 enable_otel = false
 otel_endpoint = ""
 enable_update_checks = false
 enable_auto_update = false
 
+# ── Serveur 1 : 192.168.1.116:8080 (KAT) ───────────────────────────────────
 [[providers]]
-name = "llamacpp"
+name = "llamacpp-worker1"
 api_base = "http://192.168.1.116:8080/v1"
 api_key_env_var = ""
 api_style = "openai"
 backend = "generic"
 reasoning_field_name = "reasoning_content"
-# llama-server termine correctement les streams avec un finish_reason
+# llama-server determine correctement les streams avec un finish_reason
 emits_finish_reason = true
 
-# ── Ornith 1.5 35B (DeepReinforce) — raisonnement long, chasse aux bugs ──────
-# Optimaux (model card officielle) : temp 0.6, top_p 0.95, top_k 20.
-#   top_p/top_k côté serveur (llama.cpp) ; alternative benchs : temp 1.0.
-#   Modèle de raisonnement : thinking natif, le serveur renvoie reasoning_content.
-[[models]]
-name = "worker"
-provider = "llamacpp"
-alias = "worker-ornith"
-display_name = "Ornith 1.5 35B (local)"
-temperature = 0.6
-input_price = 0.0
-output_price = 0.0
-auto_compact_threshold = 200000
+# ── Serveur 2 : 192.168.1.116:8081 (Qwen3.5) ──────────────────────────────
+[[providers]]
+name = "llamacpp-worker2"
+api_base = "http://192.168.1.116:8081/v1"
+api_key_env_var = ""
+api_style = "openai"
+backend = "generic"
+reasoning_field_name = "reasoning_content"
+emits_finish_reason = true
 
-# ── KAT-Coder V2.5 Dev (Kwaipilot) — tool-calls réguliers, économe en tokens ─
-# Paramètres appliqués : temp 0.6, top_p 0.95, top_k 20 (unifiés avec Ornith).
-#   top_p/top_k côté serveur (--top-p 0.95 --top-k 20 dans l'unit systemd).
-#   Thinking plus court qu'Ornith → tours plus rapides, compaction plus tardive.
-#   Alternative si trop créatif : temp 0.3 (APEX-I-Quality) ; min_p 0.05 possible serveur.
+# ── Worker 1 : KAT (192.168.1.116:8080) ────────────────────────────────────
+# Paramètres serveur llama.cpp : top_p 0.95, top_k 20, min_p 0,
+# presence_penalty 1.5, repetition_penalty 1.0.
+# thinking ON, preserve_thinking ON (agent / multi-turn).
 [[models]]
 name = "worker"
-provider = "llamacpp"
-alias = "worker-kat"
-display_name = "KAT-Coder V2.5 Dev (local)"
-temperature = 0.6
+provider = "llamacpp-worker1"
+alias = "worker1"
+display_name = "worker1 (KAT, local)"
+temperature = 1.0
+thinking = "high"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 200000
+auto_compact_threshold = 64000
+
+# ── Worker 2 : Qwen3.5 (192.168.1.116:8081) ────────────────────────────────
+# Paramètres serveur llama.cpp : top_p 0.8, top_k 20, min_p 0,
+# presence_penalty 1.5, repetition_penalty 1.0. thinking OFF.
+[[models]]
+name = "worker"
+provider = "llamacpp-worker2"
+alias = "worker2"
+display_name = "worker2 (Qwen3.5, local)"
+temperature = 0.7
+thinking = "off"
+input_price = 0.0
+output_price = 0.0
+auto_compact_threshold = 64000

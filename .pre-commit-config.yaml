@@ -47,5 +47,7 @@ repos:
         exclude: |
           (?x)^(
             __snapshots__/.*\.svg$|
-            client-e2e/goldens/.*\.svg$
+            client-e2e/goldens/.*\.svg$|
+            README\.md$|
+            install\.sh$
           )

@@ -985,7 +985,7 @@ class TestAutoCompactThresholdFallback:
     ) -> None:
         model = ModelConfig(name="m", provider="p", alias="m")
         cfg = make_config(models=[model], active_model="m")
-        assert cfg.get_active_model().auto_compact_threshold == 200_000
+        assert cfg.get_active_model().auto_compact_threshold == 64_000
 
     def test_changed_global_threshold_propagates_on_reload(
         self, make_config: Callable[..., VibeConfigSchema]

@@ -8,6 +8,7 @@ from tests.conftest import build_test_vibe_app
 from tests.stubs.fake_account_gateway import FakeAccountGateway
 from tests.stubs.fake_identity_gateway import FakeIdentityGateway
 from vibe.app_server._identity import IdentityResult
+from vibe.cli.commands import CommandRegistry
 from vibe.cli.textual_ui.widgets.loading import LoadingWidget
 from vibe.cli.textual_ui.widgets.messages import UserCommandMessage
 
@@ -15,6 +16,7 @@ from vibe.cli.textual_ui.widgets.messages import UserCommandMessage
 @pytest.mark.asyncio
 async def test_whoami_command_shows_identity() -> None:
     app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]),
         identity_gateway=FakeIdentityGateway(
             IdentityResult.model_validate({
                 "id": "user-1",
@@ -24,7 +26,7 @@ async def test_whoami_command_shows_identity() -> None:
                 "workspace": {"id": "ws-1", "name": "Analytical Engine"},
                 "organization": {"id": "org-1", "name": "Mistral"},
             })
-        )
+        ),
     )
 
     async with app.run_test() as pilot:
@@ -41,7 +43,10 @@ async def test_whoami_command_shows_identity() -> None:
 
 @pytest.mark.asyncio
 async def test_whoami_command_reports_missing_identity() -> None:
-    app = build_test_vibe_app(identity_gateway=FakeIdentityGateway(unavailable=True))
+    app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]),
+        identity_gateway=FakeIdentityGateway(unavailable=True),
+    )
 
     async with app.run_test() as pilot:
         handled = await app._handle_command("/whoami")
@@ -56,6 +61,7 @@ async def test_whoami_command_reports_missing_identity() -> None:
 @pytest.mark.asyncio
 async def test_whoami_command_shows_identity_when_account_fails() -> None:
     app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]),
         identity_gateway=FakeIdentityGateway(
             IdentityResult.model_validate({
                 "id": "user-1",
@@ -81,13 +87,14 @@ async def test_whoami_command_shows_identity_when_account_fails() -> None:
 @pytest.mark.asyncio
 async def test_whoami_command_omits_name_line_when_name_falls_back_to_email() -> None:
     app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]),
         identity_gateway=FakeIdentityGateway(
             IdentityResult.model_validate({
                 "id": "user-1",
                 "email": "ada@example.com",
                 "last_name": "Lovelace",
             })
-        )
+        ),
     )
 
     async with app.run_test() as pilot:
@@ -120,7 +127,9 @@ async def test_whoami_command_shows_spinner_while_fetching_identity() -> None:
             "first_name": "Ada",
         })
     )
-    app = build_test_vibe_app(identity_gateway=gateway)
+    app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]), identity_gateway=gateway
+    )
 
     async with app.run_test() as pilot:
         task = asyncio.create_task(app._handle_command("/whoami"))

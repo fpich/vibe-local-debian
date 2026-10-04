@@ -2,14 +2,14 @@
 
 Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai/mistral-vibe) : le contenu amont est vendé ici en commit racine unique, **aucune synchronisation avec l'amont n'est prévue**. Évolutions à ta discrétion, directement dans ce dépôt.
 
-**Objectif** : agent de code CLI 100 % local sur Debian 13, backend `llama.cpp` — modèle **Ornith 1.5** (`--alias ornith`, `--jinja`, 256k contexte) sur `192.168.1.116:8080`. Aucune API cloud.
+**Objectif** : agent de code CLI 100 % local sur Debian 13, backends `llama.cpp` — **worker1 (KAT)** sur `192.168.1.116:8080` et **worker2 (Qwen3.5)** sur `192.168.1.116:8081`, alias serveur `worker` sur chaque port. Aucune API cloud.
 
 ## Ce qui est spécifique à ce fork
 
 | Fichier | Rôle |
 |---|---|
 | `install.sh` | Installation Debian 13 : Kitty + uv + CLI vibe + config globale |
-| `.vibe/config.toml` | Config de projet : provider `llamacpp` → alias unique `worker` (ornith/kat), télémétrie/updates coupés |
+| `.vibe/config.toml` | Config de projet : providers `llamacpp-worker1`/`llamacpp-worker2` → alias `worker1`/`worker2`, télémétrie/updates coupés, compaction auto à 64k |
 
 Tout le reste est le vendor de l'amont (`mistral-vibe` 2.25.8 au moment du fork), licence Apache-2.0 conservée.
 
@@ -29,72 +29,63 @@ Le script :
 
 Si nécessaire : `export PATH="$HOME/.local/bin:$PATH"` dans `~/.bashrc`.
 
-## Backend llama.cpp
+## Backends llama.cpp
 
-Le serveur tourne sur la machine GPU (`192.168.1.116`) via l'unit systemd `ornith15-35B-solo.service` (llama.cpp compilé local, RTX 2060, CUDA) :
+Deux serveurs tournent sur la machine GPU (`192.168.1.116`), chacun avec l'alias `--alias worker` (côté client, les modèles sont distingués par leur `api_base`) :
+
+- **worker1** — KAT sur le port `8080` ;
+- **worker2** — Qwen3.5 sur le port `8081`.
+
+Exemple d'unit systemd (adapter le `-m` et le port par serveur) :
 
 ```ini
-# /etc/systemd/system/ornith15-35B-solo.service (machine GPU)
+# /etc/systemd/system/llama-worker.service (machine GPU)
 [Service]
 Type=simple
 WorkingDirectory=/home/fabien/llama.cpp
 Environment=CUDA_VISIBLE_DEVICES=0
 ExecStart=/home/fabien/llama.cpp/build/bin/llama-server \
-  -m /home/fabien/models/Ornith-1.5-35B-A3B-Q4_K_M.gguf \
+  -m /home/fabien/models/<modele>.gguf \
   --host 0.0.0.0 --port 8080 --alias worker \
   -c 262144 -np 1 --split-mode none --main-gpu 0 -ngl all \
   --n-cpu-moe 40 --fit off --load-mode mmap -fa on \
   -ctk q8_0 -ctv q8_0 -b 2048 -ub 512 -t 8 -tb 8 \
-  --jinja
+  --jinja \
+  --temp <temp> --top-p <top_p> --top-k 20 --min-p 0 \
+  --presence-penalty <pp> --repeat-penalty <rp>
 Restart=on-failure
 RestartSec=2
 ```
 
 Points clés : `--jinja` (tool-calling), `--alias worker` (modèle exposé), `-c 262144` (256k contexte), `-ctk/-ctv q8_0` + `-fa on` (tenir 256k en 6 Go de VRAM), `-np 1` (une session à la fois).
 
-**Paramètres d'échantillonnage** — à fixer côté serveur (le client n'envoie que la température) : `--temp 0.6 --top-p 0.95 --top-k 20`. Le `top_k` par défaut de llama.cpp est 40 : passe-le à 20 dans l'unit systemd.
+**Paramètres d'échantillonnage** — à fixer côté serveur (le client n'envoie que la température) ; le `top_k` par défaut de llama.cpp est 40 : passe-le à 20 dans l'unit systemd.
 
-**Optimaux par modèle** (détail dans `.vibe/config.toml`) :
+## Modèles actifs
 
-| Modèle | temp client | top_p (serveur) | top_k (serveur) | Notes |
-|---|---|---|---|---|
-| Ornith 1.5 35B | 0.6 | 0.95 | 20 | Model card officielle ; les benchs ont été tournés à temp 1.0 — essayer en second si trop conservateur |
-| KAT-Coder V2.5 Dev | 0.6 | 0.95 | 20 | Unifiés avec Ornith ; alternative si trop créatif : temp 0.3 (APEX-I-Quality) |
+La config de projet expose **deux modèles** vers deux serveurs llama.cpp (alias serveur `worker` sur chaque port) — bascule = un seul changement dans `.vibe/config.toml` (`active_model`) :
 
-## Modèles supportés
+| active_model | Modèle | Endpoint | temp client | top_p (serveur) | top_k | min_p | presence_penalty | repetition_penalty | thinking |
+|---|---|---|---|---|---|---|---|---|---|
+| `worker1` | KAT | `192.168.1.116:8080` | 1.0 | 0.95 | 20 | 0 | 1.5 | 1.0 | ON (preserve_thinking ON) |
+| `worker2` | Qwen3.5 | `192.168.1.116:8081` | 0.7 | 0.8 | 20 | 0 | 1.5 | 1.0 | OFF |
 
-La config de projet expose **deux modèles interchangeables** vers le même serveur llama.cpp (alias serveur unique `worker`) — bascule = un seul changement dans `.vibe/config.toml` :
-
-| active_model | Modèle | Points forts | Quant recommandé |
-|---|---|---|---|
-| `worker-ornith` | Ornith 1.5 35B-A3B | Raisonnement long, chasse aux bugs | Q4_K_M (déjà en place) |
-| `worker-kat` | KAT-Coder V2.5 Dev | Tool-calls réguliers, économe en tokens, variance faible | [mudler APEX-I-Compact](https://huggingface.co/mudler/KAT-Coder-V2.5-Dev-APEX-GGUF) (Q4, ~15,4 Go) |
-
-Même architecture (Qwen 35B MoE A3B) → même unit systemd, seul le `-m` change (`--alias worker` reste identique).
+Gestion des services (machine GPU) :
 
 ```bash
-# KAT : téléchargement du quant APEX-I-Compact (base Q4_K_M + imatrix)
-wget -c https://huggingface.co/mudler/KAT-Coder-V2.5-Dev-APEX-GGUF/resolve/main/KAT-Coder-V2.5-Dev-APEX-I-Compact.gguf -P ~/models/
-# puis éditer le -m de l'unit systemd, garder --alias worker, et dans .vibe/config.toml :
-#   active_model = "worker-kat"
-```
-
-Gestion du service (machine GPU) :
-
-```bash
-sudo systemctl enable --now ornith15-35B-solo.service
-systemctl status ornith15-35B-solo.service
+sudo systemctl enable --now llama-worker1.service
+sudo systemctl enable --now llama-worker2.service
+systemctl status llama-worker1.service llama-worker2.service
 ```
 
 Vérification depuis la machine Debian :
 
 ```bash
 curl -s http://192.168.1.116:8080/v1/models   # doit lister "worker"
+curl -s http://192.168.1.116:8081/v1/models   # doit lister "worker"
 ```
 
-⚠️ `--host 0.0.0.0` expose le port sur le LAN : ne publie pas le port 8080 sur Internet.
-
-`--host 0.0.0.0` expose le port sur le LAN : ne publie pas le port 8080 sur Internet.
+⚠️ `--host 0.0.0.0` expose les ports sur le LAN : ne les publie pas sur Internet.
 
 ## Utilisation
 
@@ -103,7 +94,9 @@ cd ~/mon-projet
 vibe
 ```
 
-Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), todo, sous-agents, agents intégrés, skills, sessions, thèmes, rendu Markdown/diffs, autocomplétion `@` et `/`.
+Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), todo, sous-agents, agents intégrés, skills, sessions, thèmes, rendu Markdown/diffs, autocomplétion `@` et `/`. La **compaction automatique se déclenche à 64k tokens**.
+
+**Commandes masquées temporairement** (code intact, réactivables dans `vibe/cli/commands.py` via `HIDDEN_COMMANDS`) : `/connectors`, `/mcp`, `/proxy-setup`, `/remote-project`, `/teleport`, `/voice`, `/whoami`.
 
 **Désactivé volontairement** (config) :
 - voice mode (transcription cloud non configurée) ;
@@ -115,17 +108,17 @@ Tout le cœur fonctionne en local : chat, outils (read/write/edit/grep/shell), t
 ## Configuration
 
 - Projet : `.vibe/config.toml` (versionné ici).
-- Globale : `~/.vibe/config.toml` (installé par `install.sh`).
-- Le provider `llamacpp` pointe sur `http://192.168.1.116:8080/v1` ; les modèles sont exposés sous l'alias `worker` (`worker-kat` actif par défaut), compaction auto à 200k tokens.
+- Globale : `~/.vibe/config.toml` (installée par `install.sh`).
+- Providers : `llamacpp-worker1` → `http://192.168.1.116:8080/v1`, `llamacpp-worker2` → `http://192.168.1.116:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 64k tokens.
 - Surcharges rapides : copie du fichier et édition de `api_base` / `alias`.
 
 ## AGENTS.md
 
-L'`AGENTS.md` du dépôt est adapté au fork : contraintes local-only (pas de cloud, backend llama.cpp, télémétrie désactivée) + conventions de contribution au code du CLI (ADRs, `uv run pytest`, ruff/pyright). Il guide l'agent quand il travaille dans ce dépôt. Pour orienter l'agent dans **tes projets**, crée plutôt un `AGENTS.md` à la racine de chaque projet.
+L'`AGENTS.md` du dépôt est adapté au fork : contraintes local-only (pas de cloud, backends llama.cpp, télémétrie désactivée) + conventions de contribution au code du CLI (ADRs, `uv run pytest`, ruff/pyright). Il guide l'agent quand il travaille dans ce dépôt. Pour orienter l'agent dans **tes projets**, crée plutôt un `AGENTS.md` à la racine de chaque projet.
 
 ## Points de vigilance
 
-- Le **tool-calling d'Ornith** est le facteur limitant : si l'agent n'utilise pas bien les outils, c'est le modèle, pas la config.
+- Le **tool-calling du modèle actif** est le facteur limitant : si l'agent n'utilise pas bien les outils, c'est le modèle, pas la config.
 - Terminal moderne requis (Kitty recommandé, xfce4-terminal fonctionne avec des raccourcis multilignes parfois limités).
 - Ce fork ne suit pas l'amont : les mises à jour de sécurité/fonctionnalités de mistral-vibe ne sont pas rapatriées automatiquement.
 

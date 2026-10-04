@@ -626,6 +626,21 @@ def build_test_vibe_app(
         initial_prompt=kwargs.pop("initial_prompt", None)
     )
 
+    commands = kwargs.pop("commands", None)
+    if commands is not None:
+        app = VibeApp(
+            app_server=app_server_source,
+            history_file=history_file,
+            startup=startup,
+            current_version=resolved_current_version,
+            update_notifier=resolved_update_notifier,
+            update_cache_repository=resolved_update_cache_repository,
+            voice_manager=voice_manager,
+            **kwargs,
+        )
+        app.provided_command_registry = commands
+        return app
+
     return VibeApp(
         app_server=app_server_source,
         history_file=history_file,

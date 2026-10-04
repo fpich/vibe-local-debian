@@ -154,7 +154,7 @@ LEAN = AgentProfile(
                 "alias": "leanstral",
                 "thinking": "high",
                 "temperature": 1.0,
-                "auto_compact_threshold": 200_000,
+                "auto_compact_threshold": 64_000,
             }
         ],
         "compaction_model": {

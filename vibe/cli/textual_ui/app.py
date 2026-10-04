@@ -675,6 +675,9 @@ class VibeApp(App):  # noqa: PLR0904
     CSS_PATH = "app.tcss"
     PAUSE_GC_ON_SCROLL: ClassVar[bool] = True
 
+    # Optional registry override (e.g. tests re-enabling hidden commands).
+    provided_command_registry: CommandRegistry | None = None
+
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+c", "interrupt_or_quit", "Quit", show=False),
         Binding("ctrl+d", "delete_right_or_quit", "Quit", show=False, priority=True),
@@ -1066,6 +1069,11 @@ class VibeApp(App):  # noqa: PLR0904
             )
 
     def _build_command_registry(self) -> CommandRegistry:
+        provided: CommandRegistry | None = getattr(
+            self, "provided_command_registry", None
+        )
+        if provided is not None:
+            return provided
         return CommandRegistry(context=self._command_context())
 
     def _command_context(self) -> CommandContext:
@@ -6519,7 +6527,7 @@ class VibeApp(App):  # noqa: PLR0904
             return
         with self.suspend():
             rprint(
-                "Mistral Vibe has been suspended. Run [bold cyan]fg[/bold cyan] to bring Mistral Vibe back."
+                "vibe-local-debian has been suspended. Run [bold cyan]fg[/bold cyan] to bring vibe-local-debian back."
             )
             os.kill(os.getpid(), signal.SIGTSTP)
 

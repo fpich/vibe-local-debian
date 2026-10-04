@@ -6,6 +6,18 @@ import platform
 
 from vibe.cli.constants import CLIPBOARD_IMAGE_PASTE_SUPPORTED_SYSTEM
 
+# Commands temporarily hidden from the CLI. The handlers, widgets, and code are
+# left fully intact; a command reappears as soon as its name is removed from
+# this set. "mcp" also covers its "/connectors" alias.
+HIDDEN_COMMANDS: frozenset[str] = frozenset({
+    "mcp",
+    "proxy-setup",
+    "remote-project",
+    "teleport",
+    "voice",
+    "whoami",
+})
+
 
 @dataclass(frozen=True)
 class CommandContext:
@@ -33,7 +45,7 @@ class CommandRegistry:
         context: CommandContext | None = None,
     ) -> None:
         if excluded_commands is None:
-            excluded_commands = []
+            excluded_commands = sorted(HIDDEN_COMMANDS)
         self._disabled_commands = set(excluded_commands)
         self._commands: dict[str, Command] = {}
         self.refresh(context)

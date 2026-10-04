@@ -26,7 +26,6 @@ class TestCommandRegistry:
         assert registry.get_command_name("/help") == "help"
         assert registry.get_command_name("/config") == "config"
         assert registry.get_command_name("/model") == "model"
-        assert registry.get_command_name("/connectors") == "mcp"
         assert registry.get_command_name("/clear") == "clear"
         assert registry.get_command_name("/new") == "clear"
         assert registry.get_command_name("/exit") == "exit"
@@ -106,13 +105,25 @@ class TestCommandRegistry:
         assert registry.parse_command("/exit") is None
         assert registry.get_command_name("/help") == "help"
 
-    def test_vibe_code_commands_are_always_registered(self) -> None:
+    def test_hidden_commands_are_registered_but_disabled_by_default(self) -> None:
         registry = CommandRegistry()
+        for name in [
+            "mcp",
+            "proxy-setup",
+            "remote-project",
+            "teleport",
+            "voice",
+            "whoami",
+        ]:
+            assert registry.get_command_name(f"/{name}") is None
+            assert registry.has_command(name) is False
+        assert registry.get_command_name("/connectors") is None
 
+    def test_hidden_commands_can_be_re_enabled(self) -> None:
+        registry = CommandRegistry(excluded_commands=[])
         assert registry.get_command_name("/teleport") == "teleport"
-        assert registry.has_command("teleport")
-        assert "/teleport" in registry.get_help_text()
-        assert registry.get_command_name("/remote-project") == "remote-project"
+        assert registry.has_command("remote-project")
+        assert registry.get_command_name("/connectors") == "mcp"
         result = registry.parse_command("/remote-project")
         assert result is not None
         _, cmd, cmd_args = result
@@ -169,17 +180,17 @@ class TestCommandRegistry:
         assert result == ("help", registry.commands["help"], "extra")
 
     def test_parse_command_keeps_args_for_argument_commands(self) -> None:
-        registry = CommandRegistry()
+        registry = CommandRegistry(excluded_commands=[])
         result = registry.parse_command("/mcp filesystem")
         assert result == ("mcp", registry.commands["mcp"], "filesystem")
 
     def test_parse_command_maps_connector_alias_to_mcp(self) -> None:
-        registry = CommandRegistry()
+        registry = CommandRegistry(excluded_commands=[])
         result = registry.parse_command("/connectors filesystem")
         assert result == ("mcp", registry.commands["mcp"], "filesystem")
 
     def test_mcp_command_description_surfaces_auth_subcommands(self) -> None:
-        registry = CommandRegistry()
+        registry = CommandRegistry(excluded_commands=[])
         command = registry.commands["mcp"]
 
         assert "status" in command.description
@@ -205,8 +216,7 @@ class TestCommandRegistry:
         assert cmd_args == "30s ping"
 
     @pytest.mark.parametrize(
-        "command_name",
-        ["config", "model", "thinking", "log-level", "proxy-setup", "voice", "theme"],
+        "command_name", ["config", "model", "thinking", "log-level", "theme"]
     )
     def test_config_picker_commands_require_idle(self, command_name: str) -> None:
         registry = CommandRegistry()

@@ -17,6 +17,7 @@ from tests.stubs.fake_account_gateway import FakeAccountGateway
 from vibe import __version__
 from vibe.app_server._account import WhoAmIResult
 from vibe.app_server.models import AccountPlanKind
+from vibe.cli.commands import CommandRegistry
 from vibe.cli.textual_ui.widgets.chat_input import ChatInputContainer
 from vibe.cli.textual_ui.widgets.messages import ErrorMessage
 from vibe.cli.textual_ui.widgets.no_markup_static import NoMarkupStatic
@@ -69,7 +70,9 @@ def _error_messages(app) -> list[str]:
 @pytest.mark.asyncio
 async def test_teleport_command_visible_for_paid_chat_users() -> None:
     app = build_test_vibe_app(
-        config=build_test_vibe_config(), account_gateway=_chat_account_gateway()
+        commands=CommandRegistry(excluded_commands=[]),
+        config=build_test_vibe_config(),
+        account_gateway=_chat_account_gateway(),
     )
 
     async with app.run_test() as pilot:
@@ -87,7 +90,9 @@ async def test_teleport_command_visible_for_paid_chat_users() -> None:
 
 @pytest.mark.asyncio
 async def test_teleport_command_uses_effective_harness_backend() -> None:
-    app = build_test_vibe_app(config=build_test_vibe_config())
+    app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]), config=build_test_vibe_config()
+    )
 
     async with app.run_test() as pilot:
         await _wait_until(
@@ -112,7 +117,10 @@ async def test_account_read_updates_subscription_banner() -> None:
     config = build_test_vibe_config()
     agent_loop = build_test_agent_loop(config=config)
     app = build_test_vibe_app(
-        config=config, agent_loop=agent_loop, account_gateway=_chat_account_gateway()
+        commands=CommandRegistry(excluded_commands=[]),
+        config=config,
+        agent_loop=agent_loop,
+        account_gateway=_chat_account_gateway(),
     )
 
     async with app.run_test() as pilot:
@@ -143,6 +151,7 @@ async def test_teleport_command_without_history_sends_early_failure_telemetry(
     user_plan: str,
 ) -> None:
     app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]),
         config=build_test_vibe_config(),
         account_gateway=FakeAccountGateway(
             WhoAmIResult(
@@ -188,6 +197,7 @@ async def test_teleport_command_allowed_for_free_chat_users(
     # Any Mistral API key is teleport-eligible now, including a free chat key.
     # With no history the command reaches the no-history stage, not "ineligible".
     app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]),
         config=build_test_vibe_config(),
         account_gateway=_chat_account_gateway(plan_name="FREE"),
     )
@@ -256,7 +266,11 @@ async def test_teleport_command_errors_after_switching_to_non_mistral_model(
         ],
         active_model="devstral",
     )
-    app = build_test_vibe_app(config=config, account_gateway=_chat_account_gateway())
+    app = build_test_vibe_app(
+        commands=CommandRegistry(excluded_commands=[]),
+        config=config,
+        account_gateway=_chat_account_gateway(),
+    )
 
     async with app.run_test() as pilot:
         await _wait_until(

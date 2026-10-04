@@ -72,4 +72,5 @@ echo
 echo "Terminé. Utilisation:"
 echo "  kitty            # terminal recommandé"
 echo "  vibe              # agent dans n'importe quel projet"
-echo "  curl -s http://192.168.1.116:8080/v1/models   # backend llama.cpp doit lister worker"
+echo "  curl -s http://192.168.1.116:8080/v1/models   # worker1 (KAT) doit lister worker"
+echo "  curl -s http://192.168.1.116:8081/v1/models   # worker2 (Qwen3.5) doit lister worker"

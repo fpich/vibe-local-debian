@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Conventions for AI agents and humans contributing to **vibe-local-debian** — a local-only hard fork of Mistral Vibe, a Python 3.12+ CLI coding assistant managed with `uv`, targeting **Debian 13** with a **local llama.cpp backend** (Ornith 1.5, alias `ornith`, at `http://192.168.1.116:8080/v1`).
+Conventions for AI agents and humans contributing to **vibe-local-debian** — a local-only hard fork of Mistral Vibe, a Python 3.12+ CLI coding assistant managed with `uv`, targeting **Debian 13** with **local llama.cpp backends** (KAT alias `worker1` at `http://192.168.1.116:8080/v1`, Qwen3.5 alias `worker2` at `http://192.168.1.116:8081/v1`).
 
 This fork does **not** track upstream. All changes are made directly here.
 
@@ -10,7 +10,7 @@ This fork does **not** track upstream. All changes are made directly here.
 - Voice mode, telemetry, OTEL, update-checks, and auto-update are intentionally disabled via config (`enable_telemetry = false`, `enable_otel = false`, etc.). Do not re-enable them.
 - No Mistral API key is required or expected; the `llamacpp` provider has no `api_key_env_var`.
 - When touching provider/backend code, assume: `reasoning_field_name = "reasoning_content"`, `emits_finish_reason = true`, `api_style = "openai"`.
-- The model has 256k context; auto-compaction is set at 200k tokens. Keep prompts and context handling efficient; avoid wasteful re-reading of large files.
+- Models have 256k context; auto-compaction is set at 64k tokens. Keep prompts and context handling efficient; avoid wasteful re-reading of large files.
 - Never test against, or point configs at, anything other than the local backend or loopback test servers.
 
 ## Layout

@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run the Mistral Vibe interactive CLI",
+        description="Run the vibe-local-debian interactive CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Commands:\n"

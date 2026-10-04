@@ -318,7 +318,7 @@ def run_onboarding(
             )
         case "completed":
             rprint(
-                '\nSetup complete 🎉. Run "vibe" to start using the Mistral Vibe CLI.\n'
+                '\nSetup complete 🎉. Run "vibe" to start using the vibe-local-debian CLI.\n'
             )
     theme = (
         onboarding_app.selected_theme

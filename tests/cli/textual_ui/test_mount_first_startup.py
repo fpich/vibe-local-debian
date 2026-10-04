@@ -113,7 +113,7 @@ async def test_input_during_cold_bootstrap_waits_for_session() -> None:
             await pilot.press("/")
             await pilot.press("shift+tab", "ctrl+backslash")
             await pilot.click(Banner)
-            dispatch = asyncio.create_task(app._dispatch_idle_input("/mcp"))
+            dispatch = asyncio.create_task(app._dispatch_idle_input("/log"))
             await pilot.pause(0.1)
 
             handle_command.assert_not_awaited()
@@ -124,7 +124,7 @@ async def test_input_during_cold_bootstrap_waits_for_session() -> None:
             await pilot.pause(0.3)
             await dispatch
 
-        handle_command.assert_awaited_once_with("/mcp")
+        handle_command.assert_awaited_once_with("/log")
 
 
 @pytest.mark.asyncio
