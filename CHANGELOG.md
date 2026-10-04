@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-04
+
+Fork public de vibe-local-debian. Backends llama.cpp auto-hébergés, localhost ou distant.
+
+### Added
+- `uninstall.sh` : désinstallation complète (CLI + toutes les données `~/.vibe`), avec confirmation.
+
+### Changed
+- Compaction automatique par défaut : 64k → **90k tokens** (défauts, agents, skill intégrée, config des deux workers).
+- Serveurs llama.cpp : `192.168.1.116` → `127.0.0.1` par défaut (config, scripts, docs) ; un backend distant reste possible via `api_base`.
+- README : guide d'utilisation opérationnel (démarrage dans un project, tableaux de commands, conseils productivité) et reprise au style public.
+- Example systemd : écoute `127.0.0.1` (loopback uniquement) et chemins génériques.
+
+### Removed
+- Commands cloud masquées de façon réversible via `HIDDEN_COMMANDS` : `/connectors`, `/mcp`, `/proxy-setup`, `/remote-project`, `/teleport`, `/voice`, `/whoami`, `/leanstall`, `/unleanstall`.
+- Computers connectors/MCP masqués de la bannière d'accueil via `HIDDEN_BANNER_COUNTERS` (réversible).
+
 ## [2.25.8] - 2026-09-23
 
 ### Added
