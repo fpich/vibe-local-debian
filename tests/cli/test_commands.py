@@ -114,6 +114,8 @@ class TestCommandRegistry:
             "teleport",
             "voice",
             "whoami",
+            "leanstall",
+            "unleanstall",
         ]:
             assert registry.get_command_name(f"/{name}") is None
             assert registry.has_command(name) is False

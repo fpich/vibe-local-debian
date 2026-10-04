@@ -16,6 +16,8 @@ HIDDEN_COMMANDS: frozenset[str] = frozenset({
     "teleport",
     "voice",
     "whoami",
+    "leanstall",
+    "unleanstall",
 })
 
 
