@@ -11,7 +11,12 @@ from vibe.app_server.models import (
     MCPSourceSummary,
     MCPState,
 )
-from vibe.cli.textual_ui.widgets.banner.banner import Banner, BannerState, _pluralize
+from vibe.cli.textual_ui.widgets.banner.banner import (
+    HIDDEN_BANNER_COUNTERS,
+    Banner,
+    BannerState,
+    _pluralize,
+)
 from vibe.cli.textual_ui.widgets.no_markup_static import NoMarkupStatic
 from vibe.cli.textual_ui.widgets.spinner import BrailleSpinner
 from vibe.cli.textual_ui.widgets.spinner_text import SpinnerText
@@ -139,9 +144,17 @@ class TestBannerInitialState:
         )
         result = banner._format_meta_counts()
         assert "2 models" in result
-        assert "3 connectors" in result
-        assert "1/2 MCP servers" in result
+        assert (
+            "connectors" not in HIDDEN_BANNER_COUNTERS or "3 connectors" not in result
+        )
+        assert (
+            "mcp_servers" not in HIDDEN_BANNER_COUNTERS
+            or "1/2 MCP servers" not in result
+        )
         assert "5 skills" in result
+        if {"connectors", "mcp_servers"} <= HIDDEN_BANNER_COUNTERS:
+            assert "connector" not in result
+            assert "MCP server" not in result
 
         banner.state = BannerState(
             models_count=2,
@@ -155,9 +168,16 @@ class TestBannerInitialState:
         assert "2 models" in result
         # A real zero-connector session shows "0 connectors", not the unknown
         # placeholder; only `None` renders as "0/? connector".
-        assert "0 connectors" in result
-        assert "0/?" not in result
-        assert "1/2 MCP servers" in result
+        if "connectors" in HIDDEN_BANNER_COUNTERS:
+            assert "connector" not in result
+            assert "0/?" not in result
+        else:
+            assert "0 connectors" in result
+            assert "0/?" not in result
+        if "mcp_servers" in HIDDEN_BANNER_COUNTERS:
+            assert "MCP server" not in result
+        else:
+            assert "1/2 MCP servers" in result
         assert "5 skills" in result
 
 
@@ -234,7 +254,10 @@ class TestBannerMCPServersCount:
         assert banner._initial_state.mcp_servers_enabled == 2
         assert banner._initial_state.mcp_servers_total == 3
         banner.state = banner._initial_state
-        assert "2/3 MCP servers" in banner._format_meta_counts()
+        if "mcp_servers" in HIDDEN_BANNER_COUNTERS:
+            assert "MCP server" not in banner._format_meta_counts()
+        else:
+            assert "2/3 MCP servers" in banner._format_meta_counts()
 
     def test_banner_shows_simple_count_when_all_enabled(self) -> None:
         banner = Banner(
@@ -248,8 +271,11 @@ class TestBannerMCPServersCount:
         assert banner._initial_state.mcp_servers_total == 2
         banner.state = banner._initial_state
         result = banner._format_meta_counts()
-        assert "2 MCP servers" in result
-        assert "1/2" not in result
+        if "mcp_servers" in HIDDEN_BANNER_COUNTERS:
+            assert "MCP server" not in result
+        else:
+            assert "2 MCP servers" in result
+            assert "1/2" not in result
 
 
 class TestBannerConnectorsCount:

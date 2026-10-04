@@ -15,6 +15,11 @@ from vibe.cli.textual_ui.widgets.banner.petit_chat import PetitChat
 from vibe.cli.textual_ui.widgets.no_markup_static import NoMarkupStatic
 from vibe.cli.textual_ui.widgets.spinner_text import SpinnerText
 
+# Banner counters temporarily hidden: cloud-only integrations (connectors,
+# MCP servers) are unused in a local llama.cpp setup. The counting logic
+# is left intact; a counter reappears when its name leaves this set.
+HIDDEN_BANNER_COUNTERS: frozenset[str] = frozenset({"connectors", "mcp_servers"})
+
 
 def _pluralize(count: int, singular: str) -> str:
     return f"{count} {singular}{'s' if count != 1 else ''}"
@@ -190,7 +195,9 @@ class Banner(Static):
         parts = [_pluralize(self.state.models_count, "model")]
         # `None` means the total is unknown (pre-session cold path); `0` is a
         # real zero-connector session and must not be shown as unknown.
-        if self.state.connectors_total is None:
+        if "connectors" in HIDDEN_BANNER_COUNTERS:
+            pass
+        elif self.state.connectors_total is None:
             parts.append(f"{self.state.connectors_connected}/? connector")
         elif self.state.connectors_connected != self.state.connectors_total:
             connector_str = (
@@ -201,14 +208,16 @@ class Banner(Static):
         else:
             parts.append(_pluralize(self.state.connectors_connected, "connector"))
         # Always show MCP servers count (even if 0/0)
-        if self.state.mcp_servers_enabled != self.state.mcp_servers_total:
+        if "mcp_servers" in HIDDEN_BANNER_COUNTERS:
+            pass
+        elif self.state.mcp_servers_enabled != self.state.mcp_servers_total:
             mcp_str = (
                 f"{self.state.mcp_servers_enabled}/{self.state.mcp_servers_total} MCP server"
                 + ("s" if self.state.mcp_servers_total != 1 else "")
             )
+            parts.append(mcp_str)
         else:
-            mcp_str = _pluralize(self.state.mcp_servers_enabled, "MCP server")
-        parts.append(mcp_str)
+            parts.append(_pluralize(self.state.mcp_servers_enabled, "MCP server"))
         parts.append(_pluralize(self.state.skills_count, "skill"))
         if self.state.hooks_count > 0:
             parts.append(_pluralize(self.state.hooks_count, "hook"))
