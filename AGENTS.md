@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Conventions for AI agents and humans contributing to **vibe-local-debian** — a local-only hard fork of Mistral Vibe, a Python 3.12+ CLI coding assistant managed with `uv`, targeting **Debian 13** with **local llama.cpp backends** (KAT alias `worker1` at `http://192.168.1.116:8080/v1`, Qwen3.5 alias `worker2` at `http://192.168.1.116:8081/v1`).
+Conventions for AI agents and humans contributing to **vibe-local-debian** — a local-only hard fork of Mistral Vibe, a Python 3.12+ CLI coding assistant managed with `uv`, targeting **Debian 13** with **local llama.cpp backends** (KAT alias `worker1` at `http://127.0.0.1:8080/v1`, Qwen3.5 alias `worker2` at `http://127.0.0.1:8081/v1`).
 
 This fork does **not** track upstream. All changes are made directly here.
 
@@ -53,7 +53,7 @@ Always go through `uv` — never invoke bare `python` or `pip`.
 - `uv run ruff check --fix .` and `uv run ruff format .` — run both after every code change and report the files modified.
 - `uv run pre-commit run --all-files` — full lint pass. Install once with `uv tool install pre-commit && uv run pre-commit install`.
 - Useful uv basics: `uv sync --all-extras`, `uv add <pkg>`, `uv remove <pkg>`.
-- Verify the local backend is reachable before debugging inference issues: `curl -s http://192.168.1.116:8080/v1/models` must list `worker`.
+- Verify the local backend is reachable before debugging inference issues: `curl -s http://127.0.0.1:8080/v1/models` must list `worker`.
 
 ## Project layout & module conventions
 

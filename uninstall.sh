@@ -47,7 +47,7 @@ else
 fi
 
 echo "==> Nettoyage des références dans ~/.bashrc"
-if [[ -f "$HOME/.bashrc" ]] && grep -q "192.168.1.116" "$HOME/.bashrc"; then
+if [[ -f "$HOME/.bashrc" ]] && grep -q "127.0.0.1" "$HOME/.bashrc"; then
   echo "    ~/.bashrc mentionne les serveurs llama.cpp; à nettoyer manuellement si souhaité."
 fi
 

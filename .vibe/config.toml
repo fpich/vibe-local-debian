@@ -14,10 +14,10 @@ otel_endpoint = ""
 enable_update_checks = false
 enable_auto_update = false
 
-# ── Serveur 1 : 192.168.1.116:8080 (KAT) ───────────────────────────────────
+# ── Serveur 1 : 127.0.0.1:8080 (KAT) ───────────────────────────────────
 [[providers]]
 name = "llamacpp-worker1"
-api_base = "http://192.168.1.116:8080/v1"
+api_base = "http://127.0.0.1:8080/v1"
 api_key_env_var = ""
 api_style = "openai"
 backend = "generic"
@@ -25,17 +25,17 @@ reasoning_field_name = "reasoning_content"
 # llama-server determine correctement les streams avec un finish_reason
 emits_finish_reason = true
 
-# ── Serveur 2 : 192.168.1.116:8081 (Qwen3.5) ──────────────────────────────
+# ── Serveur 2 : 127.0.0.1:8081 (Qwen3.5) ──────────────────────────────
 [[providers]]
 name = "llamacpp-worker2"
-api_base = "http://192.168.1.116:8081/v1"
+api_base = "http://127.0.0.1:8081/v1"
 api_key_env_var = ""
 api_style = "openai"
 backend = "generic"
 reasoning_field_name = "reasoning_content"
 emits_finish_reason = true
 
-# ── Worker 1 : KAT (192.168.1.116:8080) ────────────────────────────────────
+# ── Worker 1 : KAT (127.0.0.1:8080) ────────────────────────────────────
 # Paramètres serveur llama.cpp : top_p 0.95, top_k 20, min_p 0,
 # presence_penalty 1.5, repetition_penalty 1.0.
 # thinking ON, preserve_thinking ON (agent / multi-turn).
@@ -50,7 +50,7 @@ input_price = 0.0
 output_price = 0.0
 auto_compact_threshold = 90000
 
-# ── Worker 2 : Qwen3.5 (192.168.1.116:8081) ────────────────────────────────
+# ── Worker 2 : Qwen3.5 (127.0.0.1:8081) ────────────────────────────────
 # Paramètres serveur llama.cpp : top_p 0.8, top_k 20, min_p 0,
 # presence_penalty 1.5, repetition_penalty 1.0. thinking OFF.
 [[models]]

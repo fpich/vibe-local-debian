@@ -2,7 +2,7 @@
 
 Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai/mistral-vibe) : le contenu amont est vendé ici en commit racine unique, **aucune synchronisation avec l'amont n'est prévue**. Évolutions à ta discrétion, directement dans ce dépôt.
 
-**Objectif** : agent de code CLI 100 % local sur Debian 13, backends `llama.cpp` — **worker1 (KAT)** sur `192.168.1.116:8080` et **worker2 (Qwen3.5)** sur `192.168.1.116:8081`, alias serveur `worker` sur chaque port. Aucune API cloud.
+**Objectif** : agent de code CLI 100 % local sur Debian 13, backends `llama.cpp` — **worker1 (KAT)** sur `127.0.0.1:8080` et **worker2 (Qwen3.5)** sur `127.0.0.1:8081`, alias serveur `worker` sur chaque port. Aucune API cloud.
 
 ## Ce qui est spécifique à ce fork
 
@@ -32,7 +32,7 @@ Si nécessaire : `export PATH="$HOME/.local/bin:$PATH"` dans `~/.bashrc`.
 
 ## Backends llama.cpp
 
-Deux serveurs tournent sur la machine GPU (`192.168.1.116`), chacun avec l'alias `--alias worker` (côté client, les modèles sont distingués par leur `api_base`) :
+Deux serveurs tournent en local (`127.0.0.1`), chacun avec l'alias `--alias worker` (côté client, les modèles sont distingués par leur `api_base`) :
 
 - **worker1** — KAT sur le port `8080` ;
 - **worker2** — Qwen3.5 sur le port `8081`.
@@ -47,7 +47,7 @@ WorkingDirectory=/home/fabien/llama.cpp
 Environment=CUDA_VISIBLE_DEVICES=0
 ExecStart=/home/fabien/llama.cpp/build/bin/llama-server \
   -m /home/fabien/models/<modele>.gguf \
-  --host 0.0.0.0 --port 8080 --alias worker \
+  --host 127.0.0.1 --port 8080 --alias worker \
   -c 262144 -np 1 --split-mode none --main-gpu 0 -ngl all \
   --n-cpu-moe 40 --fit off --load-mode mmap -fa on \
   -ctk q8_0 -ctv q8_0 -b 2048 -ub 512 -t 8 -tb 8 \
@@ -68,8 +68,8 @@ La config de projet expose **deux modèles** vers deux serveurs llama.cpp (alias
 
 | active_model | Modèle | Endpoint | temp client | top_p (serveur) | top_k | min_p | presence_penalty | repetition_penalty | thinking |
 |---|---|---|---|---|---|---|---|---|---|
-| `worker1` | KAT | `192.168.1.116:8080` | 1.0 | 0.95 | 20 | 0 | 1.5 | 1.0 | ON (preserve_thinking ON) |
-| `worker2` | Qwen3.5 | `192.168.1.116:8081` | 0.7 | 0.8 | 20 | 0 | 1.5 | 1.0 | OFF |
+| `worker1` | KAT | `127.0.0.1:8080` | 1.0 | 0.95 | 20 | 0 | 1.5 | 1.0 | ON (preserve_thinking ON) |
+| `worker2` | Qwen3.5 | `127.0.0.1:8081` | 0.7 | 0.8 | 20 | 0 | 1.5 | 1.0 | OFF |
 
 Gestion des services (machine GPU) :
 
@@ -82,11 +82,11 @@ systemctl status llama-worker1.service llama-worker2.service
 Vérification depuis la machine Debian :
 
 ```bash
-curl -s http://192.168.1.116:8080/v1/models   # doit lister "worker"
-curl -s http://192.168.1.116:8081/v1/models   # doit lister "worker"
+curl -s http://127.0.0.1:8080/v1/models   # doit lister "worker"
+curl -s http://127.0.0.1:8081/v1/models   # doit lister "worker"
 ```
 
-⚠️ `--host 0.0.0.0` expose les ports sur le LAN : ne les publie pas sur Internet.
+⚠️ `--host 127.0.0.1` limite l'écoute à la machine locale : aucun port exposé sur le LAN.
 
 ## Utilisation — démarrer dans un projet
 
@@ -151,7 +151,7 @@ C'est tout. L'agent ouvre un TUI interactif, lit les fichiers du répertoire cou
 
 - Projet : `.vibe/config.toml` (versionné ici).
 - Globale : `~/.vibe/config.toml` (installée par `install.sh`).
-- Providers : `llamacpp-worker1` → `http://192.168.1.116:8080/v1`, `llamacpp-worker2` → `http://192.168.1.116:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 90k tokens.
+- Providers : `llamacpp-worker1` → `http://127.0.0.1:8080/v1`, `llamacpp-worker2` → `http://127.0.0.1:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 90k tokens.
 - Surcharges rapides : copie du fichier et édition de `api_base` / `alias`.
 
 ## AGENTS.md
