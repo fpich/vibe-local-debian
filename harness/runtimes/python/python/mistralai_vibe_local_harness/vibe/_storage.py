@@ -20,17 +20,6 @@ import shutil
 from threading import RLock
 from typing import Annotated, Any, Literal, Self, cast
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    JsonValue,
-    TypeAdapter,
-    field_validator,
-    model_validator,
-)
-import rfc8785
-
 from mistralai_vibe_local_harness import HarnessSession
 from mistralai_vibe_local_harness.protocol import (
     RustAcceptedApplyResult,
@@ -83,6 +72,16 @@ from mistralai_vibe_local_harness.vibe._subagents import (
     SubagentRuntimeState,
     SubagentSessionIdentity,
 )
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
+import rfc8785
 
 STORE_FORMAT = "mistral.vibe.unified-session-store/v1"
 # Readers accept lower minor versions and reject higher ones.

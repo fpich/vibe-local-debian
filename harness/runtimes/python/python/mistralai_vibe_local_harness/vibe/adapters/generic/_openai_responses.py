@@ -10,8 +10,6 @@ import json
 import logging
 from typing import Any, ClassVar, TypedDict, cast
 
-from pydantic import TypeAdapter
-
 from mistralai_vibe_local_harness.vibe.adapters.generic._base import (
     APIAdapter,
     ParsedStreamChunk,
@@ -30,6 +28,7 @@ from mistralai_vibe_local_harness.vibe.adapters.generic._model import (
     ToolCall,
 )
 from mistralai_vibe_local_harness.vibe.adapters.generic._provider import ProviderView
+from pydantic import TypeAdapter
 
 logger = logging.getLogger(__name__)
 

@@ -6,6 +6,9 @@
 # uniquement active_model.
 # ── Modèle actif : "worker1" ou "worker2" ─────────────────────────────────
 active_model = "worker1"
+# Seuls les modèles llama.cpp locaux sont sélectionnables (exclut les
+# modèles cloud par défaut mistral/devstral du sélecteur /config).
+allowed_models = ["worker"]
 
 # ── Cloud désactivé ────────────────────────────────────────────────────────
 enable_telemetry = false
@@ -13,6 +16,9 @@ enable_otel = false
 otel_endpoint = ""
 enable_update_checks = false
 enable_auto_update = false
+# Aucun connecteur cloud (Mistral connectors) : rien n'est appelé hors localhost
+enable_connectors = false
+
 
 # ── Serveur 1 : 127.0.0.1:8080 (KAT) ───────────────────────────────────
 [[providers]]
@@ -63,3 +69,10 @@ thinking = "off"
 input_price = 0.0
 output_price = 0.0
 auto_compact_threshold = 90000
+
+
+# ── Titres de session ─────────────────────────────────────────────────────
+# "first_message" : titre dérivé du premier message utilisateur, zéro appel LLM
+# (défaut local). "llm" : génération en arrière-plan. "off" : aperçu.
+[session_logging]
+auto_title = "first_message"

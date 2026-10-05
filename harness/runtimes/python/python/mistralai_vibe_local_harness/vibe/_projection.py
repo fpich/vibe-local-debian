@@ -6,8 +6,6 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
-from pydantic import JsonValue
-
 from mistralai_vibe_local_harness.protocol import (
     RustAssistantMessageCommittedObservation,
     RustCompletedTurn,
@@ -62,6 +60,7 @@ from mistralai_vibe_local_harness.vibe._storage import (
     ProjectionStateV1,
     compute_projection_delta,
 )
+from pydantic import JsonValue
 
 _PREVIEW_MAX_CHARS = 200
 

@@ -7,8 +7,6 @@ import secrets
 import time
 from typing import Annotated, Literal
 
-from pydantic import Field, JsonValue
-
 from mistralai_vibe_local_harness._native import HarnessSession
 from mistralai_vibe_local_harness.protocol import (
     RUNTIME_BUILTIN_TOOL_NAMES,
@@ -94,6 +92,7 @@ from mistralai_vibe_local_harness.protocol import (
     RustUserMessageEvent,
     parse_apply_result,
 )
+from pydantic import Field, JsonValue
 
 
 class ModelRequest(RustProtocolModel):

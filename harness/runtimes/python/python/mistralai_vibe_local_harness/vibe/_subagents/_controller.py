@@ -9,10 +9,6 @@ import logging
 import time
 from typing import Literal, Protocol, cast
 
-from opentelemetry import trace
-from opentelemetry.trace import Status, StatusCode
-from pydantic import JsonValue, ValidationError
-
 from mistralai_vibe_local_harness.protocol import (
     RustEvent,
     RustFailTurnEvent,
@@ -98,6 +94,9 @@ from mistralai_vibe_local_harness.vibe._subagents._operations import (
     running_child_count,
     success_output,
 )
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
+from pydantic import JsonValue, ValidationError
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)

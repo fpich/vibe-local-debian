@@ -215,8 +215,8 @@ def test_line_number_format() -> None:
     assert lines[1] == "        2\u2192world"
 
 
-def test_default_limit_is_2000() -> None:
-    assert DEFAULT_LINE_LIMIT == 2000
+def test_default_limit_is_800() -> None:
+    assert DEFAULT_LINE_LIMIT == 800
 
 
 def test_format_call_display() -> None:

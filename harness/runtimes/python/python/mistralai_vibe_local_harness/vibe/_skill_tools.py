@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, ValidationError
-
 from mistralai_vibe_local_harness.protocol import (
     RustProtocolError,
     RustRuntimeBuiltinToolCallAction,
@@ -12,6 +10,7 @@ from mistralai_vibe_local_harness.protocol import (
     RustToolSuccessResult,
 )
 from mistralai_vibe_local_harness.vibe._runtime_config import LocalRuntimeAdapterConfig
+from pydantic import BaseModel, Field, ValidationError
 
 
 class SkillArgs(BaseModel):

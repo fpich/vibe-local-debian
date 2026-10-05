@@ -16,8 +16,6 @@ import threading
 import time
 from typing import Any, Literal, cast
 
-from pydantic import JsonValue, TypeAdapter
-
 from mistralai_vibe_local_harness import HarnessSession
 from mistralai_vibe_local_harness.protocol import (
     RustContextSettings,
@@ -199,6 +197,7 @@ from mistralai_vibe_local_harness.vibe.plugins import (
     SessionPluginProvider,
     empty_plugin_binding,
 )
+from pydantic import JsonValue, TypeAdapter
 
 
 @dataclass(frozen=True, slots=True)

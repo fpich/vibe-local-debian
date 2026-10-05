@@ -14,7 +14,6 @@ from mcp.types import (
     ErrorData,
     TextContent,
 )
-
 from mistralai_vibe_local_harness.vibe._mcp_models import (
     MCPSamplingCallback,
     MCPSamplingCompletion,

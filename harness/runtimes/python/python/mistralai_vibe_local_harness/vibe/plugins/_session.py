@@ -16,8 +16,6 @@ import logging
 from pathlib import Path
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict
-
 from mistralai_vibe_local_harness.protocol import RustPluginContextDefinition
 from mistralai_vibe_local_harness.session_protocol import (
     PluginInfo,
@@ -34,6 +32,7 @@ from mistralai_vibe_local_harness.vibe.plugins._store import (
     PluginPackageStore,
     PluginPackageUnavailable,
 )
+from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
 

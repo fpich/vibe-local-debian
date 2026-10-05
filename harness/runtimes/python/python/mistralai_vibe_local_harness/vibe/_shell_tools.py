@@ -8,8 +8,6 @@ import signal
 import sys
 from typing import cast
 
-from pydantic import BaseModel, Field, JsonValue, ValidationError
-
 from mistralai_vibe_local_harness.protocol import (
     RustProtocolError,
     RustRuntimeBuiltinToolCallAction,
@@ -19,6 +17,7 @@ from mistralai_vibe_local_harness.protocol import (
     RustToolSuccessResult,
 )
 from mistralai_vibe_local_harness.vibe._runtime_config import LocalRuntimeAdapterConfig
+from pydantic import BaseModel, Field, JsonValue, ValidationError
 
 MAX_OUTPUT_BYTES = 16_000
 

@@ -712,10 +712,15 @@ class MessageList(Sequence[LLMMessage]):
 
         Under deferred init the prompt can land after messages were already
         appended, so insert at the front rather than clobber slot 0.
+        Byte-identical refreshes are dropped: the local backend's prompt cache
+        survives only while the prefix stays byte-for-byte stable, so a no-op
+        rebuild must not swap the message object.
         """
         msg = LLMMessage(role=Role.system, content=new)
         with self._lock:
             if self._data and self._data[0].role == Role.system:
+                if self._data[0].content == new:
+                    return
                 self._data[0] = msg
             else:
                 self._data.insert(0, msg)

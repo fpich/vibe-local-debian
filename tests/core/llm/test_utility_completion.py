@@ -264,3 +264,31 @@ class TestRunUtilityCompletion:
         )
 
         assert content == "named"
+
+
+class TestConfiguredUtilityModel:
+    def test_configured_utility_model_wins(self) -> None:
+        utility = ModelConfig(
+            name="worker",
+            provider="llamacpp-worker2",
+            alias="worker2-utility",
+            temperature=0.2,
+            thinking="off",
+        )
+        config = build_test_vibe_config(utility_model=utility)
+        providers = [
+            *config.providers,
+            ProviderConfig(
+                name="llamacpp-worker2", api_base="http://127.0.0.1:8081/v1"
+            ),
+        ]
+        config = config.model_copy(update={"providers": providers})
+        model, provider = select_utility_model(config)
+        assert model.alias == "worker2-utility"
+        assert provider.name == "llamacpp-worker2"
+        assert is_fast_utility_model(config) is True
+
+    def test_unset_falls_back_to_previous_behavior(self) -> None:
+        config = build_test_vibe_config()
+        model, _ = select_utility_model(config)
+        assert model is not None

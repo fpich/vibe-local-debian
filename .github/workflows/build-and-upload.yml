@@ -146,35 +146,6 @@ jobs:
           path: dist/release-assets/vibe-${{ matrix.os }}-${{ matrix.arch }}-${{ steps.get_version.outputs.version }}.zip
           archive: false
 
-  nix-build:
-    needs: configure
-    name: "Nix build and upload: ${{ matrix.os }}-${{ matrix.arch }}"
-    permissions:
-      contents: read
-    strategy:
-      matrix: ${{ fromJSON(needs.configure.outputs.matrix) }}
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - name: Checkout repository
-        if: matrix.os != 'windows'
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Install Nix
-        if: matrix.os != 'windows'
-        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
-
-      - name: Build with Nix
-        if: matrix.os != 'windows'
-        shell: bash
-        run: |
-          nix build .#
-
-      - name: Nix Smoke Test
-        if: matrix.os != 'windows'
-        shell: bash
-        run: |
-          nix run .# -- --version
-
   smoke-test:
     needs: [configure, build-and-upload]
     name: "Test: ${{ matrix.os }}-${{ matrix.arch }}${{ matrix.tag && format('-{0}', matrix.tag) || '' }}"

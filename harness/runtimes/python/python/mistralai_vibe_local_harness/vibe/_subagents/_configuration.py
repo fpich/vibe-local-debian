@@ -8,8 +8,6 @@ import logging
 from pathlib import Path
 from typing import Literal, cast
 
-from pydantic import JsonValue
-
 from mistralai_vibe_local_harness.protocol import (
     RustDisabledRuntimeToolFeature,
     RustHarnessCapabilitySet,
@@ -34,6 +32,7 @@ from mistralai_vibe_local_harness.vibe._subagents._models import (
     ResolvedSubagentPolicyCeiling,
     ResolvedToolGrant,
 )
+from pydantic import JsonValue
 
 logger = logging.getLogger(__name__)
 

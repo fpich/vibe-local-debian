@@ -34,6 +34,7 @@ async def test_reads_env_vars() -> None:
             "enabled": False,
             "session_prefix": "mysession",
             "generate_titles": False,
+            "auto_title": "first_message",
         },
         "api_timeout": 0.12,
     }

@@ -7,12 +7,11 @@ import hashlib
 from pathlib import Path
 from urllib.parse import urlparse
 
-from pydantic import JsonValue, ValidationError
-
 from mistralai_vibe_local_harness.protocol import (
     RustImageContentBlock,
     RustResourceLinkContentBlock,
 )
+from pydantic import JsonValue, ValidationError
 
 FILE_IMAGE_RESOURCE_LINK_META_KEY = "mistralai.vibe.harness/file-image-resource-link"
 

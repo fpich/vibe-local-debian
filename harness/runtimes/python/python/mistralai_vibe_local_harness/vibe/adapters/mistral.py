@@ -15,7 +15,6 @@ from mistralai.client.models.chatcompletionstreamrequest import (
     ChatCompletionStreamRequestMessageTypedDict,
 )
 from mistralai.client.utils.retries import BackoffStrategy, RetryConfig
-
 from mistralai_vibe_local_harness.protocol import (
     JsonObject,
     RustAssistantMessage,

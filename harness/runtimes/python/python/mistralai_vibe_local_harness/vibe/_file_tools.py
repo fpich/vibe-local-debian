@@ -8,15 +8,6 @@ import stat
 import tempfile
 from typing import IO, Annotated, cast
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    JsonValue,
-    StringConstraints,
-    ValidationError,
-)
-
 from mistralai_vibe_local_harness.protocol import (
     RustProtocolError,
     RustRuntimeBuiltinToolCallAction,
@@ -26,6 +17,14 @@ from mistralai_vibe_local_harness.protocol import (
     RustToolSuccessResult,
 )
 from mistralai_vibe_local_harness.vibe._runtime_config import LocalRuntimeAdapterConfig
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    StringConstraints,
+    ValidationError,
+)
 
 SNIFF_BYTES = 4_096
 _FIRST_PRINTABLE = 0x20

@@ -48,7 +48,10 @@ async def test_background_title_keeps_runtime_non_quiescent_until_delivery(
     )
     config = build_test_vibe_config(
         session_logging=SessionLoggingConfig(
-            save_dir=str(tmp_path / "sessions"), session_prefix="session", enabled=True
+            save_dir=str(tmp_path / "sessions"),
+            session_prefix="session",
+            enabled=True,
+            auto_title="llm",
         )
     )
     agent_loop = build_test_agent_loop(

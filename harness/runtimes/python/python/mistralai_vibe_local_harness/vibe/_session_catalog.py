@@ -13,8 +13,6 @@ from pathlib import Path
 import stat
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
 from mistralai_vibe_local_harness.session_protocol import PublicSession
 from mistralai_vibe_local_harness.vibe._projection import with_session_preview
 from mistralai_vibe_local_harness.vibe._storage import (
@@ -28,6 +26,7 @@ from mistralai_vibe_local_harness.vibe._storage import (
     _replace_document,
 )
 from mistralai_vibe_local_harness.vibe._subagents._models import SessionIdentity
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 _CATALOG_FILENAME = ".session-index.json"
 

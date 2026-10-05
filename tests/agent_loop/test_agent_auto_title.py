@@ -25,7 +25,10 @@ from vibe.core.types import (
 
 def _make_agent_loop(tmp_path: Path) -> AgentLoop:
     session_logging = SessionLoggingConfig(
-        save_dir=str(tmp_path / "sessions"), session_prefix="session", enabled=True
+        save_dir=str(tmp_path / "sessions"),
+        session_prefix="session",
+        enabled=True,
+        auto_title="llm",
     )
     config = build_test_vibe_config(session_logging=session_logging)
     backend = FakeBackend([
@@ -373,7 +376,10 @@ class TestAgentLoopBackgroundTitle:
             "vibe.core.session.title_model.generate_session_title", fake_generate
         )
         session_logging = SessionLoggingConfig(
-            save_dir=str(tmp_path / "sessions"), session_prefix="session", enabled=True
+            save_dir=str(tmp_path / "sessions"),
+            session_prefix="session",
+            enabled=True,
+            auto_title="llm",
         )
         config = build_test_vibe_config(session_logging=session_logging)
         backend = FakeBackend([[mock_llm_chunk(content="ok")] for _ in range(3)])
@@ -482,3 +488,49 @@ class TestAgentLoopTitleTier:
         loop._maybe_schedule_title_generation(turn_completing=True)
 
         assert cadence.periodic_calls == [False]
+
+
+class TestFirstMessageTitleMode:
+    @pytest.mark.asyncio
+    async def test_first_message_mode_skips_llm_and_derives_title(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def fail_generate(*args, **kwargs) -> str | None:
+            raise AssertionError("first_message mode must not call the LLM")
+
+        monkeypatch.setattr(
+            "vibe.core.session.title_model.generate_session_title", fail_generate
+        )
+        session_logging = SessionLoggingConfig(
+            save_dir=str(tmp_path / "sessions"),
+            session_prefix="session",
+            enabled=True,
+            auto_title="first_message",
+        )
+        config = build_test_vibe_config(session_logging=session_logging)
+        backend = FakeBackend([[mock_llm_chunk(content="ok")]])
+        loop = build_test_agent_loop(
+            config=config, backend=backend, auto_title_enabled=True
+        )
+        await _collect(loop, "Fix the login bug", auto_title=None)
+        assert loop._auto_title_task is not None
+        await loop._auto_title_task
+        assert loop.session_logger.title == "Fix the login bug"
+
+    @pytest.mark.asyncio
+    async def test_off_mode_never_schedules(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        session_logging = SessionLoggingConfig(
+            save_dir=str(tmp_path / "sessions"),
+            session_prefix="session",
+            enabled=True,
+            auto_title="off",
+        )
+        config = build_test_vibe_config(session_logging=session_logging)
+        backend = FakeBackend([[mock_llm_chunk(content="ok")]])
+        loop = build_test_agent_loop(
+            config=config, backend=backend, auto_title_enabled=True
+        )
+        await _collect(loop, "hello", auto_title=None)
+        assert loop._auto_title_task is None

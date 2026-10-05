@@ -17,7 +17,6 @@ from typing import Any, ClassVar
 import google.auth
 import google.auth.credentials
 from google.auth.transport.requests import Request
-
 from mistralai_vibe_local_harness.vibe.adapters.generic._anthropic import (
     AnthropicAdapter,
 )

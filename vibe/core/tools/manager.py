@@ -508,6 +508,18 @@ class ToolManager:
     def _is_remote_tool_class(tool_cls: type[BaseTool]) -> TypeGuard[type[MCPTool]]:
         return issubclass(tool_cls, MCPTool)
 
+    def is_remote_tool_name(self, name: str) -> bool:
+        """Whether *name* resolves to an MCP/connector tool (vs a builtin).
+
+        Returns False for unknown names so a name that disappears between the
+        serialized snapshot and this check is never treated as remote (and so
+        never dropped from a request on that basis alone).
+        """
+        tool_cls = self.available_tools.get(name)
+        if tool_cls is None:
+            return False
+        return issubclass(tool_cls, MCPTool)
+
     def integrate_mcp(self, *, raise_on_failure: bool = False) -> None:
         """Discover and register MCP tools (sync wrapper).
 

@@ -636,7 +636,7 @@ fn unknown_direct_skill_is_a_recoverable_tool_result() {
             &completion_action_id,
             "call-unknown-skill",
             "skill",
-            json!({"name": "rde-veille-collecte"}),
+            json!({"name": "rde-veille-collective"}),
         ),
     )));
 
@@ -653,7 +653,7 @@ fn unknown_direct_skill_is_a_recoverable_tool_result() {
             .all(|directive| directive["action"]["type"] != "runtime_builtin_tool_call")
     );
     let failure_text = appended_tool_result_text(&result, "call-unknown-skill");
-    assert!(failure_text.contains(r#"Skill \"rde-veille-collecte\" is not available"#));
+    assert!(failure_text.contains(r#"Skill \"rde-veille-collective\" is not available"#));
     assert!(failure_text.contains(r#"Did you mean: \"rde-veille\""#));
     assert!(failure_text.contains("Use an exact name from the available skills below"));
     assert!(failure_text.contains("Connector names and unlisted names in skill instructions"));

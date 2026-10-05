@@ -8,8 +8,6 @@ import logging
 import time
 from urllib.parse import quote
 
-from opentelemetry import trace
-
 from mistralai_vibe_local_harness.vibe._connector_models import (
     ConnectorNormalizedResult,
     ConnectorRuntimeFailure,
@@ -27,6 +25,7 @@ from mistralai_vibe_local_harness.vibe._mcp_models import (
 )
 from mistralai_vibe_local_harness.vibe._mcp_transport import call_http
 from mistralai_vibe_local_harness.vibe._observability import record_connector_operation
+from opentelemetry import trace
 
 logger = logging.getLogger(__name__)
 _tracer = trace.get_tracer(__name__)

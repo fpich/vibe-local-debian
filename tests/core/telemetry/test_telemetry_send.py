@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 import platform
 from typing import Any
@@ -1494,3 +1495,39 @@ class TestTelemetryClient:
 
         client = TelemetryClient(config_getter=_raise_config_error)
         assert client.is_active() is False
+
+
+class TestRequestSentLazyContextChars:
+    def test_disabled_config_never_invokes_char_counter(self) -> None:
+        config = build_test_vibe_config(enable_telemetry=False)
+        client = TelemetryClient(config_getter=lambda: config)
+        calls: list[int] = []
+
+        def counting() -> int:
+            calls.append(1)
+            return 42
+
+        client.send_request_sent(
+            model="m",
+            nb_context_chars=counting,
+            nb_context_messages=1,
+            nb_prompt_chars=1,
+            call_type="main_call",
+        )
+        assert calls == []
+
+    def test_enabled_config_resolves_callable_chars(self) -> None:
+        config = build_test_vibe_config(enable_telemetry=True)
+        env_key = config.get_active_provider().api_key_env_var
+        os.environ.setdefault(env_key, "sk-test")
+        client = TelemetryClient(config_getter=lambda: config)
+        client.send_telemetry_event = MagicMock()
+        client.send_request_sent(
+            model="m",
+            nb_context_chars=lambda: 4242,
+            nb_context_messages=1,
+            nb_prompt_chars=1,
+            call_type="main_call",
+        )
+        payload = client.send_telemetry_event.call_args[0][1]
+        assert payload["nb_context_chars"] == 4242

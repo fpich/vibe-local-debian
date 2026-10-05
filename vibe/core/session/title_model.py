@@ -90,3 +90,22 @@ def _clean_title(
     if len(collapsed) > policy.max_title_chars:
         collapsed = collapsed[: policy.max_title_chars].rstrip() + "…"
     return collapsed
+
+
+def first_message_title(
+    messages: Sequence[LLMMessage], *, max_chars: int = 60
+) -> str | None:
+    """Derive a session title from the first user message, without any LLM call."""
+    for message in messages:
+        if message.role != Role.user or message.injected:
+            continue
+        stripped = (message.content or "").strip()
+        first_line = stripped.splitlines()[0] if stripped else ""
+        first_line = _CONTROL_CHARS_RE.sub("", first_line)
+        collapsed = _WHITESPACE_RE.sub(" ", first_line).strip().strip(_WRAPPING_QUOTES)
+        if not collapsed:
+            return None
+        if len(collapsed) > max_chars:
+            collapsed = collapsed[:max_chars].rstrip() + "…"
+        return collapsed
+    return None

@@ -107,15 +107,15 @@ class MCPToolFilter:
         return not (
             self.disabled_globs
             and _pattern_matches(
-                display_name, self.disabled_globs, unparseable_matches=True
+                display_name, self.disabled_globs, unparsable_matches=True
             )
         )
 
 
-# An unparseable ``re:`` pattern cannot be evaluated, so the caller says which way to
+# An unparsable ``re:`` pattern cannot be evaluated, so the caller says which way to
 # miss; both callers miss toward leaving the tool unpublished.
 def _pattern_matches(
-    name: str, patterns: tuple[str, ...], *, unparseable_matches: bool = False
+    name: str, patterns: tuple[str, ...], *, unparsable_matches: bool = False
 ) -> bool:
     lowered = name.lower()
     for raw in patterns:
@@ -125,7 +125,7 @@ def _pattern_matches(
         if pattern.startswith("re:"):
             compiled = _compile_icase(pattern[3:])
             if compiled is None:
-                if unparseable_matches:
+                if unparsable_matches:
                     return True
                 continue
             if compiled.fullmatch(name):

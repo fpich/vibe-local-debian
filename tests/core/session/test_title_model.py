@@ -10,6 +10,7 @@ from vibe.core.session.title_model import (
     _clean_title,
     _user_prompt,
     build_title_transcript,
+    first_message_title,
     generate_session_title,
 )
 from vibe.core.session.title_policy import DEFAULT_TITLE_POLICY, TitlePolicy
@@ -183,3 +184,33 @@ class TestGenerateSessionTitle:
                 config=config,
                 policy=TitlePolicy(total_timeout_seconds=0.05),
             )
+
+
+def test_first_message_title_derives_from_first_user_message() -> None:
+    messages = [
+        LLMMessage(role=Role.system, content="system"),
+        LLMMessage(role=Role.user, content="Fix the login bug\n\nDetails here"),
+        LLMMessage(role=Role.assistant, content="ok"),
+    ]
+    assert first_message_title(messages) == "Fix the login bug"
+
+
+def test_first_message_title_skips_injected_messages() -> None:
+    messages = [
+        LLMMessage(role=Role.user, content="injected context", injected=True),
+        LLMMessage(role=Role.user, content="Real request"),
+    ]
+    assert first_message_title(messages) == "Real request"
+
+
+def test_first_message_title_truncates_long_messages() -> None:
+    messages = [LLMMessage(role=Role.user, content="x" * 200)]
+    title = first_message_title(messages)
+    assert title is not None
+    assert len(title) == 61
+    assert title.endswith("…")
+
+
+def test_first_message_title_returns_none_without_user_message() -> None:
+    assert first_message_title([]) is None
+    assert first_message_title([LLMMessage(role=Role.system, content="s")]) is None
