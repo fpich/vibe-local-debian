@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from pydantic import JsonValue, TypeAdapter, ValidationError
-
 from mistralai_vibe_local_harness.protocol import (
     RustContentBlock,
     RustProtocolError,
@@ -19,6 +17,7 @@ from mistralai_vibe_local_harness.vibe._connector_models import (
     ConnectorNormalizedResult,
 )
 from mistralai_vibe_local_harness.vibe._mcp_models import MCPNormalizedResult
+from pydantic import JsonValue, TypeAdapter, ValidationError
 
 _CONTENT_BLOCKS = TypeAdapter(list[RustContentBlock])
 

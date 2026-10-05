@@ -12,8 +12,6 @@ from pathlib import Path
 import re
 from typing import Literal, cast
 
-from pydantic import JsonValue
-
 from mistralai_vibe_local_harness.protocol import (
     RustProtocolError,
     RustRuntimeBuiltinToolCallAction,
@@ -33,6 +31,7 @@ from mistralai_vibe_local_harness.vibe._processes._manager import (
     ProcessStartRequest,
 )
 from mistralai_vibe_local_harness.vibe._runtime_config import LocalRuntimeAdapterConfig
+from pydantic import JsonValue
 
 type ProcessToolName = Literal[
     "process.start", "process.output", "process.write", "process.list", "process.stop"

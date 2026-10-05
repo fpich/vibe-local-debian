@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn similarity_prefers_contained_names() {
         assert_eq!(
-            normalized_similarity_score("rde-veille-collecte", "rde-veille"),
+            normalized_similarity_score("rde-veille-collective", "rde-veille"),
             0.9
         );
     }

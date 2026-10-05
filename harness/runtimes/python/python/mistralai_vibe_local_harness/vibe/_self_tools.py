@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
-
 from mistralai_vibe_local_harness.protocol import (
     RustProtocolError,
     RustRuntimeBuiltinToolCallAction,
@@ -12,6 +10,7 @@ from mistralai_vibe_local_harness.protocol import (
     RustToolSucceededEvent,
     RustToolSuccessResult,
 )
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
 class SleepArgs(BaseModel):

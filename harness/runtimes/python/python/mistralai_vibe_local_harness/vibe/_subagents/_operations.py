@@ -5,9 +5,6 @@ from __future__ import annotations
 import hashlib
 from typing import Literal, cast
 
-from pydantic import Field, JsonValue
-import rfc8785
-
 from mistralai_vibe_local_harness.protocol import RustRuntimeBuiltinToolCallAction
 from mistralai_vibe_local_harness.vibe._subagents._models import (
     ChildSessionRecord,
@@ -23,6 +20,8 @@ from mistralai_vibe_local_harness.vibe._subagents._models import (
     SubagentRuntimeState,
     TurnFailedChild,
 )
+from pydantic import Field, JsonValue
+import rfc8785
 
 SUBAGENT_TOOL_NAMES = frozenset({
     "subagent.list",

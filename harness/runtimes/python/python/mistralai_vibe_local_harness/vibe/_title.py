@@ -9,8 +9,6 @@ import dataclasses
 import logging
 import re
 
-from pydantic import JsonValue
-
 from mistralai_vibe_local_harness.protocol import (
     RustCompletionResult,
     RustMessage,
@@ -38,6 +36,7 @@ from mistralai_vibe_local_harness.vibe.adapters.generic import (
 from mistralai_vibe_local_harness.vibe.adapters.mistral import (
     execute_mistral_completion,
 )
+from pydantic import JsonValue
 
 logger = logging.getLogger(__name__)
 

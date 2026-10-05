@@ -28,8 +28,6 @@ import logging
 import time
 from typing import Protocol
 
-from pydantic import BaseModel, Field
-
 from mistralai_vibe_local_harness.protocol import (
     RustCompletionResult,
     RustExternalToolCall,
@@ -57,6 +55,7 @@ from mistralai_vibe_local_harness.vibe.adapters.generic import (
 from mistralai_vibe_local_harness.vibe.adapters.mistral import (
     execute_mistral_completion,
 )
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 

@@ -19,8 +19,6 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthFlowError
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
-from pydantic import JsonValue, TypeAdapter
-
 from mistralai_vibe_local_harness.vibe._mcp_models import (
     JsonObject,
     JsonSchema,
@@ -38,6 +36,7 @@ from mistralai_vibe_local_harness.vibe._mcp_models import (
     ResolvedMCPServerConfig,
 )
 from mistralai_vibe_local_harness.vibe._ssl import build_ssl_context
+from pydantic import JsonValue, TypeAdapter
 
 logger = logging.getLogger(__name__)
 _JSON_VALUE = TypeAdapter(JsonValue)

@@ -10,9 +10,6 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
-from pydantic import ConfigDict, Field, JsonValue
-from pydantic.alias_generators import to_camel
-
 from mistralai_vibe_local_harness.session_protocol import (
     ContentBlock,
     PublicError,
@@ -22,6 +19,8 @@ from mistralai_vibe_local_harness.session_protocol import (
     UnixTimeMilliseconds,
     UserDisplayContentAnnotation,
 )
+from pydantic import ConfigDict, Field, JsonValue
+from pydantic.alias_generators import to_camel
 
 
 class DeferredTurnModel(SessionProtocolModel):

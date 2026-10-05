@@ -12,8 +12,6 @@ import secrets
 import time
 from typing import TYPE_CHECKING, Literal, cast
 
-from pydantic import JsonValue, TypeAdapter
-
 from mistralai_vibe_local_harness import HarnessSession
 from mistralai_vibe_local_harness.protocol import (
     RustAcceptedApplyResult,
@@ -132,6 +130,7 @@ from mistralai_vibe_local_harness.vibe._storage import (
     restore_core_from_checkpoint,
     sha256_json,
 )
+from pydantic import JsonValue, TypeAdapter
 
 if TYPE_CHECKING:
     from mistralai_vibe_local_harness.vibe._subagents._configuration import (

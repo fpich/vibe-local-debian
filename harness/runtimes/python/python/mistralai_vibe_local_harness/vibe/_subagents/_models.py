@@ -5,6 +5,10 @@ from __future__ import annotations
 import re
 from typing import Annotated, Literal, Self
 
+from mistralai_vibe_local_harness.protocol import (
+    RustHarnessNotification,
+    RustRuntimeBuiltinToolName,
+)
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -12,11 +16,6 @@ from pydantic import (
     JsonValue,
     field_validator,
     model_validator,
-)
-
-from mistralai_vibe_local_harness.protocol import (
-    RustHarnessNotification,
-    RustRuntimeBuiltinToolName,
 )
 
 _SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")

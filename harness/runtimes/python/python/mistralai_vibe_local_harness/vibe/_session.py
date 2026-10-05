@@ -14,8 +14,6 @@ import secrets
 from typing import Any, Never, cast
 from urllib.parse import urlparse
 
-from pydantic import JsonValue
-
 from mistralai_vibe_local_harness.protocol import (
     RustBlobResourceContents,
     RustContentBlock,
@@ -168,6 +166,7 @@ from mistralai_vibe_local_harness.vibe.plugins import (
     SessionPluginBinding,
     empty_plugin_binding,
 )
+from pydantic import JsonValue
 
 logger = logging.getLogger(__name__)
 

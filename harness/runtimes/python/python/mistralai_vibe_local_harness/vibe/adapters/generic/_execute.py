@@ -20,7 +20,6 @@ import time
 from typing import Any, cast
 
 import httpx
-
 from mistralai_vibe_local_harness.protocol import (
     RustAssistantMessage,
     RustCompletionFinishReason,

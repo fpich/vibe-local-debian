@@ -13,6 +13,13 @@ import tempfile
 import threading
 from typing import Literal, Self
 
+from mistralai_vibe_local_harness.vibe._mcp_models import (
+    JsonSchema,
+    MCPDescriptorCacheKey,
+    MCPDescriptorCachePolicy,
+    MCPDescriptorCacheRecordV1,
+    MCPRemoteToolDescriptor,
+)
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -20,14 +27,6 @@ from pydantic import (
     JsonValue,
     TypeAdapter,
     ValidationError,
-)
-
-from mistralai_vibe_local_harness.vibe._mcp_models import (
-    JsonSchema,
-    MCPDescriptorCacheKey,
-    MCPDescriptorCachePolicy,
-    MCPDescriptorCacheRecordV1,
-    MCPRemoteToolDescriptor,
 )
 
 _JSON_SCHEMA = TypeAdapter(JsonSchema)

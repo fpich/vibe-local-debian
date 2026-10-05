@@ -9,6 +9,7 @@ amont = "amont"
 installe = "installe"
 Installe = "Installe"
 copie = "copie"
+presse = "presse"
 # Rust TUI crate (vibe/cli-rust/); not the dish "ratatouille".
 ratatui = "ratatui"
 iterm = "iterm"

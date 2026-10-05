@@ -10,7 +10,6 @@ import time
 
 import httpx
 from mistralai.client.errors import MistralError
-
 from mistralai_vibe_local_harness.protocol import (
     JsonObject,
     RustCompletionFailedEvent,

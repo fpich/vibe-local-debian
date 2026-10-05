@@ -18,6 +18,7 @@ import time
 from typing import Annotated, Literal, Self
 import unicodedata
 
+from mistralai_vibe_local_harness.vibe._storage import Sha256, canonical_json
 from pydantic import (
     AfterValidator,
     BaseModel,
@@ -26,8 +27,6 @@ from pydantic import (
     TypeAdapter,
     model_validator,
 )
-
-from mistralai_vibe_local_harness.vibe._storage import Sha256, canonical_json
 
 MANIFEST_VERSION = 1
 

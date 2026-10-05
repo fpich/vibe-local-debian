@@ -14,7 +14,6 @@ from collections.abc import Callable, Coroutine
 from typing import Any
 
 import httpx
-
 from mistralai_vibe_local_harness.vibe._runtime_config import LocalRuntimeAdapterConfig
 
 CORRELATION_ID_HEADER = "mistral-correlation-id"
