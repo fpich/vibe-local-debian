@@ -306,6 +306,7 @@ addopts = "-p pytest_vibe -vvvv -q -n auto --dist=loadgroup --durations=10 --imp
 timeout = 10
 markers = [
     "unified_supported: backend contract behavior implemented by the Unified Harness",
+    "contract: product contract tests that must survive every simplification step",
 ]
 filterwarnings = [
     # (e2e) streaming mock server is started in a thread; and the cli is spawn in a fork
