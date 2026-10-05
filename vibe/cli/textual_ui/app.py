@@ -1078,8 +1078,7 @@ class VibeApp(App):  # noqa: PLR0904
 
     def _command_context(self) -> CommandContext:
         return CommandContext(
-            registry_skills_enabled=self.app_server.resources.config.current.experimental_enable_registry_skills,
-            experimental_harness=self.app_server.resources.runtime.experimental_harness,
+            registry_skills_enabled=self.app_server.resources.config.current.experimental_enable_registry_skills
         )
 
     def _refresh_command_registry(self) -> None:
@@ -1139,11 +1138,6 @@ class VibeApp(App):  # noqa: PLR0904
                     else (init.hooks_count if init else 0)
                 ),
                 model_pending=self._model_pending() if has_session else False,
-                experimental_harness=(
-                    self.app_server.resources.runtime.experimental_harness
-                    if has_session
-                    else False
-                ),
             )
             yield self._banner
             yield VerticalGroup(id="messages")
@@ -1307,8 +1301,6 @@ class VibeApp(App):  # noqa: PLR0904
         self._refresh_subagent_list()
 
     async def _complete_mount(self) -> None:
-        if self.app_server.resources.runtime.experimental_harness:
-            self._todo_tracker = TodoTracker()
         self.event_handler = EventHandler(
             mount_callback=self._mount_and_scroll,
             get_tools_collapsed=lambda: self._tools_collapsed,
@@ -1688,20 +1680,6 @@ class VibeApp(App):  # noqa: PLR0904
         self._show_mcp_discovery_failures()
         await self._show_mcp_auth_required_notice()
         await self._show_skill_updates_notice()
-        await self._show_unified_harness_notice()
-
-    async def _show_unified_harness_notice(self) -> None:
-        """Warn the user when the session is running on the Unified Harness."""
-        if not self.app_server.resources.runtime.experimental_harness:
-            return
-        message = (
-            "You are using our new unified harness. "
-            "If you encounter issues, restart with --legacy-harness."
-        )
-        try:
-            await self._mount_and_scroll(WarningMessage(message, show_border=False))
-        except Exception:
-            self.notify(message, severity="warning", markup=False, timeout=10)
 
     def _is_cold_start(self) -> bool | None:
         """True if this process paid first-run startup cost (cold), False if it
@@ -1742,11 +1720,6 @@ class VibeApp(App):  # noqa: PLR0904
                 "is_resuming_session": self._is_resuming_session,
                 "prompt_for_workspace_trust": self._startup_prompt_for_workspace_trust,
                 "is_cold_start": self._is_cold_start(),  # None for frozen binaries; safe to ignore for python dist
-                "harness_selection_source": (
-                    self._initial_config_response.harness_selection_source
-                    if self._initial_config_response is not None
-                    else None
-                ),
             },
         )
 
@@ -2241,14 +2214,8 @@ class VibeApp(App):  # noqa: PLR0904
             return False
         if not self._queue.has_removable or not self.app_server.turn_active:
             return False
-        unified = self.app_server.state.session.harness == "unified"
-        expected_turn_id: str | None = None
-        if unified:
-            expected_turn_id = self.app_server.active_turn_id
-            if expected_turn_id is None:
-                return False
         try:
-            return await self._queue.steer_pending(expected_turn_id=expected_turn_id)
+            return await self._queue.steer_pending(expected_turn_id=None)
         except AppServerResponseError as error:
             # A stale turn leaves the queue item unchanged, so let it promote as
             # the next turn without flashing the race as an error.
@@ -4792,7 +4759,6 @@ class VibeApp(App):  # noqa: PLR0904
                 hooks_count=self.app_server.resources.runtime.hooks_count,
                 plan_description=plan_title(self.app_server.resources.account.current),
                 model_pending=self._model_pending(),
-                experimental_harness=self.app_server.resources.runtime.experimental_harness,
             )
         self._show_config_issues()
 
@@ -6021,7 +5987,6 @@ class VibeApp(App):  # noqa: PLR0904
                 hooks_count=self.app_server.resources.runtime.hooks_count,
                 plan_description=plan_title(self.app_server.resources.account.current),
                 model_pending=self._model_pending(),
-                experimental_harness=self.app_server.resources.runtime.experimental_harness,
             )
 
     def _update_profile_widgets(self, profile: AgentSummary) -> None:

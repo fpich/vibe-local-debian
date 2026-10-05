@@ -14,7 +14,7 @@ from tests.stubs.fake_config_orchestrator import FakeConfigOrchestrator
 from vibe.app_server._dispatch import RequestFailure
 from vibe.app_server._mcp_auth import MCPAuthenticationService
 from vibe.app_server._plugin_mcp import PluginMCPCatalog
-from vibe.app_server._runtime import build_unified_runtime_snapshot
+from vibe.app_server._runtime import build_runtime_snapshot
 from vibe.app_server._session_backend_port import (
     ResolvedMCPCatalog,
     ResolvedMCPServerConfig,
@@ -33,8 +33,8 @@ from vibe.app_server.protocol import (
     MCPToggleParams,
     ProtocolErrorCode,
     RuntimeUpdatedParams,
+    SessionOptions,
 )
-from vibe.core.agents.manager import AgentManager
 from vibe.core.auth.mcp_oauth import Fingerprint
 from vibe.core.config import MCPHttp, MCPOAuth, MCPStaticAuth
 from vibe.core.plugins import PluginMCPAuthorizationRequired, PluginMCPServerDefinition
@@ -151,8 +151,8 @@ class _FakeRoot:
         self._state = SessionMCPState(
             catalog_revision="r1", route_revision="r1", sources=(), discovery_errors={}
         )
-        self._runtime = build_unified_runtime_snapshot(
-            cast(Any, orchestrator), AgentManager(cast(Any, orchestrator))
+        self._runtime = build_runtime_snapshot(
+            SessionOptions(), cast(Any, orchestrator), cast(Any, None)
         )
         self.notified: list[str] = []
         self.suspended: list[str] = []

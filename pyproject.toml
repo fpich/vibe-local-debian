@@ -141,31 +141,17 @@ Issues = "https://github.com/mistralai/mistral-vibe/issues"
 Documentation = "https://github.com/mistralai/mistral-vibe#readme"
 
 [build-system]
-requires = ["maturin==1.14.1"]
-build-backend = "maturin_backend"
-backend-path = ["build_backend"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vibe"]
 
 [[tool.uv.index]]
 default = true
 name = "pypi"
 url = "https://pypi.org/simple"
 
-[tool.maturin]
-manifest-path = ".native-build/harness-core/Cargo.toml"
-module-name = "mistralai_vibe_local_harness._native"
-python-source = "."
-python-packages = ["vibe", "mistralai_vibe_local_harness"]
-include = [
-    # The runtime is staged during the build and ignored by Git. Include it
-    # explicitly so Maturin does not filter its Python sources out.
-    { path = "mistralai_vibe_local_harness/*", format = "wheel" },
-    { path = "mistralai_vibe_local_harness/**/*", format = "wheel" },
-]
-exclude = [
-    "**/__pycache__/**",
-    "**/*.pyc",
-]
-features = ["extension-module"]
 
 [project.scripts]
 vibe = "vibe.cli.launcher:main"
@@ -176,11 +162,7 @@ vibe-app-server = "vibe.app_server.stdio:main"
 exclude-newer = "2 days"
 cache-keys = [
     { file = "pyproject.toml" },
-    { file = "build_backend/**/*.py" },
-    { file = "harness/core/Cargo.toml" },
-    { file = "harness/core/Cargo.lock" },
-    { file = "harness/core/src/**/*.rs" },
-    { file = "harness/runtimes/python/python/mistralai_vibe_local_harness/**/*" },
+    { file = "vibe/**/*.py" },
 ]
 index-strategy = "first-index"
 package = true
@@ -195,7 +177,6 @@ override-dependencies = [
 [dependency-groups]
 dev = [
     "cryptography>=48.0.0",
-    "maturin==1.14.1",
     "pre-commit-uv>=4.3.0",
     "pre-commit>=4.2.0",
     "pyinstrument>=5.1.2",
@@ -274,7 +255,6 @@ ban-relative-imports = "all"
 
 [tool.ruff.lint.isort]
 known-first-party = ["vibe"]
-known-third-party = ["mistralai_vibe_local_harness"]
 force-sort-within-sections = true
 split-on-trailing-comma = false
 combine-as-imports = true
@@ -296,11 +276,9 @@ max-nested-blocks = 5
 ignore_decorators = ["@*"]
 
 [tool.pytest.ini_options]
-# client-e2e is a standalone harness with its own pytest.ini; the main suite must not collect it.
-addopts = "-p pytest_vibe -vvvv -q -n auto --dist=loadgroup --durations=10 --import-mode=importlib --maxschedchunk=1 --ignore=client-e2e"
+addopts = "-p pytest_vibe -vvvv -q -n auto --dist=loadgroup --durations=10 --import-mode=importlib --maxschedchunk=1"
 timeout = 10
 markers = [
-    "unified_supported: backend contract behavior implemented by the Unified Harness",
     "contract: product contract tests that must survive every simplification step",
 ]
 filterwarnings = [

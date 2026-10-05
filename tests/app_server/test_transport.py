@@ -72,11 +72,7 @@ def test_stdio_main_neutralizes_stdout_after_serving(
         nonlocal neutralized
         neutralized = True
 
-    monkeypatch.setattr(
-        stdio,
-        "parse_arguments",
-        lambda: argparse.Namespace(experimental_harness=False, legacy_harness=False),
-    )
+    monkeypatch.setattr(stdio, "parse_arguments", lambda: argparse.Namespace())
     monkeypatch.setattr(stdio, "init_harness_files_manager", lambda *_: None)
     monkeypatch.setattr(stdio, "init_file_logging", lambda _: None)
     monkeypatch.setattr(stdio.asyncio, "run", run)
@@ -93,50 +89,7 @@ def test_stdio_main_neutralizes_stdout_after_serving(
 
 
 @pytest.mark.asyncio
-async def test_stdio_server_creates_the_harness_behind_its_transport(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    harness = AsyncMock(spec=HarnessServer)
-    factory = AsyncMock(return_value=harness)
-    monkeypatch.setattr(stdio, "create_harness_server", factory)
-
-    await stdio.serve_stdio(reader=BytesIO(), writer=BytesIO())
-
-    factory.assert_awaited_once()
-    call = factory.await_args
-    assert call is not None
-    args, kwargs = call
-    assert isinstance(args[0], StdioJsonRpcTransport)
-    assert kwargs == {
-        "transport_kind": "stdio",
-        "experimental_harness": False,
-        "legacy_harness": False,
-    }
-    harness.serve.assert_awaited_once_with()
-
-
 @pytest.mark.asyncio
-async def test_stdio_server_forwards_experimental_harness_selection(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    harness = AsyncMock(spec=HarnessServer)
-    factory = AsyncMock(return_value=harness)
-    monkeypatch.setattr(stdio, "create_harness_server", factory)
-
-    await stdio.serve_stdio(
-        reader=BytesIO(), writer=BytesIO(), experimental_harness=True
-    )
-
-    call = factory.await_args
-    assert call is not None
-    _, kwargs = call
-    assert kwargs == {
-        "transport_kind": "stdio",
-        "experimental_harness": True,
-        "legacy_harness": False,
-    }
-
-
 @pytest.mark.asyncio
 async def test_stdio_transport_reads_json_lines() -> None:
     reader = BytesIO(
@@ -492,3 +445,20 @@ async def test_stdio_session_start_maps_agent_config_workdir_to_runtime_cwd() ->
     assert request.client_info.terminal_emulator == "ghostty"
     assert request.session_id is None
     assert request.continue_latest is False
+
+
+@pytest.mark.asyncio
+async def test_stdio_server_builds_a_legacy_harness_server(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = AsyncMock(spec=HarnessServer)
+    factory = AsyncMock(return_value=harness)
+    monkeypatch.setattr(stdio, "create_harness_server", factory)
+    await stdio.serve_stdio(reader=BytesIO(), writer=BytesIO())
+    factory.assert_awaited_once()
+    call = factory.await_args
+    assert call is not None
+    args, kwargs = call
+    assert isinstance(args[0], StdioJsonRpcTransport)
+    assert kwargs == {"transport_kind": "stdio"}
+    harness.serve.assert_awaited_once_with()

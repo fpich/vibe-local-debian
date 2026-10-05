@@ -257,13 +257,11 @@ async def test_reconnect_redelivers_an_open_callback_before_accepting_its_result
 async def test_rejected_callback_delivery_fails_the_turn_and_closes_the_callback(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[..., httpx.Response],
-    experimental_harness: bool,
 ) -> None:
     backend_contract_mistral_api.mock(
         return_value=_user_question_response(backend_contract_mistral_response)
     )
     client = await connect_backend_contract_client(
-        experimental_harness,
         session_options=SessionOptions(enabled_tools=["ask_user_question"]),
         capabilities=ClientCapabilities(callback_kinds=["user_input"]),
     )

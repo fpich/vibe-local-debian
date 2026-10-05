@@ -112,6 +112,11 @@ from vibe.app_server.protocol import (
     ToolsListResponse,
 )
 from vibe.core.agent_loop import AgentLoop
+from vibe.core.agents.install import (
+    AgentInstallError,
+    plan_installed_agents_change,
+    verify_installed_agents_change,
+)
 from vibe.core.config import VibeConfigSchema
 from vibe.core.config.admin_config import MANAGED_CONFIG_TIMEOUT, AdminConfigApplyResult
 from vibe.core.config.orchestrator import ConfigOrchestrator, ConfigPatchValidationError
@@ -746,11 +751,21 @@ class ResourceRequestHandler:
     async def _agent_install(
         self, params: AgentInstallParams, *, install: bool
     ) -> AgentsListResponse:
-        installed = list(self._agent_loop.config.installed_agents)
-        if install and params.agent_name not in installed:
-            installed.append(params.agent_name)
-        if not install:
-            installed = [name for name in installed if name != params.agent_name]
+        self._execution.require_idle()
+        self._require_session(params.session_id)
+        agents = self._agent_loop.agent_manager
+        try:
+            change = plan_installed_agents_change(
+                self._agent_loop.config_orchestrator,
+                agents,
+                params.agent_name,
+                installed=install,
+            )
+        except AgentInstallError as exc:
+            raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
+        if change.switch_to is not None:
+            await self._agent_loop.switch_agent(change.switch_to)
+        installed = change.next
         response = await self._config_write(
             ConfigWriteParams(
                 session_id=params.session_id,
@@ -769,8 +784,17 @@ class ResourceRequestHandler:
                 ProtocolErrorCode.INTERNAL_ERROR,
                 "; ".join(response.failures) or "Configuration edit rejected",
             )
-        active, agents = project_agents(self._agent_loop)
-        return AgentsListResponse(active=active, agents=agents)
+        try:
+            verify_installed_agents_change(
+                self._agent_loop.config_orchestrator,
+                agents,
+                params.agent_name,
+                installed=install,
+            )
+        except AgentInstallError as exc:
+            raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
+        active, agents_list = project_agents(self._agent_loop)
+        return AgentsListResponse(active=active, agents=agents_list)
 
     def _tools_list(self, params: ToolsListParams) -> ToolsListResponse:
         self._require_session(params.session_id)

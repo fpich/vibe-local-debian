@@ -115,15 +115,6 @@ from vibe.utils import AgentEntrypoint
 from vibe.utils.terminal import TerminalEmulator
 
 
-def test_local_harness_options_preserves_client_positional_argument() -> None:
-    client = runtime.ClientDescriptor(info=ClientInfo(name="test", version="1"))
-
-    options = runtime.LocalHarnessOptions(client)
-
-    assert options.client is client
-    assert options.experimental_harness is False
-
-
 @pytest.mark.asyncio
 async def test_first_session_open_holds_the_lifecycle_lock() -> None:
     root = build_test_agent_loop()
@@ -2120,155 +2111,9 @@ async def test_root_config_discovery_uses_session_cwd(
     )
 
 
-def test_experimental_harness_process_selects_the_unified_harness_host(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """*Prepare*: Experimental Harness construction before client initialization.
-    *Do*: Create the selected backend Host while client metadata is unavailable.
-    *Assert*: Host selection succeeds without eagerly reading telemetry metadata.
-    """
-    # Prepare
-    pytest.importorskip("mistralai_vibe_local_harness.vibe")
-    from vibe.app_server._unified_harness_backend_adapter import (
-        UnifiedHarnessBackendHostAdapter,
-    )
-
-    selected = SimpleNamespace(
-        harness_kind="unified", configure_hook_handlers=lambda _handlers: None
-    )
-    monkeypatch.setattr(
-        runtime, "create_experimental_harness_host", lambda *_args, **_kwargs: selected
-    )
-    services = FakeSessionBackendServices()
-
-    def unavailable_client_info() -> ClientInfo:
-        raise RuntimeError("App-server client metadata is unavailable")
-
-    monkeypatch.setattr(services, "client_info", unavailable_client_info)
-
-    # Do
-    process = runtime.HarnessProcess(experimental_harness=True)
-    host = process.create_session_backend_host(services)
-
-    # Assert
-    # The process hands the app server the Vibe-side adapter, not the raw
-    # Harness Host, so the two protocol shapes only meet in one place.
-    assert isinstance(host, UnifiedHarnessBackendHostAdapter)
-    assert host.harness_kind == selected.harness_kind
-
-
-def test_default_process_selects_the_legacy_session_backend(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def explode() -> object:
-        raise AssertionError("the default path must not import the Harness")
-
-    monkeypatch.setattr(runtime, "create_experimental_harness_host", explode)
-
-    host = runtime.HarnessProcess().create_session_backend_host(
-        FakeSessionBackendServices()
-    )
-
-    assert isinstance(host, LegacySessionBackendHost)
-
-
 @pytest.mark.asyncio
-async def test_unavailable_experimental_harness_falls_back_to_legacy(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
-) -> None:
-    def unavailable(**_kwargs: object) -> object:
-        raise runtime.ExperimentalHarnessUnavailableError("not installed")
-
-    monkeypatch.setattr(runtime, "create_experimental_harness_host", unavailable)
-    process = runtime.HarnessProcess(
-        HarnessFilesManager(sources=()), experimental_harness=True
-    )
-    host = process.create_session_backend_host(FakeSessionBackendServices())
-    config = cast(
-        ConfigReadResponse,
-        (
-            await process.host_handler.dispatch(
-                "config/read",
-                ConfigReadParams(cwd=str(tmp_path)).model_dump(
-                    mode="json", by_alias=True
-                ),
-            )
-        ).response,
-    )
-
-    assert isinstance(host, LegacySessionBackendHost)
-    assert capsys.readouterr().err == ""
-    assert config.startup_issue is not None
-    assert config.startup_issue.model_dump() == {
-        "file": "--experimental-harness",
-        "message": "not installed; falling back to the legacy harness.",
-    }
-
-
 @pytest.mark.asyncio
-async def test_a_host_that_cannot_take_builtin_hooks_falls_back_to_legacy(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """A Host created but failing before the builtin-hook registry is
-    configured (a harness version without ``configure_hook_handlers``) must
-    fall back to the legacy backend with a startup issue — and must not leave
-    the unified host assigned, which would hand out the unified adapter while
-    the UI reports the legacy fallback.
-    """
-
-    def without_registry() -> object:
-        return SimpleNamespace()  # no configure_hook_handlers
-
-    monkeypatch.setattr(runtime, "create_experimental_harness_host", without_registry)
-    process = runtime.HarnessProcess(
-        HarnessFilesManager(sources=()), experimental_harness=True
-    )
-    host = process.create_session_backend_host(FakeSessionBackendServices())
-    config = cast(
-        ConfigReadResponse,
-        (
-            await process.host_handler.dispatch(
-                "config/read",
-                ConfigReadParams(cwd=str(tmp_path)).model_dump(
-                    mode="json", by_alias=True
-                ),
-            )
-        ).response,
-    )
-
-    assert isinstance(host, LegacySessionBackendHost)
-    assert process._experimental_harness_host is None
-    assert config.startup_issue is not None
-    assert config.startup_issue.model_dump() == {
-        "file": "--experimental-harness",
-        "message": (
-            "'types.SimpleNamespace' object has no attribute "
-            "'configure_hook_handlers'; falling back to the legacy harness."
-        ),
-    }
-
-
 @pytest.mark.asyncio
-async def test_available_experimental_harness_never_opens_a_legacy_runtime(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    monkeypatch.setattr(
-        runtime,
-        "create_experimental_harness_host",
-        lambda: SimpleNamespace(configure_hook_handlers=lambda _handlers: None),
-    )
-    process = runtime.HarnessProcess(experimental_harness=True)
-    request = runtime.RootOpenRequest(
-        options=SessionOptions(cwd=str(tmp_path)),
-        client_info=ClientInfo(name="test", version="1"),
-    )
-
-    with pytest.raises(
-        runtime.RuntimeConfigurationError, match="never opens a legacy runtime"
-    ):
-        await process.open_root(request)
-
-
 @pytest.mark.asyncio
 async def test_build_runtime_applies_cli_overrides_inside_harness(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -2488,7 +2333,7 @@ async def test_harness_process_configures_globals_once_and_shares_cache(
 async def test_session_config_build_starts_session_log_permission_sweep(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """The unified harness never builds the legacy loop, so the sweep starts here too."""
+    """Every session build must trigger the session log permission sweep."""
     started: list[object] = []
     monkeypatch.setattr(
         runtime, "start_restrict_session_log_permissions", started.append

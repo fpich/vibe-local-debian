@@ -1269,7 +1269,7 @@ async def test_steer_after_ended_turn_does_not_drop_queue() -> None:
 
 
 @pytest.mark.asyncio
-async def test_unified_steer_uses_atomic_rpc_and_history_event() -> None:
+async def test_steer_uses_atomic_rpc_and_history_event() -> None:
     app, backend = _blocked_app()
     async with app.run_test() as pilot:
         chat_input = app.query_one(ChatInputContainer)
@@ -1342,7 +1342,7 @@ async def test_unified_steer_uses_atomic_rpc_and_history_event() -> None:
     ],
 )
 @pytest.mark.asyncio
-async def test_unified_steer_failure_does_not_escape_submit(
+async def test_steer_failure_does_not_escape_submit(
     error: RuntimeError, shows_error: bool
 ) -> None:
     app, backend = _blocked_app()

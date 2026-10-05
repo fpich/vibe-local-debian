@@ -24,14 +24,11 @@ import pytest
 import respx
 
 from tests.app_server.backend_contract.conftest import connect_backend_contract_host
-from vibe.app_server._model import validate_wire
-from vibe.app_server._worktree_session import SessionWorktrees, WorktreeResolution
 from vibe.app_server.events import CallbackRequested
 from vibe.app_server.models import (
     CompletedEffectState,
     PublicEffectEntry,
     PublicMessageEntry,
-    TextContentBlock,
     WorktreeEffectDetail,
     WorktreeEffectInput,
 )
@@ -40,10 +37,8 @@ from vibe.app_server.protocol import (
     ClientCapabilities,
     NewWorktreeInput,
     SessionOptions,
-    TurnStartParams,
-    TurnStartResponse,
 )
-from vibe.app_server.session import AppServerSession, AppServerTurnError
+from vibe.app_server.session import AppServerSession
 from vibe.core.git.worktree import ManagedWorktree
 
 
@@ -73,12 +68,9 @@ def _init_repo(root: Path) -> Repo:
 
 
 @pytest.mark.asyncio
-async def test_a_session_starts_in_the_worktree_it_asked_for(
-    tmp_path: Path, experimental_harness: bool
-) -> None:
+async def test_a_session_starts_in_the_worktree_it_asked_for(tmp_path: Path) -> None:
     _init_repo(tmp_path)
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path),
             workspace_roots=[str(tmp_path)],
@@ -111,7 +103,7 @@ def _write_post_checkout_hook(repo: Repo, marker: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_a_session_starting_a_worktree_does_not_run_repository_hooks(
-    tmp_path: Path, experimental_harness: bool
+    tmp_path: Path,
 ) -> None:
     # Worktree creation happens before any trust prompt, so a hostile
     # post-checkout hook would run with the user's full privileges. Both
@@ -134,7 +126,6 @@ async def test_a_session_starting_a_worktree_does_not_run_repository_hooks(
     marker.unlink()
 
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path),
             workspace_roots=[str(tmp_path)],
@@ -153,14 +144,11 @@ async def test_a_session_starting_a_worktree_does_not_run_repository_hooks(
 
 
 @pytest.mark.asyncio
-async def test_an_auto_worktree_is_still_a_worktree(
-    tmp_path: Path, experimental_harness: bool
-) -> None:
+async def test_an_auto_worktree_is_still_a_worktree(tmp_path: Path) -> None:
     # The composer's default. The server names it, which is the ordinary case
     # rather than an edge one.
     _init_repo(tmp_path)
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path),
             workspace_roots=[str(tmp_path)],
@@ -179,71 +167,14 @@ async def test_an_auto_worktree_is_still_a_worktree(
 
 
 @pytest.mark.asyncio
-async def test_first_turn_response_does_not_wait_for_worktree_creation(
-    tmp_path: Path, experimental_harness: bool, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    if not experimental_harness:
-        pytest.skip("legacy creates the worktree before session/start")
-
-    _init_repo(tmp_path)
-    setup_started = asyncio.Event()
-    release_setup = asyncio.Event()
-    original = SessionWorktrees.resolve_for_start
-
-    async def blocked_resolve(
-        worktrees: SessionWorktrees, options: SessionOptions
-    ) -> WorktreeResolution:
-        if options.worktree is None:
-            return await original(worktrees, options)
-        setup_started.set()
-        await release_setup.wait()
-        return await original(worktrees, options)
-
-    monkeypatch.setattr(SessionWorktrees, "resolve_for_start", blocked_resolve)
-    connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(
-            cwd=str(tmp_path),
-            workspace_roots=[str(tmp_path)],
-            worktree=NewWorktreeInput(branch="jun/deferred", name="deferred"),
-        ),
-        capabilities=ClientCapabilities(),
-    )
-    try:
-        session = await connection.host.start_session()
-        await setup_started.wait()
-
-        response = validate_wire(
-            TurnStartResponse,
-            await asyncio.wait_for(
-                connection.client.request(
-                    "turn/start",
-                    TurnStartParams(
-                        session_id=session.session_id,
-                        message=[TextContentBlock(text="start now")],
-                        client_user_message_id="message-1",
-                    ),
-                ),
-                timeout=1,
-            ),
-        )
-
-        assert response.turn.status.value == "in_progress"
-        assert not release_setup.is_set()
-    finally:
-        release_setup.set()
-        await connection.host.close()
-
-
 @pytest.mark.asyncio
 async def test_a_session_without_a_worktree_runs_where_it_was_told(
-    tmp_path: Path, experimental_harness: bool
+    tmp_path: Path,
 ) -> None:
     # The other half of the contract: naming no worktree still has to leave the
     # session where the caller put it, on both backends.
     _init_repo(tmp_path)
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path), workspace_roots=[str(tmp_path)]
         ),
@@ -261,7 +192,6 @@ async def test_a_session_without_a_worktree_runs_where_it_was_told(
 @pytest.mark.parametrize("file_location", ["extra", "checkout"])
 async def test_a_worktree_preserves_extra_roots_but_not_the_original_checkout(
     tmp_path: Path,
-    experimental_harness: bool,
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[..., httpx.Response],
     file_location: str,
@@ -282,11 +212,7 @@ async def test_a_worktree_preserves_extra_roots_but_not_the_original_checkout(
                         "index": 0,
                         "function": {
                             "name": "read_file",
-                            "arguments": json.dumps({
-                                "path" if experimental_harness else "file_path": str(
-                                    document
-                                )
-                            }),
+                            "arguments": json.dumps({"file_path": str(document)}),
                         },
                     }
                 ],
@@ -295,7 +221,6 @@ async def test_a_worktree_preserves_extra_roots_but_not_the_original_checkout(
         ]
     )
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(checkout),
             workspace_roots=[str(checkout), str(extra)],
@@ -331,13 +256,12 @@ async def test_a_worktree_preserves_extra_roots_but_not_the_original_checkout(
 
 @pytest.mark.asyncio
 async def test_a_session_holds_its_worktree_and_lets_go_on_close(
-    tmp_path: Path, experimental_harness: bool
+    tmp_path: Path,
 ) -> None:
     # The hold is what retention pruning reads to avoid deleting a live
     # worktree. A backend that never marks its own can lose its active checkout.
     _init_repo(tmp_path)
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path),
             workspace_roots=[str(tmp_path)],
@@ -367,7 +291,6 @@ async def test_a_session_holds_its_worktree_and_lets_go_on_close(
 async def test_the_first_tool_call_runs_inside_the_worktree(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[..., httpx.Response],
-    experimental_harness: bool,
     tmp_path: Path,
 ) -> None:
     _init_repo(tmp_path)
@@ -393,7 +316,6 @@ async def test_the_first_tool_call_runs_inside_the_worktree(
         ]
     )
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path),
             workspace_roots=[str(tmp_path)],
@@ -437,39 +359,5 @@ async def test_the_first_tool_call_runs_inside_the_worktree(
         )
         assert f"Absolute path: {cwd}" in system_message
         assert f"Absolute path: {tmp_path}" not in system_message
-    finally:
-        await connection.host.close()
-
-
-@pytest.mark.asyncio
-async def test_a_worktree_that_cannot_be_raised_refuses_the_turn(
-    tmp_path: Path, experimental_harness: bool
-) -> None:
-    """A session that asked to be isolated does not quietly run unisolated.
-
-    Skipped on legacy, which raises the worktree before the session exists and
-    so fails the start instead -- the same refusal, one step earlier.
-    """
-    if not experimental_harness:
-        pytest.skip("the legacy runtime fails the start instead")
-
-    # No repository here, so there is nothing to raise a worktree from.
-    connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(
-            cwd=str(tmp_path),
-            workspace_roots=[str(tmp_path)],
-            worktree=NewWorktreeInput(branch="jun/nowhere", name="nowhere"),
-        ),
-        capabilities=ClientCapabilities(),
-    )
-    try:
-        session = await connection.host.start_session()
-
-        assert _cwd(session) == tmp_path
-        # The turn is accepted before deferred setup finishes, then fails as a
-        # visible turn instead of making session creation wait for the checkout.
-        with pytest.raises(AppServerTurnError):
-            _ = [event async for event in session.act("write something")]
     finally:
         await connection.host.close()

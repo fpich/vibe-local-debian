@@ -322,7 +322,6 @@ async def test_fork_rewind_attaches_a_truncated_child_and_keeps_the_source_whole
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[[str], httpx.Response],
     backend_contract_persistent_session: AppServerSession,
-    experimental_harness: bool,
 ) -> None:
     backend_contract_mistral_api.mock(
         side_effect=[
@@ -349,9 +348,7 @@ async def test_fork_rewind_attaches_a_truncated_child_and_keeps_the_source_whole
     # would read it: from storage, once this connection has let go of it.
     await backend_contract_persistent_session.close()
     connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(),
-        capabilities=ClientCapabilities(),
+        session_options=SessionOptions(), capabilities=ClientCapabilities()
     )
     try:
         source = await connection.host.read_session(source_session_id)

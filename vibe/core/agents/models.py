@@ -112,7 +112,6 @@ SMART_APPROVE = AgentProfile(
     AgentSafety.SMART,
     # No static permission overrides: a model classifier gates each call via the
     # runtime "classify" tool mode (Unified Harness only). The runtime derives that
-    # gate from the active agent; see build_unified_session_context / _rust_tool_modes.
     overrides={"disabled_tools": ["exit_plan_mode"]},
 )
 

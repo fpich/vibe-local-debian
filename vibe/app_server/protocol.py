@@ -827,7 +827,6 @@ class RuntimeSnapshot(ProtocolModel):
     connectors: ConnectorCounts
     mcp: MCPState
     bypass_tool_permissions: bool = False
-    experimental_harness: bool = False
 
 
 class PluginInfoParams(ProtocolModel):
@@ -993,7 +992,6 @@ class ConfigReadResponse(ProtocolModel):
     hooks_count: int = 0
     mcp_servers_total: int = 0
     mcp_servers_enabled: int = 0
-    harness_selection_source: str | None = None
 
 
 class AgentInstallParams(ProtocolModel):

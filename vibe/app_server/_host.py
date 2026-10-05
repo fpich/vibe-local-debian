@@ -35,7 +35,7 @@ from vibe.app_server._workspace import (
     read_workspace_trust,
 )
 from vibe.app_server._worktree_session import SessionWorktrees
-from vibe.app_server.models import ConfigIssue, IdleSessionStatus, PublicSession
+from vibe.app_server.models import IdleSessionStatus, PublicSession
 from vibe.app_server.protocol import (
     AgentsListParams,
     AgentsListResponse,
@@ -165,15 +165,8 @@ _HOST_METHODS = frozenset({
 
 
 class HostRequestHandler:
-    def __init__(
-        self,
-        harness_files: HarnessFilesManager,
-        startup_issue: ConfigIssue | None = None,
-        harness_selection_source: str | None = None,
-    ) -> None:
+    def __init__(self, harness_files: HarnessFilesManager) -> None:
         self._harness_files = harness_files
-        self._startup_issue = startup_issue
-        self._harness_selection_source = harness_selection_source
         self._project_links = ProjectLinksController()
 
     def handles(self, method: str) -> bool:
@@ -345,12 +338,10 @@ class HostRequestHandler:
 
         return ConfigReadResponse(
             config=view,
-            startup_issue=self._startup_issue,
             skills_count=skills_count,
             hooks_count=hooks_count,
             mcp_servers_total=mcp_servers_total,
             mcp_servers_enabled=mcp_servers_enabled,
-            harness_selection_source=self._harness_selection_source,
         )
 
     async def _dispatch_project_links(

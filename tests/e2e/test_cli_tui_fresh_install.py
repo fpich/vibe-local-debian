@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import os
 from pathlib import Path
-import platform
 import subprocess
 import sys
 import zipfile
@@ -37,17 +36,12 @@ def _build_wheel(dist_dir: Path) -> Path:
     )
     wheels = sorted(dist_dir.glob("mistral_vibe-*.whl"))
     assert len(wheels) == 1
-    assert "-cp312-abi3-" in wheels[0].name
-    # The global test fixture mocks sys.platform to Linux; platform.system()
-    # reflects the host that actually produced the wheel.
-    if platform.system() == "Linux":
-        assert wheels[0].name.endswith(
-            f"-cp312-abi3-manylinux_2_28_{platform.machine()}.whl"
-        )
+    assert "-py3-none-any-" in wheels[0].name
     with zipfile.ZipFile(wheels[0]) as wheel:
         names = wheel.namelist()
-        assert any(
-            name.startswith("mistralai_vibe_local_harness/_native.") for name in names
+        assert "vibe/__init__.py" in names
+        assert not any(
+            name.startswith("mistralai_vibe_local_harness/") for name in names
         )
     return wheels[0]
 

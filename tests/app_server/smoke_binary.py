@@ -55,13 +55,13 @@ async def read_response(
         return response
 
 
-async def smoke_binary(binary: Path, *, experimental_harness: bool) -> None:
+async def smoke_binary(binary: Path) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         env = os.environ.copy()
         env["VIBE_HOME"] = str(Path(tmp) / ".vibe")
         env["VIBE_TEST_DISABLE_KEYRING"] = "1"
         env["MISTRAL_API_KEY"] = "smoke-test"
-        arguments = ["--experimental-harness"] if experimental_harness else []
+        arguments: list[str] = []
         proc = await asyncio.create_subprocess_exec(
             str(binary),
             *arguments,
@@ -99,28 +99,6 @@ async def smoke_binary(binary: Path, *, experimental_harness: bool) -> None:
                 else:
                     print("PASS: app-server initialize")
 
-            if failure is None and experimental_harness:
-                await send_message(
-                    proc, {"jsonrpc": "2.0", "method": "initialized", "params": {}}
-                )
-                await send_message(
-                    proc,
-                    {
-                        "jsonrpc": "2.0",
-                        "id": "session-start",
-                        "method": "session/start",
-                        "params": {"agentConfig": {"cwd": tmp}},
-                    },
-                )
-                response = await read_response(proc, "session-start")
-                result = response.get("result")
-                state = result.get("state") if isinstance(result, dict) else None
-                session = state.get("session") if isinstance(state, dict) else None
-                session_id = session.get("id") if isinstance(session, dict) else None
-                if not isinstance(session_id, str) or not session_id:
-                    failure = f"unexpected session/start response: {response}"
-                else:
-                    print("PASS: experimental Harness session/start")
         except (TimeoutError, json.JSONDecodeError, RuntimeError) as error:
             failure = f"binary smoke test failed: {error}"
         finally:
@@ -134,7 +112,6 @@ async def smoke_binary(binary: Path, *, experimental_harness: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("binary_dir", type=Path)
-    parser.add_argument("--experimental-harness", action="store_true")
     args = parser.parse_args()
 
     binary_dir = args.binary_dir
@@ -147,7 +124,7 @@ def main() -> None:
     if platform.system() != "Windows":
         binary.chmod(0o755)
 
-    asyncio.run(smoke_binary(binary, experimental_harness=args.experimental_harness))
+    asyncio.run(smoke_binary(binary))
 
 
 if __name__ == "__main__":

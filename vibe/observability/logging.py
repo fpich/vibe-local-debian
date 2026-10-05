@@ -14,11 +14,6 @@ from vibe.config_values import DEFAULT_LOG_LEVEL
 
 logger = logging.getLogger("vibe")
 
-# The experimental Unified Harness Runtime logs under its own top-level logger, which
-# propagates to the root rather than to "vibe". Route it to the same file handler so
-# harness diagnostics (e.g. smart-approve verdicts) land in vibe.log.
-_HARNESS_LOGGER_NAME = "mistralai_vibe_local_harness"
-
 
 def log_model_call_success(
     alias: str,
@@ -74,21 +69,11 @@ class _VibeFileHandler(OwnerOnlyRotatingFileHandler):
     pass
 
 
-# The Unified Harness runtime logs under this top-level logger. It is not a child
-# of the "vibe" logger, so it propagates to the root logger -- which carries no Vibe
-# file handler -- and its diagnostics never reach vibe.log. Capture it alongside
-# Vibe's own logger so `--experimental-harness` sessions are observable.
-_HARNESS_LOGGER_NAME = "mistralai_vibe_local_harness"
-
-
 def init_file_logging(
     log_file: Path, *, target_logger: logging.Logger = logger
 ) -> None:
     resolved_log_file = log_file.expanduser().resolve()
     targets = [target_logger]
-    harness_logger = logging.getLogger(_HARNESS_LOGGER_NAME)
-    if harness_logger not in targets:
-        targets.append(harness_logger)
 
     shared_handler: _VibeFileHandler | None = None
     for candidate in targets:

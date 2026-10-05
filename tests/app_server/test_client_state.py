@@ -28,7 +28,6 @@ def _snapshot(mcp: MCPState) -> RuntimeSnapshot:
             connectors=SimpleNamespace(),
             mcp=mcp,
             bypass_tool_permissions=False,
-            experimental_harness=False,
         ),
     )
 

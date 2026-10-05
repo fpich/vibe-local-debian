@@ -121,14 +121,8 @@ async def _assert_projection_agreement(
     assert accepted.route_revision
 
 
-def _backend_class(experimental_harness: bool) -> type[Any]:
-    if not experimental_harness:
-        return LegacySessionBackend
-    from vibe.app_server._unified_harness_backend_adapter import (
-        UnifiedHarnessBackendAdapter,
-    )
-
-    return UnifiedHarnessBackendAdapter
+def _backend_class() -> type[Any]:
+    return LegacySessionBackend
 
 
 def _record_incoming(
@@ -167,7 +161,6 @@ async def test_connector_catalog_default_selection_matches_production_compositio
     backend_contract_connection: BackendContractConnection,
     backend_contract_mistral_api,
     respx_mock: respx.MockRouter,
-    experimental_harness: bool,
 ) -> None:
     """*Prepare*: A ready and an authorization-actionable connector have no explicit config.
     *Do*: Start the selected production composition and read its canonical catalog.
@@ -189,8 +182,8 @@ async def test_connector_catalog_default_selection_matches_production_compositio
             )
         )
 
-        expected_ready = "connected" if experimental_harness else "disabled"
-        expected_oauth = "needs_auth" if experimental_harness else "disabled"
+        expected_ready = "disabled"
+        expected_oauth = "disabled"
         assert response.catalog.catalog_revision
         assert response.catalog.disposition == "memory"
         assert _source(response, "github").status == expected_ready
@@ -205,7 +198,7 @@ async def test_connector_catalog_default_selection_matches_production_compositio
             )
         )
         assert compatibility.counts.total == 2
-        assert compatibility.counts.connected == int(experimental_harness)
+        assert compatibility.counts.connected == 0
         await _assert_projection_agreement(session, response)
     finally:
         await session.close()
@@ -245,7 +238,6 @@ async def test_public_mcp_resource_combines_connector_sources(
     backend_contract_connection: BackendContractConnection,
     backend_contract_mistral_api,
     respx_mock: respx.MockRouter,
-    experimental_harness: bool,
 ) -> None:
     """*Prepare*: The selected backend has one accepted connector source.
     *Do*: Read it through the shared MCP client resource.
@@ -262,11 +254,9 @@ async def test_public_mcp_resource_combines_connector_sources(
             source for source in state.sources if source.kind is MCPSourceKind.CONNECTOR
         )
         assert connector.name == "github"
-        assert connector.status.value == (
-            "connected" if experimental_harness else "disabled"
-        )
+        assert connector.status.value == ("disabled")
         assert [(tool.name, tool.enabled) for tool in connector.tools] == [
-            ("search", experimental_harness)
+            ("search", False)
         ]
     finally:
         await session.close()
@@ -277,7 +267,6 @@ async def test_connector_catalog_explicit_toggle_overrides_each_process_default(
     backend_contract_connection: BackendContractConnection,
     backend_contract_mistral_api,
     respx_mock: respx.MockRouter,
-    experimental_harness: bool,
 ) -> None:
     """*Prepare*: One ready connector starts with the backend-specific absent-config default.
     *Do*: Persist the opposite explicit source selection against the accepted session.
@@ -289,7 +278,7 @@ async def test_connector_catalog_explicit_toggle_overrides_each_process_default(
         _payload(_connector("github/raw", "github")),
     )
     try:
-        disabled = experimental_harness
+        disabled = False
         mutation = ConnectorCatalogMutationResponse.model_validate(
             await backend_contract_connection.client.request(
                 "connector_catalog/toggle",
@@ -404,7 +393,6 @@ async def test_sessionless_effective_toggle_conflicts_before_persistence(
     backend_contract_connection: BackendContractConnection,
     backend_contract_mistral_api,
     respx_mock: respx.MockRouter,
-    experimental_harness: bool,
 ) -> None:
     """A mutation that changes the live effective selection requires a target."""
     session, bootstrap_route = await _open_connector_session(
@@ -422,9 +410,7 @@ async def test_sessionless_effective_toggle_conflicts_before_persistence(
         with pytest.raises(AppServerResponseError) as exc_info:
             await backend_contract_connection.client.request(
                 "connector_catalog/toggle",
-                ConnectorCatalogToggleParams(
-                    alias="github", disabled=experimental_harness
-                ),
+                ConnectorCatalogToggleParams(alias="github", disabled=False),
             )
         after = ConnectorCatalogReadResponse.model_validate(
             await backend_contract_connection.client.request(
@@ -596,7 +582,6 @@ async def test_connector_toggle_persistence_and_convergence_ordering(
     backend_contract_connection: BackendContractConnection,
     backend_contract_mistral_api,
     respx_mock: respx.MockRouter,
-    experimental_harness: bool,
     monkeypatch: pytest.MonkeyPatch,
     change: str,
 ) -> None:
@@ -617,7 +602,7 @@ async def test_connector_toggle_persistence_and_convergence_ordering(
                 session_id=session.session_id, alias="github", disabled=initial_disabled
             ),
         )
-        backend_type = _backend_class(experimental_harness)
+        backend_type = _backend_class()
         events: list[str] = []
         original_persist = connector_catalog_module.persist_mcp_toggle
         original_reconfigure = backend_type.reconfigure_connectors
@@ -697,7 +682,6 @@ async def test_terminal_connector_rejection_is_not_retried_until_revision_change
     backend_contract_connection: BackendContractConnection,
     backend_contract_mistral_api,
     respx_mock: respx.MockRouter,
-    experimental_harness: bool,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A deterministic rejection is terminal for its catalog/selection pair."""
@@ -713,7 +697,7 @@ async def test_terminal_connector_rejection_is_not_retried_until_revision_change
                 session_id=session.session_id, alias="github", disabled=True
             ),
         )
-        backend_type = _backend_class(experimental_harness)
+        backend_type = _backend_class()
         original_reconfigure = backend_type.reconfigure_connectors
         attempted_revisions: list[tuple[str, str]] = []
 

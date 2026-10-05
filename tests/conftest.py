@@ -60,15 +60,6 @@ _LOCAL_XDIST_GROUPS = {
 }
 
 
-def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption(
-        "--experimental-harness",
-        action="store_true",
-        default=False,
-        help="Run backend contract tests with the Unified Harness backend.",
-    )
-
-
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     local_run = not os.environ.get("BUILDKITE") and not os.environ.get("GITHUB_ACTIONS")
@@ -90,11 +81,6 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
             else "subprocess_cli"
         )
         item.add_marker(pytest.mark.xdist_group(name=group))
-
-
-@pytest.fixture
-def experimental_harness(pytestconfig: pytest.Config) -> bool:
-    return bool(pytestconfig.getoption("--experimental-harness"))
 
 
 class _EmptyKeyring(KeyringBackend):

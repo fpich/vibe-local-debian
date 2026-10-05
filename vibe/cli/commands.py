@@ -24,7 +24,6 @@ HIDDEN_COMMANDS: frozenset[str] = frozenset({
 @dataclass(frozen=True)
 class CommandContext:
     registry_skills_enabled: bool = False
-    experimental_harness: bool = False
 
 
 CommandAvailability = Callable[[CommandContext], bool]
@@ -191,19 +190,16 @@ class CommandRegistry:
                 aliases=frozenset(["/plugins"]),
                 description="Display the plugins this session is running",
                 handler="_show_plugins",
-                is_available=lambda ctx: ctx.experimental_harness,
             ),
             "reload-plugins": Command(
                 aliases=frozenset(["/reload-plugins"]),
                 description="Re-pin this session's plugins and report what changed",
                 handler="_reload_plugins",
-                is_available=lambda ctx: ctx.experimental_harness,
             ),
             "todo": Command(
                 aliases=frozenset(["/todo"]),
                 description="Show the current todo list",
                 handler="_show_todos",
-                is_available=lambda ctx: ctx.experimental_harness,
             ),
             "voice": Command(
                 aliases=frozenset(["/voice"]),

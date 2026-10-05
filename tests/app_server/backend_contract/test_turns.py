@@ -29,7 +29,6 @@ from vibe.app_server.models import (
     PublicHistoryEntry,
     PublicMessageEntry,
     ResourceContentBlock,
-    SubagentEffectDetail,
     TextContentBlock,
     TurnErrorCode,
 )
@@ -88,121 +87,15 @@ async def test_turn_streams_public_events_over_json_rpc(
 
 
 @pytest.mark.asyncio
-async def test_stateful_subagent_runs_through_the_backend(
-    backend_contract_mistral_api: respx.Route,
-    backend_contract_mistral_response: Callable[..., httpx.Response],
-    experimental_harness: bool,
-    tmp_path,
-) -> None:
-    if not experimental_harness:
-        pytest.skip("stateful subagents require the Unified Harness backend")
-
-    requests: list[dict[str, object]] = []
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        payload = json.loads(request.content)
-        requests.append(payload)
-        messages = payload.get("messages", [])
-        serialized_messages = json.dumps(messages)
-        user_messages = json.dumps([
-            message for message in messages if message.get("role") == "user"
-        ])
-        if "Investigate the local Harness marker" in user_messages:
-            return backend_contract_mistral_response("Child found the marker.")
-        if "call_stateful_subagent" in serialized_messages:
-            return backend_contract_mistral_response("Parent started the subagent.")
-        if "call_find_subagent_tools" in serialized_messages:
-            return backend_contract_mistral_response(
-                "",
-                tool_calls=[
-                    {
-                        "id": "call_stateful_subagent",
-                        "index": 0,
-                        "function": {
-                            "name": "run_typescript",
-                            "arguments": json.dumps({
-                                "code": (
-                                    "async function main() { return tools.agent.spawn({"
-                                    "agentName: 'researcher', "
-                                    "message: 'Investigate the local Harness marker'"
-                                    "}); }"
-                                )
-                            }),
-                        },
-                    }
-                ],
-            )
-        return backend_contract_mistral_response(
-            "",
-            tool_calls=[
-                {
-                    "id": "call_find_subagent_tools",
-                    "index": 0,
-                    "function": {
-                        "name": "search_tool_functions",
-                        "arguments": json.dumps({
-                            "mode": "best_match",
-                            "query": "start a subagent",
-                        }),
-                    },
-                }
-            ],
-        )
-
-    backend_contract_mistral_api.mock(side_effect=respond)
-    connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(cwd=str(tmp_path), auto_approve=True),
-        capabilities=ClientCapabilities(),
-    )
-    try:
-        session = await connection.host.open_session()
-
-        _ = [event async for event in session.act("Delegate this investigation")]
-        for _ in range(100):
-            if any(
-                "Investigate the local Harness marker"
-                in json.dumps(request.get("messages", []))
-                for request in requests
-            ):
-                break
-            await asyncio.sleep(0.01)
-
-        effect = next(
-            entry
-            for entry in session.history
-            if isinstance(entry, PublicEffectEntry)
-            and isinstance(entry.detail, SubagentEffectDetail)
-        )
-        assert isinstance(effect.state, CompletedEffectState)
-        assert isinstance(effect.detail, SubagentEffectDetail)
-        assert effect.detail.child_session_id is not None
-        assert any(
-            "Investigate the local Harness marker"
-            in json.dumps(request.get("messages", []))
-            for request in requests
-        )
-        assert any(
-            isinstance(entry, PublicMessageEntry)
-            and entry.text == "Parent started the subagent."
-            for entry in session.history
-        )
-    finally:
-        await connection.host.close()
-
-
 @pytest.mark.asyncio
 async def test_read_file_tool_call_runs_through_the_backend(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[..., httpx.Response],
-    experimental_harness: bool,
     tmp_path,
 ) -> None:
     target = tmp_path / "notes.txt"
     target.write_text("from file\n", encoding="utf-8")
-    tool_arguments = (
-        {"path": str(target)} if experimental_harness else {"file_path": str(target)}
-    )
+    tool_arguments = {"file_path": str(target)}
     backend_contract_mistral_api.mock(
         side_effect=[
             backend_contract_mistral_response(
@@ -222,7 +115,6 @@ async def test_read_file_tool_call_runs_through_the_backend(
         ]
     )
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path), enabled_tools=["read_file"], auto_approve=True
         ),
@@ -252,7 +144,6 @@ async def test_read_file_tool_call_runs_through_the_backend(
 async def test_shell_tool_call_runs_through_the_backend(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[..., httpx.Response],
-    experimental_harness: bool,
     tmp_path,
 ) -> None:
     backend_contract_mistral_api.mock(
@@ -277,7 +168,6 @@ async def test_shell_tool_call_runs_through_the_backend(
         ]
     )
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(
             cwd=str(tmp_path), enabled_tools=["bash"], auto_approve=True
         ),
@@ -307,7 +197,6 @@ async def test_shell_tool_call_runs_through_the_backend(
 async def test_shell_tool_call_waits_for_approval(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[..., httpx.Response],
-    experimental_harness: bool,
     tmp_path,
 ) -> None:
     backend_contract_mistral_api.mock(
@@ -332,7 +221,6 @@ async def test_shell_tool_call_waits_for_approval(
         ]
     )
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(cwd=str(tmp_path), enabled_tools=["bash"]),
         capabilities=ClientCapabilities(callback_kinds=["approval"]),
     )
@@ -370,7 +258,6 @@ async def test_shell_tool_call_waits_for_approval(
 async def test_interrupt_closes_shell_approval_callback(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[..., httpx.Response],
-    experimental_harness: bool,
     tmp_path,
 ) -> None:
     backend_contract_mistral_api.mock(
@@ -392,7 +279,6 @@ async def test_interrupt_closes_shell_approval_callback(
         )
     )
     connection = await connect_backend_contract_host(
-        experimental_harness,
         session_options=SessionOptions(cwd=str(tmp_path), enabled_tools=["bash"]),
         capabilities=ClientCapabilities(callback_kinds=["approval"]),
     )

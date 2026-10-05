@@ -318,7 +318,7 @@ def test_current_date_placeholder_substituted_in_prompt(
     assert "$current_date" not in prompt
 
 
-def test_v3_system_prompt_variant_is_available_to_legacy_harness(
+def test_v3_system_prompt_variant_is_available(
     build_config: ConfigBuilder, load_orchestrator: OrchestratorLoader[VibeConfigSchema]
 ) -> None:
     config = build_config(

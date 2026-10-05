@@ -2,13 +2,6 @@ from __future__ import annotations
 
 import sys
 
-if sys.argv[1:2] == ["--internal-posix-pty-helper"]:
-    from mistralai_vibe_local_harness.vibe._processes._posix_helper import (
-        main as _pty_helper_main,
-    )
-
-    raise SystemExit(_pty_helper_main(sys.argv[2:]))
-
 # isort: off
 # Capture the process-start monotonic timestamp as early as possible (before
 # any heavier imports below) so the vibe.startup metric measures from true
@@ -22,10 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from vibe import __version__
-from vibe._experimental_harness import (
-    add_experimental_harness_argument,
-    add_smart_approve_argument,
-)
 
 # Anything heavier than argparse is imported inside the functions below, after
 # argument parsing, so that --help/--version don't pay for the config stack
@@ -127,15 +116,12 @@ def parse_arguments() -> argparse.Namespace:
         "'default_agent' config setting in both interactive and programmatic "
         "(-p/--prompt) mode.",
     )
-    harness_group = parser.add_mutually_exclusive_group()
-    add_experimental_harness_argument(parser, group=harness_group)
-    harness_group.add_argument(
-        "--legacy-harness",
+    parser.add_argument(
+        "--smart-approve",
         action="store_true",
         default=False,
-        help="Force the legacy Python harness, overriding the GrowthBook rollout.",
+        help="Use the smart-approve agent mode (classify tool calls, auto-run safe ones).",
     )
-    add_smart_approve_argument(parser)
     parser.add_argument(
         "--auto-approve",
         "--yolo",
@@ -207,11 +193,7 @@ def parse_arguments() -> argparse.Namespace:
         cli_args[0] = "--check-upgrade"
     args = parser.parse_args(cli_args)
     # --smart-approve selects the smart-approve mode unless an explicit --agent wins.
-    # Smart approve is a Unified Harness classify gate with no legacy equivalent, so
-    # the flag also turns on the experimental harness -- otherwise a legacy session
-    # would just relabel the mode and run ordinary permissions.
     if getattr(args, "smart_approve", False):
-        args.experimental_harness = True
         if args.agent is None:
             args.agent = "smart-approve"
     return args

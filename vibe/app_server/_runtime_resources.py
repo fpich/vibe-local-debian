@@ -389,10 +389,6 @@ class RuntimeResource:
         return self._state.bypass_tool_permissions
 
     @property
-    def experimental_harness(self) -> bool:
-        return self._state.experimental_harness
-
-    @property
     def connectors(self) -> ConnectorCounts:
         return self._state.connectors
 

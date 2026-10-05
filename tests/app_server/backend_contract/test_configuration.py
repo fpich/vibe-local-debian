@@ -136,7 +136,6 @@ async def test_config_subscribers_observe_updates_until_unsubscribed(
 async def test_active_model_is_pinned_on_first_turn_and_restored_on_resume(
     config_dir: Path,
     tmp_path: Path,
-    experimental_harness: bool,
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[[str], httpx.Response],
 ) -> None:
@@ -156,9 +155,7 @@ async def test_active_model_is_pinned_on_first_turn_and_restored_on_resume(
     )
 
     connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(),
-        capabilities=ClientCapabilities(),
+        session_options=SessionOptions(), capabilities=ClientCapabilities()
     )
     session = await connection.host.open_session()
     try:
@@ -168,12 +165,7 @@ async def test_active_model_is_pinned_on_first_turn_and_restored_on_resume(
             {"active_model": "alternate"}, reload_runtime=True
         )
         assert session.resources.config.current.active_model.alias == "alternate"
-        assert (
-            _session_model_is_persisted(
-                session_root, session.session_id, experimental_harness
-            )
-            is False
-        )
+        assert _session_model_is_persisted(session_root, session.session_id) is False
         await session.resources.config.update({"active_model": ""}, reload_runtime=True)
         _ = [event async for event in session.act("pin this model")]
         session_id = session.session_id
@@ -183,25 +175,15 @@ async def test_active_model_is_pinned_on_first_turn_and_restored_on_resume(
             {"active_model": "alternate"}, reload_runtime=True
         )
         assert session.resources.config.current.active_model.alias == "alternate"
-        assert _stored_active_model(session_root, session_id, experimental_harness) == (
-            default_model
-        )
+        assert _stored_active_model(session_root, session_id) == (default_model)
         _ = [event async for event in session.act("persist the alternate model")]
-        assert _stored_active_model(session_root, session_id, experimental_harness) == (
-            "alternate"
-        )
+        assert _stored_active_model(session_root, session_id) == ("alternate")
 
         await session.resources.config.update({"active_model": ""}, reload_runtime=True)
         assert session.resources.config.current.active_model.alias == default_model
-        assert (
-            _stored_active_model(session_root, session_id, experimental_harness)
-            == "alternate"
-        )
+        assert _stored_active_model(session_root, session_id) == "alternate"
         _ = [event async for event in session.act("persist the default model")]
-        assert (
-            _stored_active_model(session_root, session_id, experimental_harness)
-            == default_model
-        )
+        assert _stored_active_model(session_root, session_id) == default_model
     finally:
         await session.close()
 
@@ -211,9 +193,7 @@ async def test_active_model_is_pinned_on_first_turn_and_restored_on_resume(
     config_file.write_text(tomli_w.dumps(config), encoding="utf-8")
 
     resumed_connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(),
-        capabilities=ClientCapabilities(),
+        session_options=SessionOptions(), capabilities=ClientCapabilities()
     )
     resumed = await resumed_connection.host.resume_session(session_id)
     try:
@@ -233,7 +213,6 @@ async def test_active_model_is_pinned_on_first_turn_and_restored_on_resume(
 async def test_explicit_active_model_target_controls_session_pin_update(
     config_dir: Path,
     tmp_path: Path,
-    experimental_harness: bool,
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[[str], httpx.Response],
     target_layer: str,
@@ -255,18 +234,13 @@ async def test_explicit_active_model_target_controls_session_pin_update(
     )
 
     connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(),
-        capabilities=ClientCapabilities(),
+        session_options=SessionOptions(), capabilities=ClientCapabilities()
     )
     session = await connection.host.open_session()
     try:
         _ = [event async for event in session.act("pin this model")]
         pinned_model = session.resources.config.current.active_model.alias
-        assert (
-            _stored_active_model(session_root, session.session_id, experimental_harness)
-            == pinned_model
-        )
+        assert _stored_active_model(session_root, session.session_id) == pinned_model
 
         await session.resources.config.update(
             {"active_model": "alternate"},
@@ -276,16 +250,10 @@ async def test_explicit_active_model_target_controls_session_pin_update(
 
         active_model = "alternate" if updates_session_pin else pinned_model
         assert session.resources.config.current.active_model.alias == active_model
-        assert (
-            _stored_active_model(session_root, session.session_id, experimental_harness)
-            == pinned_model
-        )
+        assert _stored_active_model(session_root, session.session_id) == pinned_model
 
         _ = [event async for event in session.act("persist the selected model")]
-        assert (
-            _stored_active_model(session_root, session.session_id, experimental_harness)
-            == active_model
-        )
+        assert _stored_active_model(session_root, session.session_id) == active_model
     finally:
         await session.close()
 
@@ -299,7 +267,6 @@ async def test_explicit_active_model_target_controls_session_pin_update(
 async def test_removed_session_active_model_falls_back_to_default(
     config_dir: Path,
     tmp_path: Path,
-    experimental_harness: bool,
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[[str], httpx.Response],
 ) -> None:
@@ -325,18 +292,13 @@ async def test_removed_session_active_model_falls_back_to_default(
     )
 
     connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(),
-        capabilities=ClientCapabilities(),
+        session_options=SessionOptions(), capabilities=ClientCapabilities()
     )
     session = await connection.host.open_session()
     try:
         _ = [event async for event in session.act("pin the removed model")]
         session_id = session.session_id
-        assert (
-            _stored_active_model(session_root, session_id, experimental_harness)
-            == "removed-model"
-        )
+        assert _stored_active_model(session_root, session_id) == "removed-model"
     finally:
         await session.close()
 
@@ -348,9 +310,7 @@ async def test_removed_session_active_model_falls_back_to_default(
     config_file.write_text(tomli_w.dumps(config), encoding="utf-8")
 
     resumed_connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(),
-        capabilities=ClientCapabilities(),
+        session_options=SessionOptions(), capabilities=ClientCapabilities()
     )
     resumed = await resumed_connection.host.resume_session(session_id)
     try:
@@ -359,43 +319,21 @@ async def test_removed_session_active_model_falls_back_to_default(
             resumed.resources.config.current.active_model.alias != "lower-layer-model"
         )
         assert resumed.resources.config.current.active_model_pinned is False
-        assert (
-            _stored_active_model(session_root, session_id, experimental_harness)
-            == "removed-model"
-        )
+        assert _stored_active_model(session_root, session_id) == "removed-model"
         _ = [event async for event in resumed.act("pin the default model")]
         assert resumed.resources.config.current.active_model_pinned is True
-        assert (
-            _stored_active_model(session_root, session_id, experimental_harness)
-            == fallback_model
-        )
+        assert _stored_active_model(session_root, session_id) == fallback_model
     finally:
         await resumed.close()
 
 
-def _stored_active_model(
-    session_root: Path, session_id: str, experimental_harness: bool
-) -> str | None:
-    if experimental_harness:
-        from mistralai_vibe_local_harness.vibe._storage import UnifiedSessionStore
-
-        return (
-            UnifiedSessionStore(session_root, session_id)
-            .load()
-            .runtime_state.session_metadata.active_model
-        )
+def _stored_active_model(session_root: Path, session_id: str) -> str | None:
     metadata_path = next(session_root.glob(f"*_{session_id[:8]}/meta.json"))
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     return metadata["config"].get("active_model")
 
 
-def _session_model_is_persisted(
-    session_root: Path, session_id: str, experimental_harness: bool
-) -> bool:
-    if experimental_harness:
-        from mistralai_vibe_local_harness.vibe._storage import UnifiedSessionStore
-
-        return UnifiedSessionStore(session_root, session_id).exists
+def _session_model_is_persisted(session_root: Path, session_id: str) -> bool:
     return any(session_root.glob(f"*_{session_id[:8]}/meta.json"))
 
 
@@ -479,10 +417,8 @@ async def test_agent_install_and_uninstall_round_trip_through_the_backend(
 
 @pytest.mark.asyncio
 async def test_agent_install_rejects_unknown_agent_names(
-    backend_contract_session: AppServerSession, experimental_harness: bool
+    backend_contract_session: AppServerSession,
 ) -> None:
-    if not experimental_harness:
-        pytest.skip("validation semantics are unified-harness only")
     with pytest.raises(AppServerResponseError) as exc_info:
         await backend_contract_session.resources.agents.set_installed(
             "no-such-agent", installed=True
@@ -494,10 +430,8 @@ async def test_agent_install_rejects_unknown_agent_names(
 
 @pytest.mark.asyncio
 async def test_agent_uninstall_switches_away_from_the_active_agent(
-    backend_contract_session: AppServerSession, experimental_harness: bool
+    backend_contract_session: AppServerSession,
 ) -> None:
-    if not experimental_harness:
-        pytest.skip("active-agent switch semantics are unified-harness only")
     resources = backend_contract_session.resources
     await resources.agents.set_installed("lean", installed=True)
     active = await resources.agents.switch("lean")

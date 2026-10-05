@@ -71,7 +71,6 @@ async def test_passive_host_lists_and_reads_a_persisted_public_session(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[[str], httpx.Response],
     backend_contract_persistent_connection: BackendContractConnection,
-    experimental_harness: bool,
 ) -> None:
     backend_contract_mistral_api.mock(
         return_value=backend_contract_mistral_response("saved")
@@ -84,9 +83,7 @@ async def test_passive_host_lists_and_reads_a_persisted_public_session(
         await session.close()
 
     passive_connection = await connect_backend_contract_host(
-        experimental_harness,
-        session_options=SessionOptions(),
-        capabilities=ClientCapabilities(),
+        session_options=SessionOptions(), capabilities=ClientCapabilities()
     )
     try:
         sessions = await passive_connection.host.list_sessions()
@@ -104,13 +101,10 @@ async def test_host_catalog_paginates_persisted_sessions_and_selects_the_latest(
     backend_contract_mistral_api: respx.Route,
     backend_contract_mistral_response: Callable[[str], httpx.Response],
     backend_contract_persistent_connection: BackendContractConnection,
-    experimental_harness: bool,
 ) -> None:
     async def persist(prompt: str) -> str:
         connection = await connect_backend_contract_host(
-            experimental_harness,
-            session_options=SessionOptions(),
-            capabilities=ClientCapabilities(),
+            session_options=SessionOptions(), capabilities=ClientCapabilities()
         )
         session = await connection.host.open_session()
         try:

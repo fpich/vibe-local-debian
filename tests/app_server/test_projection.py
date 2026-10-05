@@ -101,7 +101,7 @@ def test_persisted_known_tool_output_is_not_treated_as_typed_result() -> None:
     assert effect.state.output_text.startswith("response: done")
 
 
-def test_unified_agent_projection_hides_plan_from_the_picker() -> None:
+def test_agent_projection_hides_plan_from_the_picker() -> None:
     from vibe.core.agents.models import ACCEPT_EDITS, ASK, PLAN
 
     active, available = project_unified_agent_summaries(
@@ -114,7 +114,7 @@ def test_unified_agent_projection_hides_plan_from_the_picker() -> None:
     assert active.name == "accept-edits"
 
 
-def test_unified_agent_projection_still_reports_plan_when_active() -> None:
+def test_agent_projection_still_reports_plan_when_active() -> None:
     """A session already running plan reports it as active, even though it is hidden."""
     from vibe.core.agents.models import ACCEPT_EDITS, ASK, PLAN
 

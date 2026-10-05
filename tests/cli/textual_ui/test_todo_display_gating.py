@@ -108,7 +108,7 @@ async def _header_suffix_and_body(app: _ResultApp) -> tuple[str, list[str]]:
 
 
 @pytest.mark.asyncio
-async def test_a_unified_todo_result_reports_the_change_in_its_header() -> None:
+async def test_a_todo_result_reports_the_change_in_its_header() -> None:
     suffix, body = await _header_suffix_and_body(
         _ResultApp(_todo_entry(), "+2 · 0/2 done")
     )
