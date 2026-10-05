@@ -6,6 +6,9 @@
 # uniquement active_model.
 # ── Modèle actif : "worker1" ou "worker2" ─────────────────────────────────
 active_model = "worker1"
+# Seuls les modèles llama.cpp locaux sont sélectionnables (exclut les
+# modèles cloud par défaut mistral/devstral du sélecteur /config).
+allowed_models = ["worker"]
 
 # ── Cloud désactivé ────────────────────────────────────────────────────────
 enable_telemetry = false
