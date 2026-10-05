@@ -13,6 +13,8 @@ enable_otel = false
 otel_endpoint = ""
 enable_update_checks = false
 enable_auto_update = false
+# Aucun connecteur cloud (Mistral connectors) : rien n'est appelé hors localhost
+enable_connectors = false
 # ── Compaction & utilitaires sure worker2 (Qwen, thinking OFF) ──────────────
 # Résumés de compaction et appels utility (titres, résumés teleport, noms de
 # worktree) routés vers worker2 : moins de tokens de raisonnement, et le cache
@@ -54,7 +56,7 @@ temperature = 1.0
 thinking = "high"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 180000
+auto_compact_threshold = 90000
 
 # ── Worker 2 : Qwen3.5 (127.0.0.1:8081) ────────────────────────────────
 # Paramètres serveur llama.cpp : top_p 0.8, top_k 20, min_p 0,
@@ -68,7 +70,7 @@ temperature = 0.7
 thinking = "off"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 180000
+auto_compact_threshold = 90000
 
 
 # ── Titres de session ─────────────────────────────────────────────────────
