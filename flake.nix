@@ -90,10 +90,11 @@
           };
           # The Harness extension (_native) is a hard import of the wheel, so
           # vendor the crates up front and provide a real Rust toolchain.
-          cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-            inherit (old) pname version src;
-            sourceRoot = "${old.pname}-${old.version}/harness/core";
-            hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          # importCargoLock needs no output hash: it fetches each crate with the
+          # checksum pinned in Cargo.lock, avoiding a vendor-hash iteration loop.
+          cargoDeps = pkgs.rustPlatform.importCargoLock {
+            cargoLock = ./harness/core/Cargo.lock;
+            cargoRoot = "harness/core";
           };
           nativeBuildInputs = (old.nativeBuildInputs or [])
             ++ [
