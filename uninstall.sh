@@ -14,16 +14,15 @@ confirm() {
 
 echo "==> Désinstallation de vibe-local-debian"
 echo "    VIBE_HOME détecté: $VIBE_HOME"
-
 echo
 echo "Le script va supprimer :"
-echo "  1. Le CLI vibe (uv tool mistral-vibe)"
+echo "  1. Le CLI vibe (uv tool mistral-vibe: vibe, vibe-acp, vibe-app-server)"
 echo "  2. Toutes les données de $VIBE_HOME :"
 echo "     config.toml, sessions, historique, logs, worktrees,"
 echo "     plans, caches, trusted_folders, .env"
 [[ -d "$VIBE_HOME/worktrees" ]] && echo "     ATTENTION: worktrees existent dans $VIBE_HOME/worktrees"
 echo
-echo "NON supprimé : dépôts Git des projects, serveurs llama.cpp, uv, kitty."
+echo "NON supprimé : dépôts Git des projets, serveurs llama.cpp, uv, kitty."
 echo
 
 if ! confirm "Continuer ?"; then
@@ -32,7 +31,7 @@ if ! confirm "Continuer ?"; then
 fi
 
 echo "==> Suppression du CLI vibe"
-if uv tool list 2>/dev/null | grep -qE "^mistral-vibe(-v2x8.*)?:"; then
+if uv tool list 2>/dev/null | grep -qE "^mistral-vibe "; then
   uv tool uninstall mistral-vibe
 else
   echo "    CLI vibe non installé via uv; ignoré."

@@ -7,6 +7,9 @@ extend-ignore-re = ["(?m)^.*(#|//)\\s*typos:disable-line$", "datas", "mis-aligne
 # French words in README.md / install.sh (this fork is documented in French).
 amont = "amont"
 abord = "abord"
+projets = "projets"
+projet = "projet"
+"dépôts" = "dépôts"
 installe = "installe"
 Installe = "Installe"
 copie = "copie"

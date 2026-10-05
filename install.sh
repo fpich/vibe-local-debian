@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installateur Debian 13 : terminal Kitty + gestionnaire uv pour le CLI vibe.
-# Installe aussi le CLI vibe depuis ce dépôt.
+# Installe le CLI vibe (TUI Python) depuis ce dépôt, sans toolchain Rust.
 set -euo pipefail
 
 if [[ ! -r /etc/os-release ]]; then
@@ -9,21 +9,13 @@ if [[ ! -r /etc/os-release ]]; then
 fi
 # shellcheck disable=SC1091
 source /etc/os-release
-
 if [[ "${ID:-}" != "debian" || "${VERSION_ID:-}" != "13" ]]; then
   echo "Erreur: Debian 13 uniquement (détecté: ${PRETTY_NAME:-inconnu})." >&2
   exit 2
 fi
-
 echo "==> Système: ${PRETTY_NAME:-Debian 13}"
 
-echo "==> Dépendances de build (compilateur Rust du CLI)"
-sudo apt-get update
-sudo apt-get install -y --no-install-recommends \
-  build-essential pkg-config cmake rustc cargo \
-  libasound2-dev
-
-echo "==> Installation de Kitty (terminal)"
+echo "==> Installation de Kitty (terminal recommandé pour le TUI)"
 if ! dpkg -s kitty >/dev/null 2>&1; then
   sudo apt-get update
   sudo apt-get install -y kitty
@@ -38,19 +30,22 @@ if ! command -v uv >/dev/null 2>&1; then
 else
   echo "    uv déjà installé: $(uv --version)"
 fi
-
 if ! command -v uv >/dev/null 2>&1; then
   echo "Erreur: uv introuvable après installation; vérifie ~/.local/bin dans PATH." >&2
   exit 3
 fi
 
-echo "==> Installation du CLI vibe depuis ce dépôt"
+echo "==> Installation du CLI vibe depuis ce dépôt (TUI Python, sans Rust)"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-if ! uv tool list 2>/dev/null | grep -qE "^mistral-vibe(-v2x8.*)?:"; then
-  uv tool install "$SCRIPT_DIR"
+# VIBE_SKIP_RUST_TUI: le TUI Python de ce fork est la surface livrée ; le
+# build ne doit ni exiger cargo ni compiler vibe/cli-rust.
+export VIBE_SKIP_RUST_TUI=1
+if uv tool list 2>/dev/null | grep -qE "^mistral-vibe "; then
+  echo "    vibe déjà installé; mise à jour depuis ce dépôt..."
+  # --reinstall depuis le chemin local: `upgrade` ne suit pas un dépôt local.
+  uv tool install --reinstall "$SCRIPT_DIR"
 else
-  echo "    vibe déjà installé; mise à jour..."
-  uv tool upgrade mistral-vibe 2>/dev/null || uv tool install --reinstall "$SCRIPT_DIR"
+  uv tool install "$SCRIPT_DIR"
 fi
 
 echo "==> Configuration globale (~/.vibe/config.toml)"
