@@ -14,7 +14,6 @@ from vibe.core.config.layers.admin import AdminConfigLayer
 from vibe.core.config.layers.agent_profile import AgentProfileLayer
 from vibe.core.config.layers.default import DefaultConfigLayer
 from vibe.core.config.layers.environment import EnvironmentLayer
-from vibe.core.config.layers.growthbook import GrowthbookLayer
 from vibe.core.config.layers.overrides import OverridesLayer
 from vibe.core.config.layers.project import ProjectConfigLayer
 from vibe.core.config.layers.user import UserConfigLayer
@@ -30,15 +29,14 @@ async def build_default_orchestrator(
 ) -> ConfigOrchestrator[VibeConfigSchema]:
     """Build the CLI ConfigOrchestrator with the standard layer stack.
 
-    Priority order (lowest to highest): schema defaults, GrowthBook experiments,
-    user TOML, project TOML, VIBE_* env vars, runtime overrides, agent profile
+    Priority order (lowest to highest): schema defaults, user TOML, project TOML,
+    VIBE_* env vars, runtime overrides, agent profile
     overrides, enforced admin config. The agent-profile slot ships empty and is
     filled in place by AgentManager; the admin layer stays on top so an enforced
     org config shadows every layer below it. Both the user and project TOML
     layers are installed together when
     their sources are enabled, so a trusted project config inherits unspecified
-    values from the user config and both TOML layers override GrowthBook
-    assignments. The default persistence target is the user layer, otherwise a
+    values from the user config. The default persistence target is the user layer, otherwise a
     trusted project layer, otherwise an ephemeral fallback.
     """
     manager = harness_files or get_harness_files_manager()
@@ -67,7 +65,6 @@ async def build_default_orchestrator(
 
     layers = [
         DefaultConfigLayer(schema=VibeConfigSchema),
-        GrowthbookLayer(),
         *([user_layer] if user_layer is not None else []),
         *([project_layer] if project_layer is not None else []),
         EnvironmentLayer(schema=VibeConfigSchema),

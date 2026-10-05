@@ -590,7 +590,7 @@ class SkillsBrowserApp(Container):
         if self._query:
             return Text(f"No skills match '{self._query}'")
         if not self._authenticated:
-            return Text("Sign in to Mistral to browse shared skills")
+            return Text("Shared skill registry is unavailable in Vibe Local")
         if not self._catalog_loaded:
             return Text("Could not load the shared skills catalog")
         return Text("No skills available")

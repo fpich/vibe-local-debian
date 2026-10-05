@@ -713,34 +713,6 @@ def test_run_cli_auto_approve_without_an_agent_selects_the_auto_approve_profile(
     assert options.session_options.auto_approve is False
 
 
-def test_run_cli_forwards_experimental_harness_selection(
-    monkeypatch: pytest.MonkeyPatch,
-    load_orchestrator: OrchestratorLoader[VibeConfigSchema],
-) -> None:
-    args = _make_args(experimental_harness=True)
-    call: dict[str, object] = {}
-    config = build_test_vibe_config()
-    orchestrator = load_orchestrator(config)
-
-    monkeypatch.setattr(cli_mod, "bootstrap_vibe_home", lambda: None)
-    monkeypatch.setattr(
-        cli_mod, "load_config_orchestrator_or_exit", lambda: orchestrator
-    )
-    monkeypatch.setattr(cli_mod, "get_prompt_from_stdin", lambda: None)
-
-    def fake_run_programmatic(**kwargs: object) -> str:
-        call.update(kwargs)
-        return "done"
-
-    monkeypatch.setattr(programmatic_mod, "run_programmatic", fake_run_programmatic)
-
-    with pytest.raises(SystemExit) as exc_info:
-        cli_mod.run_cli(args)
-
-    assert exc_info.value.code == 0
-    options = call["harness_options"]
-    assert isinstance(options, LocalHarnessOptions)
-    assert options.experimental_harness is True
 
 
 def _patch_run_cli_for_config(

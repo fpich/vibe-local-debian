@@ -2,13 +2,6 @@ from __future__ import annotations
 
 import sys
 
-if sys.argv[1:2] == ["--internal-posix-pty-helper"]:
-    from mistralai_vibe_local_harness.vibe._processes._posix_helper import (
-        main as _pty_helper_main,
-    )
-
-    raise SystemExit(_pty_helper_main(sys.argv[2:]))
-
 # isort: off
 # Capture the process-start monotonic timestamp as early as possible (before
 # any heavier imports below) so the vibe.startup metric measures from true
@@ -22,10 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from vibe import __version__
-from vibe._experimental_harness import (
-    add_experimental_harness_argument,
-    add_smart_approve_argument,
-)
 
 # Anything heavier than argparse is imported inside the functions below, after
 # argument parsing, so that --help/--version don't pay for the config stack
@@ -40,9 +29,6 @@ def parse_arguments() -> argparse.Namespace:
         description="Run the vibe-local-debian interactive CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Commands:\n"
-            "  update         Check for a Vibe update now (same as --check-upgrade).\n"
-            "  mcp            Manage MCP server configuration (vibe mcp --help).\n\n"
             "Environment variables:\n"
             "  VIBE_HOME       Override the Vibe home directory (default: ~/.vibe)\n"
             "  LOG_LEVEL       Logging level: DEBUG, INFO, WARNING (default), ERROR, CRITICAL.\n"
@@ -123,31 +109,16 @@ def parse_arguments() -> argparse.Namespace:
         "--agent",
         metavar="NAME",
         default=None,
-        help="Agent to use (builtin: ask, plan, accept-edits, smart-approve, "
+        help="Agent to use (builtin: ask, plan, accept-edits, "
         "auto-approve, or custom from ~/.vibe/agents/NAME.toml). Defaults to the "
         "'default_agent' config setting in both interactive and programmatic "
         "(-p/--prompt) mode.",
     )
-    harness_group = parser.add_mutually_exclusive_group()
-    add_experimental_harness_argument(parser, group=harness_group)
-    harness_group.add_argument(
-        "--legacy-harness",
-        action="store_true",
-        default=False,
-        help="Force the legacy Python harness, overriding the GrowthBook rollout.",
-    )
-    add_smart_approve_argument(parser)
     parser.add_argument(
         "--auto-approve",
         "--yolo",
         action="store_true",
         help="Approves all tool calls without prompting for the selected agent.",
-    )
-    parser.add_argument("--setup", action="store_true", help="Setup API key and exit")
-    parser.add_argument(
-        "--check-upgrade",
-        action="store_true",
-        help="Check for a Vibe update now, prompt to install it, and exit",
     )
     parser.add_argument(
         "--workdir",
@@ -164,8 +135,7 @@ def parse_arguments() -> argparse.Namespace:
         help="Run inside a git worktree under $VIBE_HOME/worktrees. With NAME, "
         "create (or reuse) a worktree and branch named NAME. Without NAME, "
         "create a new one named after the prompt (or a random slug) on a "
-        "vibe/<name> branch. Implicitly trusted for the session. Ignored with "
-        "--setup and --check-upgrade.",
+        "vibe/<name> branch. Implicitly trusted for the session.",
     )
     parser.add_argument(
         "--add-dir",
@@ -184,9 +154,6 @@ def parse_arguments() -> argparse.Namespace:
         "Use this for non-interactive automation.",
     )
 
-    # Feature flag for teleport, not exposed to the user yet
-    parser.add_argument("--teleport", action="store_true", help=argparse.SUPPRESS)
-
     continuation_group = parser.add_mutually_exclusive_group()
     continuation_group.add_argument(
         "-c",
@@ -203,18 +170,7 @@ def parse_arguments() -> argparse.Namespace:
         metavar="SESSION_ID",
         help="Resume a session. Without SESSION_ID, shows an interactive picker.",
     )
-    cli_args = sys.argv[1:]
-    if cli_args[:1] == ["update"]:
-        cli_args[0] = "--check-upgrade"
-    args = parser.parse_args(cli_args)
-    # --smart-approve selects the smart-approve mode unless an explicit --agent wins.
-    # Smart approve is a Unified Harness classify gate with no legacy equivalent, so
-    # the flag also turns on the experimental harness -- otherwise a legacy session
-    # would just relabel the mode and run ordinary permissions.
-    if getattr(args, "smart_approve", False):
-        args.experimental_harness = True
-        if args.agent is None:
-            args.agent = "smart-approve"
+    args = parser.parse_args(sys.argv[1:])
     return args
 
 
@@ -396,18 +352,10 @@ def main() -> None:
 
     silence_proactor_transport_teardown_warnings()
 
-    # The gate must run before the mcp subcommand and init_file_logging: their
-    # mkdir(parents=True) calls are otherwise the first to materialize
-    # ~/.vibe, at permissive modes.
+    # Bootstrap the private Vibe home before any logging/config writes.
     from vibe.core.paths import bootstrap_vibe_home
 
     bootstrap_vibe_home()
-
-    if sys.argv[1:2] == ["mcp"]:
-        from vibe.cli.mcp_command import run_mcp_cli
-
-        run_mcp_cli(sys.argv[2:])
-        return
 
     args = parse_arguments()
     worktree_session: PreparedWorktree | None = None
@@ -431,7 +379,7 @@ def main() -> None:
 
     # Must run before `cwd` is read and before run_cli so that session lookups
     # (-c / --resume picker) scope to the worktree directory.
-    if args.worktree and not (args.setup or args.check_upgrade):
+    if args.worktree:
         worktree_session = _enter_worktree(args)
 
     try:

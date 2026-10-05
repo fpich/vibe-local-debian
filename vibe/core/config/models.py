@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from enum import StrEnum, auto
 import logging
 import os
 from pathlib import Path
@@ -20,17 +19,8 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from vibe.config_values import (
-    THINKING_LEVELS as THINKING_LEVELS,
-    SpeechOutputFormat,
-    ThinkingLevel,
-    TranscriptionEncoding,
-)
-from vibe.core.config._defaults import (
-    DEFAULT_AUTO_COMPACT_THRESHOLD,
-    DEFAULT_MISTRAL_BROWSER_AUTH_API_BASE_URL,
-    DEFAULT_MISTRAL_BROWSER_AUTH_BASE_URL,
-)
+from vibe.config_values import THINKING_LEVELS as THINKING_LEVELS, ThinkingLevel
+from vibe.core.config._defaults import DEFAULT_AUTO_COMPACT_THRESHOLD
 from vibe.core.paths import SESSION_LOG_DIR
 from vibe.core.types import Backend
 
@@ -53,12 +43,6 @@ class ProjectContextConfig(BaseSettings):
     timeout_seconds: float = 2.0
 
 
-class ExperimentsConfig(BaseSettings):
-    model_config = SettingsConfigDict(extra="ignore")
-
-    enable: bool = True
-    api_host: str = "https://experiments.mistral.services/"
-    client_key: str = "sdk-OE8yJgTXZY6tj"
 
 
 class SessionLoggingConfig(BaseSettings):
@@ -111,14 +95,6 @@ class ProviderConfig(BaseModel):
     name: str
     api_base: str
     api_key_env_var: str = ""
-    browser_auth_base_url: str | None = None
-    browser_auth_api_base_url: str | None = None
-    # Split-horizon deployments (e.g. behind an SAP Cloud Connector) expose the
-    # console under a virtual host the CLI reaches but the server does not know
-    # about, so it returns sign-in/poll URLs on its own public host. When True,
-    # returned URLs are re-homed onto the configured browser auth base URLs
-    # instead of being rejected for an origin mismatch.
-    browser_auth_allow_origin_rewrite: bool = False
     api_style: str = "openai"
     backend: Backend = Backend.GENERIC
     reasoning_field_name: str = "reasoning_content"
@@ -131,48 +107,13 @@ class ProviderConfig(BaseModel):
     region: str = ""
     extra_headers: dict[str, str] = Field(default_factory=dict)
 
-    def _is_legacy_mistral_provider_without_backend(self) -> bool:
-        return (
-            self.name == "mistral"
-            and self.backend == Backend.GENERIC
-            and "backend" not in self.model_fields_set
-        )
-
-    def _uses_mistral_browser_sign_in_defaults(self) -> bool:
-        return self.name == "mistral" and (
-            self.backend == Backend.MISTRAL
-            or self._is_legacy_mistral_provider_without_backend()
-        )
-
-    @model_validator(mode="after")
-    def _apply_legacy_mistral_browser_auth_defaults(self) -> ProviderConfig:
-        if not self._uses_mistral_browser_sign_in_defaults():
-            return self
-
-        if self.browser_auth_base_url is None:
-            self.browser_auth_base_url = DEFAULT_MISTRAL_BROWSER_AUTH_BASE_URL
-        if self.browser_auth_api_base_url is None:
-            self.browser_auth_api_base_url = DEFAULT_MISTRAL_BROWSER_AUTH_API_BASE_URL
-        return self
-
-    @property
-    def supports_browser_sign_in(self) -> bool:
-        return (
-            (self.backend == Backend.MISTRAL or self.name == "mistral")
-            and bool(self.browser_auth_base_url)
-            and bool(self.browser_auth_api_base_url)
-        )
 
 
-class TranscribeClient(StrEnum):
-    MISTRAL = auto()
 
 
-class TranscribeProviderConfig(BaseModel):
-    name: str
-    api_base: str = "wss://api.mistral.ai"
-    api_key_env_var: str = ""
-    client: TranscribeClient = TranscribeClient.MISTRAL
+
+
+
 
 
 def normalize_mcp_server_name(value: str | None) -> str:
@@ -600,49 +541,3 @@ def merge_model_payloads(
             continue
         merged[key] = value
     return merged
-
-
-class TranscribeModelConfig(BaseModel):
-    name: str
-    provider: str
-    alias: str
-    sample_rate: int = 16000
-    encoding: TranscriptionEncoding = "pcm_s16le"
-    language: str = "en"
-    target_streaming_delay_ms: int = 500
-
-    _default_alias_to_name = model_validator(mode="before")(_default_alias_to_name)
-
-
-class TTSClient(StrEnum):
-    MISTRAL = auto()
-
-
-class TTSProviderConfig(BaseModel):
-    name: str
-    api_base: str = "https://api.mistral.ai"
-    api_key_env_var: str = ""
-    client: TTSClient = TTSClient.MISTRAL
-
-
-class TTSModelConfig(BaseModel):
-    name: str
-    provider: str
-    alias: str
-    voice: str = "gb_jane_neutral"
-    response_format: SpeechOutputFormat = "wav"
-
-    _default_alias_to_name = model_validator(mode="before")(_default_alias_to_name)
-
-
-class OtelRedactionMode(StrEnum):
-    DEFAULT = auto()
-    NONE = auto()
-    STRICT = auto()
-
-
-class OtelSpanExporterConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    endpoint: str
-    headers: dict[str, str] | None = None

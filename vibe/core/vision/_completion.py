@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from vibe.core.llm.backend.factory import create_backend
-from vibe.core.telemetry.build_metadata import build_request_metadata
+from vibe.core.local_runtime import build_request_metadata
 from vibe.core.types import Backend
 from vibe.utils.http import get_user_agent
 

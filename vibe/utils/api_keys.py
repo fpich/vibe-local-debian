@@ -4,14 +4,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 import os
 
-from vibe.utils.keyring import get_api_key_from_keyring
-
 
 class ApiKeySource(StrEnum):
     """The places ``resolve_api_key`` looks, in the order it looks."""
 
     ENVIRONMENT = "environment"
-    KEYRING = "keyring"
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,9 +25,7 @@ class ApiKeyOrigin:
     env_var: str
 
     def describe(self) -> str:
-        if self.source is ApiKeySource.ENVIRONMENT:
-            return f"env var {self.env_var}"
-        return "the keyring"
+        return f"env var {self.env_var}"
 
 
 def resolve_api_key_with_origin(env_key: str) -> tuple[str, ApiKeyOrigin] | None:
@@ -44,8 +39,6 @@ def resolve_api_key_with_origin(env_key: str) -> tuple[str, ApiKeyOrigin] | None
         return None
     if token := os.environ.get(env_key):
         return token, ApiKeyOrigin(ApiKeySource.ENVIRONMENT, env_key)
-    if token := get_api_key_from_keyring(env_key):
-        return token, ApiKeyOrigin(ApiKeySource.KEYRING, env_key)
     return None
 
 

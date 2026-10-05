@@ -1,7 +1,2 @@
-# CODEOWNERS
-
-# Default owners for everything in the repo
-* @mistralai/eng-vibe-code-cli
-
-# Owners for specific directories
-# Not needed for now, can be filled later
+# Maintainers of this fork can replace this rule with GitHub usernames/teams.
+* @fpich

@@ -591,7 +591,7 @@ def test_allowed_model_names_cannot_be_matched_by_an_alias() -> None:
     assert set(config.available_models()) == {"approved"}
 
 
-def test_allowed_models_matching_nothing_falls_back_to_all() -> None:
+def test_allowed_models_matching_nothing_fails_closed() -> None:
     models = [
         ModelConfig(name="model-a", provider="mistral", alias="a"),
         ModelConfig(name="model-b", provider="mistral", alias="b"),
@@ -602,10 +602,13 @@ def test_allowed_models_matching_nothing_falls_back_to_all() -> None:
         "allowed_models": ["does-not-exist"],
     })
 
-    assert set(config.available_models()) == {"a", "b"}
-    assert config.get_active_model().alias == "a"
-    assert len(config.validation_warnings) == 1
-    assert "does-not-exist" in config.validation_warnings[0]
+    assert config.available_models() == {}
+    with pytest.raises(ValueError, match="Active model 'a' not found"):
+        config.get_active_model()
+    assert len(config.validation_warnings) >= 1
+    assert any(
+        "does-not-exist" in warning for warning in config.validation_warnings
+    )
 
 
 def test_admin_allowed_models_matching_nothing_are_rejected() -> None:

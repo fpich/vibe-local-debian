@@ -105,7 +105,7 @@ class AppServerHost:
 
     async def start_session(self) -> AppServerSession:
         # Backs the --resume picker; the throwaway session must not emit
-        # new-session telemetry since it is discarded on resume.
+        # new-session side effects since it is discarded on resume.
         return await self._open_session(None, False, session_kind=SessionKind.EPHEMERAL)
 
     async def resume_session(self, session_id: str) -> AppServerSession:

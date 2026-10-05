@@ -756,7 +756,6 @@ class AppServerSession:  # noqa: PLR0904
         await self.resources.sessions.resume(
             session_id, on_adopt=self._advance_event_generation
         )
-        self.resources.vibe_code.reset()
         await self.resources.refresh()
 
     def _advance_event_generation(self) -> None:
@@ -785,7 +784,6 @@ class AppServerSession:  # noqa: PLR0904
         self._closing = True
 
     async def close(self) -> None:
-        await self.resources.telemetry.flush()
         self._closing = True
         client = self._connection.current
         if client is not None:

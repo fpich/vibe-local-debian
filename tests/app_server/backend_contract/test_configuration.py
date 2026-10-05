@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-import json
 from pathlib import Path
 import tomllib
 
@@ -373,30 +372,8 @@ async def test_removed_session_active_model_falls_back_to_default(
         await resumed.close()
 
 
-def _stored_active_model(
-    session_root: Path, session_id: str, experimental_harness: bool
-) -> str | None:
-    if experimental_harness:
-        from mistralai_vibe_local_harness.vibe._storage import UnifiedSessionStore
-
-        return (
-            UnifiedSessionStore(session_root, session_id)
-            .load()
-            .runtime_state.session_metadata.active_model
-        )
-    metadata_path = next(session_root.glob(f"*_{session_id[:8]}/meta.json"))
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    return metadata["config"].get("active_model")
 
 
-def _session_model_is_persisted(
-    session_root: Path, session_id: str, experimental_harness: bool
-) -> bool:
-    if experimental_harness:
-        from mistralai_vibe_local_harness.vibe._storage import UnifiedSessionStore
-
-        return UnifiedSessionStore(session_root, session_id).exists
-    return any(session_root.glob(f"*_{session_id[:8]}/meta.json"))
 
 
 @pytest.mark.asyncio

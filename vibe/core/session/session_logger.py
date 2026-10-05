@@ -33,7 +33,6 @@ from vibe.utils.session_id import shorten_session_id
 if TYPE_CHECKING:
     from vibe.core.agents.models import AgentProfile
     from vibe.core.config import SessionLoggingConfig, VibeConfigSchema
-    from vibe.core.experiments.models import EvalResponse
     from vibe.core.tools.manager import ToolManager
 
 
@@ -647,21 +646,6 @@ class SessionLogger:  # noqa: PLR0904
         _, session_metadata = session_info
         await self._persist_metadata_field(
             "loops", [loop.model_dump(mode="json") for loop in session_metadata.loops]
-        )
-
-    async def persist_experiments(self, response: EvalResponse | None) -> None:
-        # Persist ONLY the sticky GrowthBook variant assignment. Plan/org
-        # attributes and user_plan are user-scoped, not session-scoped, so they
-        # are never written to meta.json — they are re-resolved from the user
-        # cache on every session (fresh and resume alike).
-        session_info = self._get_session_info()
-        if session_info is None:
-            return
-        _, session_metadata = session_info
-        session_metadata.experiments = response
-        await self._persist_metadata_field(
-            "experiments",
-            response.model_dump(mode="json") if response is not None else None,
         )
 
     async def persist_created_worktree(self, worktree: WorktreeContext) -> None:

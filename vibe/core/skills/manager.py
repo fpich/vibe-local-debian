@@ -11,7 +11,6 @@ from vibe.core.config.harness_files import (
 )
 from vibe.core.skills.builtins import BUILTIN_SKILLS
 from vibe.core.skills.models import (
-    REGISTRY_LATEST_ALIAS,
     ParsedSkillCommand,
     RegistryRef,
     SkillConfigIssue,
@@ -26,7 +25,6 @@ from vibe.core.skills.parser import (
     openai_skill_metadata_path,
     parse_skill_markdown,
 )
-from vibe.core.skills.registry import _manifest, _resolved, _store
 from vibe.core.utils import name_matches
 from vibe.observability.logging import logger
 from vibe.utils.io import read_safe
@@ -129,13 +127,6 @@ class SkillManager:
                         info.skill_path,
                         skills[name].skill_path,
                     )
-        for name, info in self._discover_registry_skills().items():
-            if name not in skills:
-                skills[name] = info
-            else:
-                logger.debug(
-                    "Skipping registry skill '%s'; a local/builtin skill wins", name
-                )
         return skills
 
     def _discover_skills_in_dir(
@@ -171,45 +162,9 @@ class SkillManager:
             skills[skill_info.name] = skill_info
         return skills
 
-    def _registry_sources(self) -> list[tuple[Path, SkillScope]]:
-        sources: list[tuple[Path, SkillScope]] = [
-            (_manifest.global_manifest_path(), SkillScope.GLOBAL)
-        ]
-        sources.extend(
-            (p, SkillScope.PROJECT)
-            for p in _manifest.project_manifest_paths_sync(
-                self._harness_files.project_roots
-            )
-        )
-        return sources
-
-    def _discover_registry_skills(self) -> dict[str, SkillInfo]:
-        """The active set the agent uses: one entry per name, project wins."""
-        if not self._config.experimental_enable_registry_skills:
-            return {}
-        out: dict[str, SkillInfo] = {}
-        for path, scope in self._registry_sources():
-            for entry in _manifest.load_sync(path).skills:
-                info = self._load_registry_entry(entry, scope)
-                if info is not None:
-                    out[entry.name] = info
-        return out
-
     def registry_pins(self) -> list[SkillInfo]:
-        """Every registry pin as its own SkillInfo, one per (name, scope).
-
-        Unlike ``available_skills`` (de-duped, project-wins) this keeps a global
-        and a project pin of the same skill as separate rows, for the browser.
-        """
-        if not self._config.experimental_enable_registry_skills:
-            return []
-        out: dict[tuple[str, SkillScope], SkillInfo] = {}
-        for path, scope in self._registry_sources():
-            for entry in _manifest.load_sync(path).skills:
-                info = self._load_registry_entry(entry, scope)
-                if info is not None:
-                    out[(entry.name, scope)] = info
-        return list(out.values())
+        """Remote registry skills are not available in local-only builds."""
+        return []
 
     def installed_skills(self) -> list[SkillInfo]:
         """Everything installed, one entry per (name, scope, source).
@@ -235,54 +190,7 @@ class SkillManager:
                 continue
             for name, info in self._discover_skills_in_dir(base, scope).items():
                 out.setdefault((name, scope, SkillSource.LOCAL), info)
-        for info in self.registry_pins():
-            out.setdefault((info.name, info.scope, info.source), info)
         return list(out.values())
-
-    def _load_registry_entry(
-        self, entry: _manifest.ManifestEntry, scope: SkillScope
-    ) -> SkillInfo | None:
-        if not _store.is_safe_skill_id(entry.skill_id):
-            logger.warning(
-                "Skipping registry skill with unsafe id '%s'", entry.skill_id
-            )
-            return None
-        if isinstance(entry.version, int):
-            version: int | None = entry.version
-        elif entry.version == REGISTRY_LATEST_ALIAS:
-            version = _store.latest_materialized_sync(entry.skill_id)
-        else:
-            version = _resolved.get(entry.skill_id, entry.version)
-            if version is None or not _store.is_materialized_sync(
-                entry.skill_id, version
-            ):
-                version = _store.latest_materialized_sync(entry.skill_id)
-        if version is None:
-            logger.debug(
-                "Registry skill '%s' (%s@%s) not materialized; skipping",
-                entry.name,
-                entry.skill_id,
-                entry.version,
-            )
-            return None
-        skill_file = _store.skill_dir(entry.skill_id, version) / "SKILL.md"
-        if not skill_file.is_file():
-            logger.debug(
-                "Registry skill '%s' (%s@%d) not materialized; skipping",
-                entry.name,
-                entry.skill_id,
-                version,
-            )
-            return None
-        return self._try_load_skill(
-            skill_file,
-            source=SkillSource.REGISTRY,
-            scope=scope,
-            registry=RegistryRef(
-                skill_id=entry.skill_id, version=version, alias=entry.alias
-            ),
-            check_dir_name=False,
-        )
 
     def _try_load_skill(
         self,

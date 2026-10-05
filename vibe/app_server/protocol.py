@@ -36,7 +36,6 @@ from vibe.app_server._connection_protocol import (
 from vibe.app_server._model import ProtocolModel
 from vibe.app_server.config import ConfigView, ProxySettingsView
 from vibe.app_server.models import (
-    AccountView,
     AgentStatsSnapshot,
     AgentSummary,
     CallbackOutput,
@@ -44,7 +43,6 @@ from vibe.app_server.models import (
     ConnectorCounts,
     ContentBlock,
     DebugLogPage,
-    IdentityView,
     JsonPatchOperation,
     MCPState,
     MentionStats,
@@ -78,15 +76,11 @@ from vibe.app_server.models import (
     SkillSummary,
     SkillUpdateView,
     SkillVersionView,
-    TeleportEvent,
     ToolSummary,
     TurnContextInputEntry as TurnContextInputEntry,
     TurnInputEntry,
     TurnUserInputEntry,
     UserDisplayContent,
-    VibeCodePickerPurpose,
-    VibeCodePickerView,
-    VibeCodeProject,
     WorkspaceTrustDecision,
     WorkspaceTrustDetails,
     WorkspaceTrustStatus,
@@ -103,7 +97,6 @@ from vibe.app_server.review import (
 from vibe.utils.mcp import MCPAddTransport
 
 SERVER_METHODS: tuple[str, ...] = (
-    "account/read",
     "agents/install",
     "agents/list",
     "agents/uninstall",
@@ -126,10 +119,7 @@ SERVER_METHODS: tuple[str, ...] = (
     "diagnostics/list",
     "diagnostics/logs/read",
     "events/read",
-    "feedback/record",
-    "feedback/shouldShow",
     "session/history/get",
-    "identity/read",
     "loops/clear",
     "loops/create",
     "loops/delete",
@@ -147,20 +137,10 @@ SERVER_METHODS: tuple[str, ...] = (
     "mcp_catalog/refresh",
     "mcp_catalog/remove",
     "mcp_catalog/toggle",
-    "narration/summarize",
     "plugin/info",
     "plugin/reload",
     "plugins/read",
     "plugin_catalog/read",
-    "projectLinks/create",
-    "projectLinks/inspectRoot",
-    "projectLinks/link",
-    "projectLinks/list",
-    "projectLinks/picker/load",
-    "projectLinks/picker/loadMore",
-    "projectLinks/resolveRoot",
-    "projectLinks/save",
-    "projectLinks/unlink",
     "review/approve",
     "review/baseline",
     "review/hunks",
@@ -211,7 +191,6 @@ SERVER_METHODS: tuple[str, ...] = (
     "skills/updates",
     "skills/versions",
     "stats/read",
-    "telemetry/record",
     "tools/list",
     "session/turn/enqueue",
     "session/turn/queue/read",
@@ -222,16 +201,6 @@ SERVER_METHODS: tuple[str, ...] = (
     "turn/interrupt",
     "turn/start",
     "turn/steer",
-    "vibeCode/projects/cancel",
-    "vibeCode/projects/create",
-    "vibeCode/projects/loadMore",
-    "vibeCode/projects/open",
-    "vibeCode/projects/recover",
-    "vibeCode/projects/select",
-    "vibeCode/projects/unlink",
-    "vibeCode/teleport/cancel",
-    "vibeCode/teleport/push/respond",
-    "vibeCode/teleport/start",
     "workspace/git/checkouts",
     "workspace/git/worktrees/limit/update",
     "workspace/git/worktrees/list",
@@ -389,12 +358,12 @@ class SessionOpenParams(ProtocolModel):
 class SessionKind(StrEnum):
     """Lifecycle role of a session as seen by the server.
 
-    ``NORMAL`` — a genuine user-initiated session; emits new-session telemetry
+    ``NORMAL`` — a genuine user-initiated session.
     and is persisted to disk as soon as a turn runs.
 
     ``EPHEMERAL`` — a throwaway session used to warm up the runtime while the
     in-app picker is shown; it is discarded on resume and must not emit
-    new-session telemetry or be counted as a new session.
+    normal new-session side effects.
     """
 
     NORMAL = auto()
@@ -663,20 +632,12 @@ class SessionReadyWaitResponse(ProtocolModel):
     init_duration_ms: int | None = None
 
 
-class AccountReadParams(ProtocolModel):
-    session_id: str
 
 
-class AccountReadResponse(ProtocolModel):
-    account: AccountView
 
 
-class IdentityReadParams(ProtocolModel):
-    session_id: str
 
 
-class IdentityReadResponse(ProtocolModel):
-    identity: IdentityView | None = None
 
 
 class SessionRewindReadParams(ProtocolModel):
@@ -1146,104 +1107,42 @@ class DiagnosticsLogsReadResponse(ProtocolModel):
     logs: DebugLogPage
 
 
-class VibeCodeProjectsOpenParams(ProtocolModel):
-    session_id: str
-    purpose: VibeCodePickerPurpose = "configure"
-    prompt: str | None = None
 
 
-class VibeCodeProjectsOpenResponse(ProtocolModel):
-    picker_id: str
-    view: VibeCodePickerView
-    resolved_project_id: str | None = None
 
 
-class VibeCodeProjectsLoadMoreParams(ProtocolModel):
-    session_id: str
-    picker_id: str
 
 
-class VibeCodeProjectsLoadMoreResponse(ProtocolModel):
-    view: VibeCodePickerView
-    focus_option_id: str | None = None
 
 
-class VibeCodeProjectCreateParams(ProtocolModel):
-    session_id: str
-    picker_id: str
-    name: str
-    default_branch: str
 
 
-class VibeCodeProjectCreateResponse(ProtocolModel):
-    view: VibeCodePickerView
-    project: VibeCodeProject
 
 
-class VibeCodeProjectSelectParams(ProtocolModel):
-    session_id: str
-    picker_id: str
-    project_id: str
 
 
-class VibeCodeProjectSelectResponse(ProtocolModel):
-    view: VibeCodePickerView
-    project: VibeCodeProject
 
 
-class VibeCodeProjectUnlinkParams(ProtocolModel):
-    session_id: str
-    picker_id: str
 
 
-class VibeCodeProjectUnlinkResponse(ProtocolModel):
-    view: VibeCodePickerView
 
 
-class VibeCodeProjectCancelParams(ProtocolModel):
-    session_id: str
-    picker_id: str
 
 
-class VibeCodeProjectRecoverParams(ProtocolModel):
-    session_id: str
-    picker_id: str
 
 
-class VibeCodeProjectRecoverResponse(ProtocolModel):
-    recovered: bool
-    view: VibeCodePickerView
 
 
-class TeleportStartParams(ProtocolModel):
-    session_id: str
-    picker_id: str
-    operation_id: str
-    prompt: str | None = None
-    project_id: str
 
 
-class TeleportStartResponse(ProtocolModel):
-    operation_id: str
 
 
-class TeleportCancelParams(ProtocolModel):
-    session_id: str
-    operation_id: str
 
 
-class TeleportCancelResponse(ProtocolModel):
-    cancelled: bool
 
 
-class TeleportPushRespondParams(ProtocolModel):
-    session_id: str
-    operation_id: str
-    approved: bool
 
 
-class TeleportEventParams(ProtocolModel):
-    event: TeleportEvent
 
 
 class ConnectorCatalogToolView(ProtocolModel):
@@ -1681,137 +1580,54 @@ class WorkspaceUntrustedConfigResponse(ProtocolModel):
     settings_path: str = ""
 
 
-class ProjectLinksListParams(ProtocolModel):
-    pass
 
 
-class ProjectLinksLocalLink(ProtocolModel):
-    directory_path: str
-    has_commits: bool
 
 
-class ProjectLinksLinkedProject(ProtocolModel):
-    project_id: str
-    local_links: list[ProjectLinksLocalLink]
 
 
-class ProjectLinksListResponse(ProtocolModel):
-    projects: list[ProjectLinksLinkedProject]
 
 
-type ProjectLinksResolveRootRejectReason = Literal[
-    "not_git", "unsupported_remote", "nested_unresolvable", "no_commits"
-]
 
 
-class ProjectLinksDirectoryGit(ProtocolModel):
-    current_branch: str | None
-    default_branch: str | None
-    github_repo_url: str | None
-    has_commits: bool
 
 
-class ProjectLinksInspectedDirectory(ProtocolModel):
-    directory_path: str
-    directory_name: str
-    git: ProjectLinksDirectoryGit | None
 
 
-class ProjectLinksResolveRootParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
 
 
-class ProjectLinksResolveRootResponse(ProtocolModel):
-    eligible: bool
-    reject_reason: ProjectLinksResolveRootRejectReason | None = None
-    root: ProjectLinksInspectedDirectory | None = None
 
 
-class ProjectLinksInspectRootParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
 
 
-class ProjectLinksSavedLink(ProtocolModel):
-    project_id: str
-    project_name: str
 
 
-class ProjectLinksInspectRootResponse(ProtocolModel):
-    eligible: bool
-    reject_reason: ProjectLinksResolveRootRejectReason | None = None
-    root: ProjectLinksInspectedDirectory | None = None
-    saved_link: ProjectLinksSavedLink | None = None
-    stale_link_cleared: bool
-    stale_link_clear_failed: bool = False
 
 
-class ProjectLinksPickerCandidate(ProtocolModel):
-    project_id: str
-    name: str
-    recommended: bool
 
 
-class ProjectLinksPickerCandidates(ProtocolModel):
-    items: list[ProjectLinksPickerCandidate]
-    next_cursor: str | None
 
 
-class ProjectLinksPickerLoadParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
 
 
-class ProjectLinksPickerLoadResponse(ProtocolModel):
-    root: ProjectLinksInspectedDirectory
-    saved_link: ProjectLinksSavedLink | None = None
-    stale_link_cleared: bool
-    candidates: ProjectLinksPickerCandidates
 
 
-class ProjectLinksPickerLoadMoreParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
-    cursor: str = Field(min_length=1)
 
 
-class ProjectLinksPickerLoadMoreResponse(ProtocolModel):
-    candidates: ProjectLinksPickerCandidates
-    focus_project_id: str | None
 
 
-class ProjectLinksCreateParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
-    name: str = Field(min_length=1)
-    default_branch: str = Field(min_length=1)
 
 
-class ProjectLinksLinkParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
-    project_id: str = Field(min_length=1)
-    project_name: str = Field(min_length=1)
 
 
-class ProjectLinksSaveParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
-    project_id: str = Field(min_length=1)
-    project_name: str = Field(min_length=1)
-    expected_github_repo_url: str | None
 
 
-class ProjectLink(ProtocolModel):
-    project_id: str
-    project_name: str
-    directory_path: str
 
 
-class ProjectLinkMutationResponse(ProtocolModel):
-    link: ProjectLink
 
 
-class ProjectLinksUnlinkParams(ProtocolModel):
-    root_path: str = Field(min_length=1)
 
 
-class ProjectLinksUnlinkResponse(ProtocolModel):
-    unlinked: Literal[True]
 
 
 class LoopsListParams(ProtocolModel):
@@ -1849,38 +1665,16 @@ class LoopsClearResponse(ProtocolModel):
     count: int
 
 
-class TelemetryRecordParams(ProtocolModel):
-    session_id: str
-    name: str
-    properties: dict[str, JsonValue] = Field(default_factory=dict)
-    correlate_last_request: bool = False
 
 
-class NarrationSummarizeParams(ProtocolModel):
-    session_id: str
-    user_message: str
-    assistant_text: str
-    error: str | None = None
-    message_id: str | None = None
 
 
-class NarrationSummarizeResponse(ProtocolModel):
-    summary: str | None = None
 
 
-class FeedbackShouldShowParams(ProtocolModel):
-    session_id: str
-    pending_user_messages: int = 0
 
 
-class FeedbackShouldShowResponse(ProtocolModel):
-    show: bool
-    snooze_duration_seconds: int | None = None
 
 
-class FeedbackRecordParams(ProtocolModel):
-    session_id: str
-    action: Literal["asked", "given", "snoozed"]
 
 
 class _TurnQueueInputParams(ProtocolModel):

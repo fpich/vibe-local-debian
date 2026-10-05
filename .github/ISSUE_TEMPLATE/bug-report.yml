@@ -1,59 +1,44 @@
-name: Bug Report
-description: Tell us about a defect in Mistral Vibe
-title: "bug: "
+name: Bug report
+description: Signaler un défaut dans vibe-local-debian
+title: "[bug] "
 labels: ["bug"]
 body:
-  - type: markdown
-    attributes:
-      value: >
-        Thanks for filing a detailed bug. Fill out every section so we can
-        reproduce the issue quickly
-
-  - type: dropdown
-    id: component
-    attributes:
-      label: Component
-      description: Which part of Mistral Vibe is affected?
-      options:
-        - CLI
-        - ACP
-        - VS Code extension
-        - Other
-    validations:
-      required: true
-
   - type: textarea
-    id: summary
+    id: description
     attributes:
-      label: Summary
-      description: What went wrong? Keep it short but specific.
+      label: Description
+      description: Décris le problème et le comportement attendu.
     validations:
       required: true
-
   - type: textarea
-    id: repro
+    id: reproduce
     attributes:
-      label: Reproduction steps
-      description: >
-        Commands, code, or payloads that trigger the bug. Include any relevant
-        input files or snippets (redact secrets).
+      label: Reproduction
+      description: Commands/étapes minimales permettant de reproduire.
     validations:
       required: true
-
   - type: input
-    id: versions
+    id: version
     attributes:
-      label: Versions / environment
-      description: >
-        Include the version for the affected component, uv or pip when
-        relevant and OS.
-      placeholder: "mistral-vibe 1.2.0 or Mistral Vibe VS Code 1.1.0, uv 0.9.0 on macOS 15.7"
+      label: Version
+      placeholder: "vibe 1.2.1"
     validations:
       required: true
-
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Debian 13, Python 3.13, uv 0.12.x"
+    validations:
+      required: true
+  - type: textarea
+    id: backend
+    attributes:
+      label: Backend llama.cpp
+      description: Modèle, version llama.cpp, endpoint sans secret, options pertinentes.
   - type: textarea
     id: logs
     attributes:
-      label: Logs & screenshots
-      description: Paste relevant stack traces, JSON snippets, or console output.
+      label: Trace / logs
+      description: Masquer les secrets et données privées.
       render: shell

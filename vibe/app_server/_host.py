@@ -13,13 +13,6 @@ from typing import Any
 
 from vibe.app_server._dispatch import DispatchResult, RequestFailure, method_not_found
 from vibe.app_server._model import ProtocolModel, validate_wire
-from vibe.app_server._project_links import (
-    ProjectLinksAuthError,
-    ProjectLinksController,
-    ProjectLinksError,
-    ProjectLinksInternalError,
-    ProjectLinksInvalidRequest,
-)
 from vibe.app_server._projection import (
     project_config_view,
     project_message_history,
@@ -44,22 +37,6 @@ from vibe.app_server.protocol import (
     ConfigSchemaReadParams,
     ConfigSchemaReadResponse,
     EmptyResponse,
-    ProjectLinkMutationResponse,
-    ProjectLinksCreateParams,
-    ProjectLinksInspectRootParams,
-    ProjectLinksInspectRootResponse,
-    ProjectLinksLinkParams,
-    ProjectLinksListParams,
-    ProjectLinksListResponse,
-    ProjectLinksPickerLoadMoreParams,
-    ProjectLinksPickerLoadMoreResponse,
-    ProjectLinksPickerLoadParams,
-    ProjectLinksPickerLoadResponse,
-    ProjectLinksResolveRootParams,
-    ProjectLinksResolveRootResponse,
-    ProjectLinksSaveParams,
-    ProjectLinksUnlinkParams,
-    ProjectLinksUnlinkResponse,
     ProtocolErrorCode,
     SessionDeleteParams,
     SessionHistoryGetParams,
@@ -133,15 +110,6 @@ _HOST_METHODS = frozenset({
     "agents/list",
     "config/read",
     "config/schema",
-    "projectLinks/create",
-    "projectLinks/inspectRoot",
-    "projectLinks/link",
-    "projectLinks/list",
-    "projectLinks/picker/load",
-    "projectLinks/picker/loadMore",
-    "projectLinks/resolveRoot",
-    "projectLinks/save",
-    "projectLinks/unlink",
     "session/delete",
     "session/history/list",
     "session/list",
@@ -174,7 +142,6 @@ class HostRequestHandler:
         self._harness_files = harness_files
         self._startup_issue = startup_issue
         self._harness_selection_source = harness_selection_source
-        self._project_links = ProjectLinksController()
 
     def handles(self, method: str) -> bool:
         return method in _HOST_METHODS
@@ -207,14 +174,6 @@ class HostRequestHandler:
             raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
         except GitError as exc:
             raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
-        except ProjectLinksAuthError as exc:
-            raise RequestFailure(ProtocolErrorCode.UNAUTHORIZED, str(exc)) from exc
-        except ProjectLinksInvalidRequest as exc:
-            raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
-        except ProjectLinksInternalError as exc:
-            raise RequestFailure(ProtocolErrorCode.INTERNAL_ERROR, str(exc)) from exc
-        except ProjectLinksError as exc:
-            raise RequestFailure(ProtocolErrorCode.INTERNAL_ERROR, str(exc)) from exc
         except FileNotFoundError as exc:
             raise RequestFailure(ProtocolErrorCode.NOT_FOUND, str(exc)) from exc
         return DispatchResult(response)
@@ -236,8 +195,6 @@ class HostRequestHandler:
                 response = await self._dispatch_session(method, raw_params)
             case _ if method.startswith("workspace/"):
                 response = await self._dispatch_workspace(method, raw_params)
-            case _ if method.startswith("projectLinks/"):
-                response = await self._dispatch_project_links(method, raw_params)
             case _:
                 raise method_not_found(method)
         return response
@@ -338,10 +295,8 @@ class HostRequestHandler:
             if skill.source is not SkillSource.BUILTIN
         )
         hooks_count = len(load_hooks_from_fs(harness_files=session_files).hooks)
-        mcp_servers_total = len(config.mcp_servers)
-        mcp_servers_enabled = sum(
-            1 for server in config.mcp_servers if not server.disabled
-        )
+        mcp_servers_total = 0
+        mcp_servers_enabled = 0
 
         return ConfigReadResponse(
             config=view,
@@ -353,69 +308,6 @@ class HostRequestHandler:
             harness_selection_source=self._harness_selection_source,
         )
 
-    async def _dispatch_project_links(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> ProtocolModel:
-        match method:
-            case "projectLinks/list":
-                validate_wire(ProjectLinksListParams, raw_params)
-                response: ProtocolModel = ProjectLinksListResponse.model_validate(
-                    await self._project_links.list_links()
-                )
-            case "projectLinks/resolveRoot":
-                params = validate_wire(ProjectLinksResolveRootParams, raw_params)
-                response = ProjectLinksResolveRootResponse.model_validate(
-                    await self._project_links.resolve_root(params.root_path)
-                )
-            case "projectLinks/inspectRoot":
-                params = validate_wire(ProjectLinksInspectRootParams, raw_params)
-                response = ProjectLinksInspectRootResponse.model_validate(
-                    await self._project_links.inspect_root(params.root_path)
-                )
-            case "projectLinks/picker/load":
-                params = validate_wire(ProjectLinksPickerLoadParams, raw_params)
-                response = ProjectLinksPickerLoadResponse.model_validate(
-                    await self._project_links.picker_load(params.root_path)
-                )
-            case "projectLinks/picker/loadMore":
-                params = validate_wire(ProjectLinksPickerLoadMoreParams, raw_params)
-                response = ProjectLinksPickerLoadMoreResponse.model_validate(
-                    await self._project_links.picker_load_more(
-                        params.root_path, params.cursor
-                    )
-                )
-            case "projectLinks/create":
-                params = validate_wire(ProjectLinksCreateParams, raw_params)
-                response = ProjectLinkMutationResponse.model_validate(
-                    await self._project_links.create(
-                        params.root_path, params.name, params.default_branch
-                    )
-                )
-            case "projectLinks/link":
-                params = validate_wire(ProjectLinksLinkParams, raw_params)
-                response = ProjectLinkMutationResponse.model_validate(
-                    await self._project_links.link(
-                        params.root_path, params.project_id, params.project_name
-                    )
-                )
-            case "projectLinks/save":
-                params = validate_wire(ProjectLinksSaveParams, raw_params)
-                response = ProjectLinkMutationResponse.model_validate(
-                    await self._project_links.save(
-                        params.root_path,
-                        params.project_id,
-                        params.project_name,
-                        params.expected_github_repo_url,
-                    )
-                )
-            case "projectLinks/unlink":
-                params = validate_wire(ProjectLinksUnlinkParams, raw_params)
-                response = ProjectLinksUnlinkResponse.model_validate(
-                    await self._project_links.unlink(params.root_path)
-                )
-            case _:
-                raise method_not_found(method)
-        return response
 
     async def _dispatch_workspace(
         self, method: str, raw_params: dict[str, Any]
@@ -621,11 +513,6 @@ class HostRequestHandler:
     ) -> ConfigOrchestrator[VibeConfigSchema]:
         session_files = self._harness_files.for_session(self._cwd(cwd))
         orchestrator = await build_default_orchestrator(harness_files=session_files)
-        # Match the session path so host reads (agents/list) see rollout flags
-        # like smart_approve_available. Lazy import: _runtime imports _host.
-        from vibe.app_server._runtime import _apply_cached_experiment_variants
-
-        await _apply_cached_experiment_variants(orchestrator)
         return orchestrator
 
     @staticmethod

@@ -44,22 +44,14 @@ if __name__ == "__main__":
         yield next(chunk_iterable)
 
     patch(
-        "vibe.core.llm.backend.mistral.MistralBackend.complete",
-        side_effect=mock_complete,
-    ).start()
-    patch(
         "vibe.core.llm.backend.generic.GenericBackend.complete",
         side_effect=mock_complete,
-    ).start()
-    patch(
-        "vibe.core.llm.backend.mistral.MistralBackend.complete_streaming",
-        side_effect=mock_complete_streaming,
     ).start()
     patch(
         "vibe.core.llm.backend.generic.GenericBackend.complete_streaming",
         side_effect=mock_complete_streaming,
     ).start()
 
-    from vibe.acp.entrypoint import main
+    from vibe.cli.entrypoint import main
 
     main()

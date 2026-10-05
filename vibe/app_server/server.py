@@ -5,16 +5,14 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, suppress
 from dataclasses import dataclass
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from pydantic import JsonValue, ValidationError
 
 from vibe import __version__
-from vibe.app_server._account import AccountGateway
 from vibe.app_server._dispatch import DispatchResult, RequestFailure, method_not_found
 from vibe.app_server._execution import cancel_tasks
 from vibe.app_server._host import HostRequestHandler
-from vibe.app_server._identity import IdentityGateway
 from vibe.app_server._model import ProtocolModel, validate_wire
 from vibe.app_server._session_backend_port import (
     SessionBackend,
@@ -35,18 +33,12 @@ from vibe.app_server._session_backend_port import (
     SessionBackendNotificationSink,
     SessionBackendOpenCallbacks,
     SessionBackendQueuedTurnSteering,
-    SessionBackendResult,
     SessionBackendRewindForkHost,
     SessionBackendRuntimeView,
     SessionEventSubscription,
 )
 from vibe.app_server._session_backend_services import SessionBackendServices
-from vibe.app_server.connector_catalog import ConnectorCatalogService
-from vibe.app_server.events import (
-    CallbackRequested,
-    ConnectorAuthorizationRequiredEvent,
-    MCPAuthorizationRequiredEvent,
-)
+from vibe.app_server.events import CallbackRequested
 from vibe.app_server.models import OpenCallbackState, PublicCallbackEntry
 from vibe.app_server.protocol import (
     SERVER_METHODS,
@@ -73,7 +65,6 @@ from vibe.app_server.protocol import (
     JsonRpcErrorResponse,
     JsonRpcProtocolError,
     JsonRpcSuccessResponse,
-    MCPAuthUrlParams,
     ModelConfigWriteParams,
     Notification,
     PageRequest,
@@ -120,10 +111,6 @@ from vibe.app_server.protocol import (
 from vibe.app_server.transport import JsonRpcTransport
 from vibe.core.config.harness_files import HarnessFilesManager
 from vibe.observability.logging import logger
-
-if TYPE_CHECKING:
-    from vibe.app_server.mcp_catalog import MCPCatalogService
-    from vibe.app_server.plugin_catalog import PluginCatalogService
 
 
 class InitializationState(StrEnum):
@@ -221,12 +208,7 @@ class AppServer:
         *,
         session_backend_host_factory: SessionBackendHostFactory,
         transport_kind: TransportKind = "in_process",
-        account_gateway: AccountGateway | None = None,
-        identity_gateway: IdentityGateway | None = None,
         host_handler: HostRequestHandler | None = None,
-        mcp_catalog_service: MCPCatalogService | None = None,
-        connector_catalog_service: ConnectorCatalogService | None = None,
-        plugin_catalog_service: PluginCatalogService | None = None,
     ) -> None:
         self._root: SessionBackend | None = None
         self._host_handler = host_handler or HostRequestHandler(
@@ -257,11 +239,6 @@ class AppServer:
         self._attachment_lock = asyncio.Lock()
         self._closed = False
         self._shutdown_complete = False
-        self._account_gateway = account_gateway
-        self._identity_gateway = identity_gateway
-        self._mcp_catalog_service = mcp_catalog_service
-        self._connector_catalog_service = connector_catalog_service
-        self._plugin_catalog_service = plugin_catalog_service
         self._session_backend_host = session_backend_host_factory(self)
         if self._session_backend_host is None:
             raise TypeError(
@@ -293,8 +270,7 @@ class AppServer:
                     "Failed to shut down previous session backend", exc_info=exc
                 )
             finally:
-                if self._connector_catalog_service is not None:
-                    self._connector_catalog_service.discard_session(previous.session_id)
+                pass
         await self._replay_pending_backend_events(
             backend, subscription.snapshot.last_event_id
         )
@@ -325,63 +301,10 @@ class AppServer:
     async def _forward_backend_event(self, envelope: SessionBackendEvent) -> None:
         if isinstance(envelope.event, CallbackRequested):
             await self._deliver_callback(envelope.event.callback)
-        elif isinstance(envelope.event, ConnectorAuthorizationRequiredEvent):
-            await self._forward_connector_authorization(envelope.event)
-        elif isinstance(envelope.event, MCPAuthorizationRequiredEvent):
-            await self._forward_mcp_authorization(envelope.event)
-        else:
-            if envelope.method is None or envelope.params is None:
-                raise RuntimeError(
-                    "Session backend event has no Vibe notification mapping"
-                )
-            await self._route_notification(envelope.method, envelope.params)
-        if envelope.method == "turn/completed" and envelope.session_id is not None:
-            service = self._connector_catalog_service
-            if service is not None:
-                runtime_updated = await service.converge_pending_connector_candidate(
-                    envelope.session_id, self._root
-                )
-                if runtime_updated is not None:
-                    await self._route_notification("runtime/updated", runtime_updated)
-
-    async def _forward_connector_authorization(
-        self, event: ConnectorAuthorizationRequiredEvent
-    ) -> None:
-        service = self._connector_catalog_service
-        if service is None or event.raw_connector_id is None or event.action is None:
             return
-        authorization = await service.accept_auth_required(
-            event.params,
-            raw_connector_id=event.raw_connector_id,
-            action=event.action,
-            root=self._root,
-            notify=self._notify,
-        )
-        if authorization is None:
-            return
-        try:
-            await self._route_notification(
-                "runtime/updated", authorization.runtime_updated
-            )
-            await self._route_notification(
-                "connector_catalog/authRequired", event.params
-            )
-        except BaseException:
-            authorization.release_reservation()
-            raise
-        authorization.start_broker()
-
-    async def _forward_mcp_authorization(
-        self, event: MCPAuthorizationRequiredEvent
-    ) -> None:
-        service = self._mcp_catalog_service
-        if service is None:
-            return
-        runtime_updated = await service.accept_auth_required(event.params, self._root)
-        if runtime_updated is None:
-            return
-        await self._route_notification("mcp_catalog/authRequired", event.params)
-        await self._route_notification("runtime/updated", runtime_updated)
+        if envelope.method is None or envelope.params is None:
+            raise RuntimeError("Session backend event has no Vibe notification mapping")
+        await self._route_notification(envelope.method, envelope.params)
 
     def _backend_event_finished(self, task: asyncio.Task[None]) -> None:
         if self._backend_event_task is task:
@@ -502,13 +425,10 @@ class AppServer:
 
     async def _close_root(self) -> None:
         async with self._lifecycle_transition():
-            root = self._root
             try:
                 await self._session_backend_host.shutdown()
             finally:
                 self._root = None
-                if root is not None and self._connector_catalog_service is not None:
-                    self._connector_catalog_service.discard_session(root.session_id)
 
     async def _detach_connection(self, transport: JsonRpcTransport) -> None:
         if self._transport is not transport:
@@ -718,33 +638,13 @@ class AppServer:
         if request.method == "session/stop":
             await self.close()
 
-    async def _dispatch_request(  # noqa: PLR0911 - explicit route ownership
+    async def _dispatch_request(
         self, method: str, raw_params: dict[str, Any]
     ) -> DispatchResult:
         if method not in SERVER_METHODS:
             raise method_not_found(method)
         if method == "events/read":
             return self._events_read(raw_params)
-        if self._mcp_catalog_service is not None and self._mcp_catalog_service.handles(
-            method
-        ):
-            return await self._mcp_catalog_service.dispatch(
-                method, raw_params, root=self._root, notify=self._notify
-            )
-        if (
-            self._connector_catalog_service is not None
-            and self._connector_catalog_service.handles(method)
-        ):
-            return await self._connector_catalog_service.dispatch(
-                method, raw_params, root=self._root, notify=self._route_notification
-            )
-        if (
-            self._plugin_catalog_service is not None
-            and self._plugin_catalog_service.handles(method)
-        ):
-            return await self._plugin_catalog_service.dispatch(
-                method, raw_params, root=self._root
-            )
         if method in {
             "config/schema",
             "session/history/get",
@@ -757,7 +657,7 @@ class AppServer:
             "workspace/git/worktrees/remove",
             "workspace/trust/status",
             "workspace/trust/untrustedConfig",
-        } or method.startswith("projectLinks/"):
+        }:
             return await self._host_handler.dispatch(method, raw_params)
         if method == "session/delete":
             return await self._delete_session(raw_params)
@@ -808,8 +708,6 @@ class AppServer:
                     await cancel_tasks([backend_events], label="deleted session events")
                 self._root = None
                 self._callback_requests.clear()
-                if self._connector_catalog_service is not None:
-                    self._connector_catalog_service.discard_session(params.session_id)
             return DispatchResult(response=response)
         if is_root or references_child:
             raise RequestFailure(
@@ -1222,31 +1120,9 @@ class AppServer:
             )
             runtime_updated = result.response.applied
         elif method == "config/reload":
-            plan = (
-                await self._mcp_catalog_service.prepare_config_reload(root)
-                if self._mcp_catalog_service is not None
-                else None
+            result = await root.reload_config(
+                validate_wire(ConfigReloadParams, raw_params)
             )
-            try:
-                result = await root.reload_config(
-                    validate_wire(ConfigReloadParams, raw_params)
-                )
-                mcp_runtime = (
-                    await self._mcp_catalog_service.finish_config_reload(root, plan)
-                    if self._mcp_catalog_service is not None
-                    else None
-                )
-            except Exception:
-                if self._mcp_catalog_service is not None:
-                    await self._mcp_catalog_service.fail_config_reload(root, plan)
-                raise
-            if mcp_runtime is not None:
-                result = SessionBackendResult(
-                    response=result.response.model_copy(
-                        update={"runtime": mcp_runtime}
-                    ),
-                    after_response=result.after_response,
-                )
             runtime_updated = True
         else:
             return None
@@ -1399,12 +1275,7 @@ class AppServer:
         if self._attaching:
             self._pending_notifications.append(PendingNotification(method, params))
             return
-        sessionless_auth_url = (
-            self._root is None
-            and self._initialization is InitializationState.INITIALIZED
-            and isinstance(params, MCPAuthUrlParams)
-        )
-        if not self._connection_attached and not sessionless_auth_url:
+        if not self._connection_attached:
             return
         await self._send_notification(method, params)
 
@@ -1536,12 +1407,6 @@ class AppServer:
 
     def event_watermark(self, session_id: str) -> int:
         return self._event_watermark(session_id)
-
-    def account_gateway(self) -> AccountGateway | None:
-        return self._account_gateway
-
-    def identity_gateway(self) -> IdentityGateway | None:
-        return self._identity_gateway
 
     def lifecycle_transition(self) -> AbstractAsyncContextManager[None]:
         return self._lifecycle_transition()

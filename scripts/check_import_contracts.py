@@ -87,7 +87,7 @@ def collect_imports(
     repo: Path, vibe_pkg: Path
 ) -> dict[Path, list[tuple[str, str, int]]]:
     result: dict[Path, list[tuple[str, str, int]]] = {}
-    for root in [vibe_pkg, repo / "tests"]:
+    for root in [vibe_pkg, repo / "tests" / "local"]:
         if not root.exists():
             continue
         for py in root.rglob("*.py"):

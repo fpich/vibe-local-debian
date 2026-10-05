@@ -17,8 +17,7 @@ from vibe.observability.logging import log_model_call_success
 
 if TYPE_CHECKING:
     from vibe.core.config import ModelConfig, VibeConfigSchema
-    from vibe.core.telemetry.send import TelemetryClient
-    from vibe.core.telemetry.types import TelemetryCallType
+    from vibe.core.local_runtime import CallType
     from vibe.core.types import (
         AgentStats,
         AvailableTool,
@@ -49,7 +48,7 @@ class CompletionFn(Protocol):
         messages: Sequence[LLMMessage],
         tools: list[AvailableTool] | None,
         tool_choice: StrToolChoice | AvailableTool | None,
-        call_type: TelemetryCallType | None,
+        call_type: CallType | None,
     ) -> LLMChunk: ...
 
 
@@ -73,8 +72,6 @@ class CompactionManager:
         available_tools: Callable[[], list[AvailableTool]],
         tool_choice: Callable[[], StrToolChoice | AvailableTool],
         save: Callable[[], Awaitable[None]],
-        telemetry_client: TelemetryClient,
-        session_ids: Callable[[], tuple[str, str | None]],
     ) -> None:
         self._messages = messages
         self._stats = stats_getter
@@ -83,8 +80,6 @@ class CompactionManager:
         self._available_tools = available_tools
         self._tool_choice = tool_choice
         self._save = save
-        self._telemetry = telemetry_client
-        self._session_ids = session_ids
 
     async def compact(self, extra_instructions: str = "") -> str:
         summary_prefix = UtilityPrompt.COMPACT_SUMMARY_PREFIX.read()
@@ -129,7 +124,6 @@ class CompactionManager:
             recovered = await self._fallback(working, request)
             if recovered is not None:
                 return recovered
-        self._send_compaction_failed(reason)
         if self._config().raise_on_compaction_failure:
             raise CompactionFailedError(reason)
         return None
@@ -238,9 +232,3 @@ class CompactionManager:
                 continue
             blocks.append(f"### {message.role.value}\n" + "\n".join(parts))
         return "\n\n".join(blocks)
-
-    def _send_compaction_failed(self, reason: CompactionFailureReason) -> None:
-        session_id, parent_session_id = self._session_ids()
-        self._telemetry.send_compaction_failed(
-            reason=reason, session_id=session_id, parent_session_id=parent_session_id
-        )

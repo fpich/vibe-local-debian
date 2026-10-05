@@ -16,7 +16,6 @@ from vibe.app_server.models import (
     FileImageSource,
     ImageAttachment,
     InlineImageSource,
-    MentionStats,
     PreparedPrompt,
     PublicMessageEntry,
     PublicQueuedTurn,
@@ -99,9 +98,6 @@ class QueuePorts:
     refresh_session_state: Callable[[], Awaitable[PublicSessionState]]
     turn_has_started: Callable[[str], bool]
     set_loading_queue_count: Callable[[int], None]
-    maybe_show_feedback_bar: Callable[[], Awaitable[None]]
-    send_mention_telemetry: Callable[[MentionStats, str | None], None]
-    send_skill_telemetry: Callable[[str | None], None]
 
 
 @dataclass(slots=True)
@@ -446,7 +442,6 @@ class QueueController:
                 raise
             for entry in entries:
                 await entry.widget.set_pending(False)
-                self._report_prompt(entry.prompt)
             self._merged = None
             await self._remove_header()
             self._push_loading_queue_count()
@@ -494,7 +489,6 @@ class QueueController:
     async def _finish_atomic_steer_locked(self, merged: _MergedTurn) -> None:
         for entry in merged.entries:
             await entry.widget.set_pending(False)
-            self._report_prompt(entry.prompt)
         self._merged = None
         self._clear_atomic_steer()
         await self._remove_header()
@@ -731,8 +725,6 @@ class QueueController:
         pending = self._optimistic.pop(queue_item_id, None)
         if pending is not None:
             await pending.widget.set_pending(False)
-            self._report_prompt(pending.prompt)
-            await self._ports.maybe_show_feedback_bar()
             await self._reset_header_position()
             self._push_loading_queue_count()
             return
@@ -741,10 +733,8 @@ class QueueController:
             return
         for entry in merged.entries:
             await entry.widget.set_pending(False)
-            self._report_prompt(entry.prompt)
         self._merged = None
         self._clear_atomic_steer()
-        await self._ports.maybe_show_feedback_bar()
         await self._reset_header_position()
         self._push_loading_queue_count()
 
@@ -813,13 +803,6 @@ class QueueController:
             widget.set_show_separator(index == last)
             widget.history_entry_id = rewind_id if index == 0 else None
 
-    def _report_prompt(self, prompt: _QueuedPrompt) -> None:
-        prepared = prompt.prepared_prompt
-        if prepared is not None:
-            self._ports.send_mention_telemetry(
-                prepared.mentions, prompt.message_entry_id
-            )
-        self._ports.send_skill_telemetry(prompt.skill_name)
 
     @staticmethod
     def _server_text_of(prompt: _QueuedPrompt) -> str:

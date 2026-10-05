@@ -48,13 +48,6 @@ from vibe.app_server._turns import (
     TurnController,
 )
 from vibe.app_server._utils import now_ms
-from vibe.app_server._vibe_code import (
-    LegacyVibeCodeSession,
-    VibeCodeAccessError,
-    VibeCodeConflictError,
-    VibeCodeController,
-    VibeCodeError,
-)
 from vibe.app_server._workspace import (
     PromptPreparationError,
     WorkspaceTrustError,
@@ -94,7 +87,6 @@ from vibe.app_server.protocol import (
     SessionHistoryClearResponse,
     SessionHistoryListParams,
     SessionHistoryListResponse,
-    SessionKind,
     SessionLogReadParams,
     SessionLogReadResponse,
     SessionReadParams,
@@ -121,11 +113,6 @@ from vibe.app_server.protocol import (
     SessionTurnsListParams,
     SessionTurnsListResponse,
     SessionUpdatedParams,
-    TeleportCancelParams,
-    TeleportCancelResponse,
-    TeleportPushRespondParams,
-    TeleportStartParams,
-    TeleportStartResponse,
     TurnEnqueueParams,
     TurnEnqueueResponse,
     TurnInterruptParams,
@@ -142,19 +129,6 @@ from vibe.app_server.protocol import (
     TurnStartResponse,
     TurnSteerParams,
     TurnSteerResponse,
-    VibeCodeProjectCancelParams,
-    VibeCodeProjectCreateParams,
-    VibeCodeProjectCreateResponse,
-    VibeCodeProjectRecoverParams,
-    VibeCodeProjectRecoverResponse,
-    VibeCodeProjectSelectParams,
-    VibeCodeProjectSelectResponse,
-    VibeCodeProjectsLoadMoreParams,
-    VibeCodeProjectsLoadMoreResponse,
-    VibeCodeProjectsOpenParams,
-    VibeCodeProjectsOpenResponse,
-    VibeCodeProjectUnlinkParams,
-    VibeCodeProjectUnlinkResponse,
     WorkspacePromptPrepareParams,
     WorkspacePromptPrepareResponse,
     WorkspaceTrustDecisionParams,
@@ -221,9 +195,6 @@ class CoreRequestHandler:
         self._shell = ShellRequestHandler(
             agent_loop, turns, execution, self._require_attached, self._current_event_id
         )
-        self._vibe_code = VibeCodeController(
-            LegacyVibeCodeSession(agent_loop, execution, resources.read_account), notify
-        )
         self._resources = resources
         self._review = ReviewRequestHandler(
             agent_loop.review_manager,
@@ -277,12 +248,6 @@ class CoreRequestHandler:
             raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
         except ShellConflictError as exc:
             raise RequestFailure(ProtocolErrorCode.CONFLICT, str(exc)) from exc
-        except VibeCodeConflictError as exc:
-            raise RequestFailure(ProtocolErrorCode.CONFLICT, str(exc)) from exc
-        except VibeCodeAccessError as exc:
-            raise RequestFailure(ProtocolErrorCode.FORBIDDEN, str(exc)) from exc
-        except VibeCodeError as exc:
-            raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
         except SessionExecutionConflict as exc:
             raise RequestFailure(ProtocolErrorCode.CONFLICT, str(exc)) from exc
 
@@ -291,7 +256,6 @@ class CoreRequestHandler:
             return
         self._closed = True
         await self._shell.close()
-        await self._vibe_code.close()
 
     async def _dispatch(
         self, method: str, raw_params: dict[str, Any]
@@ -304,8 +268,8 @@ class CoreRequestHandler:
                 result = await self._dispatch_session(method, raw_params)
             case "turn":
                 result = await self._dispatch_turn(method, raw_params)
-            case "workspace" | "vibeCode":
-                result = await self._dispatch_product(method, raw_params)
+            case "workspace":
+                result = await self._dispatch_workspace(method, raw_params)
             case "callback":
                 result = await self._dispatch_callback(method, raw_params)
             case "plugin":
@@ -317,9 +281,7 @@ class CoreRequestHandler:
             case "review":
                 result = self._review.dispatch(method, raw_params)
             case (
-                "account"
-                | "identity"
-                | "runtime"
+                "runtime"
                 | "config"
                 | "agents"
                 | "skills"
@@ -329,113 +291,14 @@ class CoreRequestHandler:
                 | "connectors"
                 | "mcp"
                 | "loops"
-                | "telemetry"
-                | "narration"
-                | "feedback"
             ):
                 result = await self._resources.dispatch(method, raw_params)
             case _:
                 raise method_not_found(method)
         return result
 
-    async def _dispatch_product(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        if method.startswith("workspace/"):
-            return await self._dispatch_workspace(method, raw_params)
-        return await self._dispatch_vibe_code(method, raw_params)
 
-    async def _dispatch_vibe_code(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        if method.startswith("vibeCode/projects/"):
-            return await self._dispatch_vibe_code_projects(method, raw_params)
-        return await self._dispatch_teleport(method, raw_params)
 
-    async def _dispatch_vibe_code_projects(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        match method:
-            case "vibeCode/projects/open":
-                params = validate_wire(VibeCodeProjectsOpenParams, raw_params)
-                self._require_session(params.session_id)
-                picker_id, view, project_id = await self._vibe_code.open(
-                    purpose=params.purpose, prompt=params.prompt
-                )
-                response: ProtocolModel = VibeCodeProjectsOpenResponse(
-                    picker_id=picker_id, view=view, resolved_project_id=project_id
-                )
-            case "vibeCode/projects/loadMore":
-                params = validate_wire(VibeCodeProjectsLoadMoreParams, raw_params)
-                self._require_session(params.session_id)
-                view, focus = await self._vibe_code.load_more(params.picker_id)
-                response = VibeCodeProjectsLoadMoreResponse(
-                    view=view, focus_option_id=focus
-                )
-            case "vibeCode/projects/create":
-                params = validate_wire(VibeCodeProjectCreateParams, raw_params)
-                self._require_session(params.session_id)
-                view, project = await self._vibe_code.create(
-                    picker_id=params.picker_id,
-                    name=params.name,
-                    default_branch=params.default_branch,
-                )
-                response = VibeCodeProjectCreateResponse(view=view, project=project)
-            case "vibeCode/projects/select":
-                params = validate_wire(VibeCodeProjectSelectParams, raw_params)
-                self._require_session(params.session_id)
-                view, project = await self._vibe_code.select(
-                    picker_id=params.picker_id, project_id=params.project_id
-                )
-                response = VibeCodeProjectSelectResponse(view=view, project=project)
-            case "vibeCode/projects/unlink":
-                params = validate_wire(VibeCodeProjectUnlinkParams, raw_params)
-                self._require_session(params.session_id)
-                view = await self._vibe_code.unlink(params.picker_id)
-                response = VibeCodeProjectUnlinkResponse(view=view)
-            case "vibeCode/projects/cancel":
-                params = validate_wire(VibeCodeProjectCancelParams, raw_params)
-                self._require_session(params.session_id)
-                await self._vibe_code.cancel_picker(params.picker_id)
-                response = EmptyResponse()
-            case "vibeCode/projects/recover":
-                params = validate_wire(VibeCodeProjectRecoverParams, raw_params)
-                self._require_session(params.session_id)
-                view, recovered = await self._vibe_code.recover_stale_link(
-                    params.picker_id
-                )
-                response = VibeCodeProjectRecoverResponse(
-                    recovered=recovered, view=view
-                )
-            case _:
-                raise method_not_found(method)
-        return DispatchResult(response)
-
-    async def _dispatch_teleport(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        after_response: Callable[[], None] | None = None
-        match method:
-            case "vibeCode/teleport/start":
-                params = validate_wire(TeleportStartParams, raw_params)
-                self._require_attached(params.session_id)
-                await self._vibe_code.reserve_teleport(params)
-                response = TeleportStartResponse(operation_id=params.operation_id)
-                after_response = lambda: self._vibe_code.start_teleport(params)
-            case "vibeCode/teleport/cancel":
-                params = validate_wire(TeleportCancelParams, raw_params)
-                self._require_attached(params.session_id)
-                response = TeleportCancelResponse(
-                    cancelled=await self._vibe_code.cancel_teleport(params.operation_id)
-                )
-            case "vibeCode/teleport/push/respond":
-                params = validate_wire(TeleportPushRespondParams, raw_params)
-                self._require_attached(params.session_id)
-                self._vibe_code.respond_to_push(params.operation_id, params.approved)
-                response = EmptyResponse()
-            case _:
-                raise method_not_found(method)
-        return DispatchResult(response, after_response)
 
     async def _dispatch_session(
         self, method: str, raw_params: dict[str, Any]
@@ -599,9 +462,6 @@ class CoreRequestHandler:
                     "The app server was started in a different working directory",
                 )
             self._root_session.attach(self._agent_loop.session_id)
-            self._agent_loop.start_initialize_experiments(
-                defer_new_session_telemetry=params.kind is SessionKind.EPHEMERAL
-            )
             return DispatchResult(
                 SessionStartResponse(
                     state=(state := self._public_state(params.history_limit)),
@@ -1351,7 +1211,7 @@ class CoreRequestHandler:
         self._require_attached(params.session_id)
         # The reserve is stricter than the loop's own guards, and it is what
         # makes every busy case a conflict rather than a bad request: a turn, a
-        # teleport and another lifecycle transition all hold the same slot. What
+        # Lifecycle transitions all hold the same slot. What
         # reaches the loop is therefore only ever a target it rejects on merit.
         with self._execution.reserve(SessionExecutionKind.LIFECYCLE, "relocate"):
             previous_cwd = self._agent_loop.cwd

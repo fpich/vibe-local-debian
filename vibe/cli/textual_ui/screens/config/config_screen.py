@@ -119,8 +119,6 @@ class ConfigScreen(ModalScreen[bool]):
         choices: dict[str, list[str]] = {
             "theme": list(sorted_theme_names()),
             "active_model": [model.alias for model in config.models],
-            "active_transcribe_model": list(config.transcribe_models),
-            "active_tts_model": list(config.tts_models),
         }
         if (field_choices := choices.get(view.name)) is None:
             return view

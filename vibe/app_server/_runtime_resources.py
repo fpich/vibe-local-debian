@@ -7,21 +7,17 @@ from vibe.app_server.client_state import ClientSessionState
 from vibe.app_server.config import ConfigView, ProxySettingsView, ThinkingLevel
 from vibe.app_server.connection import AppServerResourceConnection
 from vibe.app_server.models import (
-    AccountView,
     AgentStatsSnapshot,
     AgentSummary,
     ConfigIssue,
     ConnectorCounts,
     DebugLogPage,
-    IdentityView,
     MCPState,
     SessionLogSummary,
     SkillSummary,
     ToolSummary,
 )
 from vibe.app_server.protocol import (
-    AccountReadParams,
-    AccountReadResponse,
     AgentInstallParams,
     AgentsListParams,
     AgentsListResponse,
@@ -42,8 +38,6 @@ from vibe.app_server.protocol import (
     DiagnosticsLogsReadParams,
     DiagnosticsLogsReadResponse,
     EmptyResponse,
-    IdentityReadParams,
-    IdentityReadResponse,
     ModelConfigWriteParams,
     Notification,
     ProtocolError,
@@ -241,54 +235,8 @@ class ConfigResource:
         )
 
 
-class AccountResource:
-    def __init__(
-        self, connection: AppServerResourceConnection, state: ClientSessionState
-    ) -> None:
-        self._connection = connection
-        self._state = state
-        self._current: AccountView | None = None
-
-    @property
-    def current(self) -> AccountView | None:
-        return self._current
-
-    async def read(self) -> AccountView:
-        self._current = None
-        client = await self._connection.connect()
-        response = validate_wire(
-            AccountReadResponse,
-            await client.request(
-                "account/read", AccountReadParams(session_id=self._state.session_id)
-            ),
-        )
-        self._current = response.account
-        return response.account
 
 
-class IdentityResource:
-    def __init__(
-        self, connection: AppServerResourceConnection, state: ClientSessionState
-    ) -> None:
-        self._connection = connection
-        self._state = state
-        self._current: IdentityView | None = None
-
-    @property
-    def current(self) -> IdentityView | None:
-        return self._current
-
-    async def read(self) -> IdentityView | None:
-        self._current = None
-        client = await self._connection.connect()
-        response = validate_wire(
-            IdentityReadResponse,
-            await client.request(
-                "identity/read", IdentityReadParams(session_id=self._state.session_id)
-            ),
-        )
-        self._current = response.identity
-        return response.identity
 
 
 class AgentResource:

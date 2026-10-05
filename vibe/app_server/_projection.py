@@ -4,7 +4,7 @@ from collections.abc import Iterable, Mapping, Sequence
 import hashlib
 import json
 from pathlib import Path
-from typing import Literal, Protocol, TypedDict
+from typing import Protocol, TypedDict
 
 from pydantic import JsonValue
 
@@ -16,15 +16,7 @@ from vibe.app_server._tool_projection import (
 )
 from vibe.app_server._utils import now_ms
 from vibe.app_server._worktree_effects import WorktreeEffect
-from vibe.app_server.config import (
-    AudioProviderView,
-    ConfigView,
-    ModelConfigView,
-    SpeechConfigView,
-    TranscribeModelConfigView,
-    TranscriptionConfigView,
-    TTSModelConfigView,
-)
+from vibe.app_server.config import ConfigView, ModelConfigView
 from vibe.app_server.models import (
     AgentStatsSnapshot,
     AgentSummary,
@@ -42,11 +34,7 @@ from vibe.app_server.models import (
     GenericEffectDetail,
     ImageAttachment,
     ImageContentBlock,
-    MCPSourceKind,
-    MCPSourceStatus,
-    MCPSourceSummary,
     MCPState,
-    MCPToolSummary,
     PublicCheckpointEntry,
     PublicEffectEntry,
     PublicEntryGenerationStatus,
@@ -63,22 +51,10 @@ from vibe.app_server.models import (
 )
 from vibe.core.agent_loop import AgentLoop
 from vibe.core.agents import AgentProfile, BuiltinAgentName
-from vibe.core.config import (
-    ModelConfig,
-    TranscribeClient,
-    TranscribeModelConfig,
-    TranscribeProviderConfig,
-    TTSClient,
-    TTSModelConfig,
-    TTSProviderConfig,
-    VibeConfigSchema,
-)
+from vibe.core.config import ModelConfig, VibeConfigSchema
 from vibe.core.config.orchestrator import ConfigOrchestrator
 from vibe.core.log_reader import PaginatedLogs
 from vibe.core.skills.models import SkillInfo, SkillSource
-from vibe.core.tools.connectors.connector_registry import ConnectorAuthAction
-from vibe.core.tools.connectors.counts import compute_connector_counts
-from vibe.core.tools.remote import AuthStatus, MCPTool
 from vibe.core.types import (
     ImageAttachment as CoreImageAttachment,
     LLMMessage,
@@ -88,7 +64,6 @@ from vibe.core.types import (
 )
 from vibe.core.utils import CANCELLATION_TAG, TOOL_ERROR_TAG, TaggedText, name_matches
 from vibe.user_content import UserResource
-from vibe.utils.mcp import format_tool_display_description
 from vibe.utils.tool_presentation import ToolCallPresentation
 
 
@@ -96,7 +71,6 @@ def project_config(agent_loop: AgentLoop) -> ConfigView:
     return project_config_view(
         agent_loop.config,
         active_model_pinned=active_model_is_pinned(agent_loop.config_orchestrator),
-        awaiting_experiment_model=agent_loop.awaiting_experiment_model,
     )
 
 
@@ -104,14 +78,11 @@ def project_config_view(
     config: VibeConfigSchema,
     *,
     active_model_pinned: bool = False,
-    awaiting_experiment_model: bool = False,
     # Whether the caller's backend can show a blind model a description in
     # place of the pixels. Only the Unified one can, so the legacy projection
     # keeps reporting the active model's own vision.
     image_fallback: bool = False,
 ) -> ConfigView:
-    transcribe_model = config.get_active_transcribe_model()
-    tts_model = config.get_active_tts_model()
     active_model = config.get_active_model()
     # A describer, not Core's resource-link projection, is what makes the
     # promise good for every source kind: the link only exists for a
@@ -121,7 +92,6 @@ def project_config_view(
         active_model=_project_model_config(active_model),
         active_model_pinned=active_model_pinned,
         images_supported=active_model.supports_images or describable,
-        awaiting_experiment_model=awaiting_experiment_model,
         # The configured default, never the active model: clients render it as
         # the "Default (currently X)" hint, which must stay stable while a pin
         # is in effect.
@@ -134,46 +104,20 @@ def project_config_view(
         autocopy_to_clipboard=config.autocopy_to_clipboard,
         file_watcher_for_autocomplete=config.file_watcher_for_autocomplete,
         ask_confirmation_on_exit=config.ask_confirmation_on_exit,
-        voice_mode_enabled=config.voice_mode_enabled,
-        narrator_enabled=config.narrator_enabled,
         show_thinking_nodes=config.show_thinking_nodes,
         show_subagent_status_list=config.show_subagent_status_list,
         worktree_limit=config.worktree_limit,
-        enable_update_checks=config.enable_update_checks,
         enable_notifications=config.enable_notifications,
         experimental_enable_tab_status=config.experimental_enable_tab_status,
-        enable_telemetry=config.enable_telemetry,
-        experimental_enable_registry_skills=config.experimental_enable_registry_skills,
         models=[
             _project_model_config(model) for model in config.available_models().values()
         ],
-        transcribe_models=[model.alias for model in config.transcribe_models],
-        tts_models=[model.alias for model in config.tts_models],
-        transcription=TranscriptionConfigView(
-            model=_project_transcribe_model(transcribe_model),
-            provider=_project_transcribe_provider(
-                config.get_transcribe_provider_for_model(transcribe_model)
-            ),
-        ),
-        speech=SpeechConfigView(
-            model=_project_tts_model(tts_model),
-            provider=_project_tts_provider(
-                config.get_tts_provider_for_model(tts_model)
-            ),
-        ),
         validation_warnings=list(config.validation_warnings),
     )
 
 
 def project_workdir(agent_loop: AgentLoop) -> str:
     return agent_loop.config.displayed_workdir or str(agent_loop.cwd)
-
-
-def _project_audio_client(client: TranscribeClient | TTSClient) -> Literal["mistral"]:
-    match client:
-        case TranscribeClient.MISTRAL | TTSClient.MISTRAL:
-            return "mistral"
-    raise ValueError(f"Unsupported audio client: {client}")
 
 
 def _project_model_config(model: ModelConfig) -> ModelConfigView:
@@ -183,42 +127,6 @@ def _project_model_config(model: ModelConfig) -> ModelConfigView:
         thinking=model.thinking,
         supports_images=model.supports_images,
         display_name=model.display_name or model.alias,
-    )
-
-
-def _project_transcribe_model(
-    model: TranscribeModelConfig,
-) -> TranscribeModelConfigView:
-    return TranscribeModelConfigView(
-        name=model.name,
-        sample_rate=model.sample_rate,
-        encoding=model.encoding,
-        language=model.language,
-        target_streaming_delay_ms=model.target_streaming_delay_ms,
-    )
-
-
-def _project_transcribe_provider(
-    provider: TranscribeProviderConfig,
-) -> AudioProviderView:
-    return AudioProviderView(
-        api_base=provider.api_base,
-        api_key_env_var=provider.api_key_env_var,
-        client=_project_audio_client(provider.client),
-    )
-
-
-def _project_tts_model(model: TTSModelConfig) -> TTSModelConfigView:
-    return TTSModelConfigView(
-        name=model.name, voice=model.voice, response_format=model.response_format
-    )
-
-
-def _project_tts_provider(provider: TTSProviderConfig) -> AudioProviderView:
-    return AudioProviderView(
-        api_base=provider.api_base,
-        api_key_env_var=provider.api_key_env_var,
-        client=_project_audio_client(provider.client),
     )
 
 
@@ -395,152 +303,15 @@ def project_tools(agent_loop: AgentLoop) -> list[ToolSummary]:
 
 
 def project_connectors(agent_loop: AgentLoop) -> ConnectorCounts:
-    connected, total = compute_connector_counts(
-        agent_loop.config, agent_loop.connector_registry
-    )
-    return ConnectorCounts(connected=connected, total=total)
+    del agent_loop
+    return ConnectorCounts(connected=0, total=0)
 
 
 def project_mcp(
     agent_loop: AgentLoop, *, discovery_errors: Mapping[str, str] | None = None
 ) -> MCPState:
-    tools = _project_mcp_tools(agent_loop)
-    discovery_errors_set = set(discovery_errors) if discovery_errors else set()
-    connector_registry = agent_loop.connector_registry
-    connector_error = (
-        connector_registry.bootstrap_error() if connector_registry is not None else None
-    )
-    return MCPState(
-        sources=[
-            *_project_mcp_servers(agent_loop, tools, discovery_errors_set),
-            *_project_mcp_connectors(agent_loop, tools),
-        ],
-        discovery_errors=dict(discovery_errors or {}),
-        connector_error=connector_error,
-    )
-
-
-def _project_mcp_tools(
-    agent_loop: AgentLoop,
-) -> dict[tuple[MCPSourceKind, str], list[MCPToolSummary]]:
-    tools: dict[tuple[MCPSourceKind, str], list[MCPToolSummary]] = {}
-    available = agent_loop.tool_manager.available_tools
-    for tool_name, tool_class in agent_loop.tool_manager.registered_tools.items():
-        if not issubclass(tool_class, MCPTool):
-            continue
-        source_name = tool_class.get_server_name()
-        if source_name is None:
-            continue
-        kind = (
-            MCPSourceKind.CONNECTOR
-            if tool_class.is_connector()
-            else MCPSourceKind.SERVER
-        )
-        tools.setdefault((kind, source_name), []).append(
-            MCPToolSummary(
-                name=tool_class.get_remote_name(),
-                description=format_tool_display_description(
-                    tool_class.description, source_name=source_name
-                ),
-                enabled=tool_name in available,
-            )
-        )
-    return tools
-
-
-def _project_mcp_servers(
-    agent_loop: AgentLoop,
-    tools: dict[tuple[MCPSourceKind, str], list[MCPToolSummary]],
-    discovery_errors: set[str],
-) -> list[MCPSourceSummary]:
-    registry = agent_loop.mcp_registry
-    server_statuses = registry.status() if registry is not None else {}
-    sources: list[MCPSourceSummary] = []
-    for server in agent_loop.config.mcp_servers:
-        if server.disabled:
-            status = MCPSourceStatus.DISABLED
-        elif server.name in discovery_errors:
-            status = MCPSourceStatus.UNAVAILABLE
-        else:
-            match server_statuses.get(server.name):
-                case AuthStatus.NEEDS_AUTH:
-                    status = MCPSourceStatus.NEEDS_AUTH
-                case AuthStatus.OK:
-                    status = MCPSourceStatus.CONNECTED
-                case _:
-                    status = MCPSourceStatus.ENABLED
-        sources.append(
-            MCPSourceSummary(
-                name=server.name,
-                kind=MCPSourceKind.SERVER,
-                transport=server.transport,
-                status=status,
-                tools=sorted(
-                    tools.get((MCPSourceKind.SERVER, server.name), []),
-                    key=lambda tool: tool.name,
-                ),
-            )
-        )
-    return sources
-
-
-def _project_mcp_connectors(
-    agent_loop: AgentLoop, tools: dict[tuple[MCPSourceKind, str], list[MCPToolSummary]]
-) -> list[MCPSourceSummary]:
-    connector_registry = agent_loop.connector_registry
-    connector_configs = {
-        connector.name: connector for connector in agent_loop.config.connectors
-    }
-    connector_names = set(connector_configs)
-    if connector_registry is not None:
-        connector_names.update(connector_registry.get_connector_names())
-    sources: list[MCPSourceSummary] = []
-    for name in sorted(connector_names):
-        config = connector_configs.get(name)
-        disabled = config is None or config.disabled
-        if disabled:
-            status = MCPSourceStatus.DISABLED
-        elif connector_registry is None:
-            status = MCPSourceStatus.UNAVAILABLE
-        elif connector_registry.is_connected(name):
-            status = MCPSourceStatus.CONNECTED
-        else:
-            match connector_registry.get_auth_action(name):
-                case ConnectorAuthAction.OAUTH:
-                    status = MCPSourceStatus.NEEDS_AUTH
-                case ConnectorAuthAction.CREDENTIALS_SETUP:
-                    status = MCPSourceStatus.NEEDS_SETUP
-                case _:
-                    status = MCPSourceStatus.UNAVAILABLE
-        error = (
-            connector_registry.connector_error_for(name)
-            if connector_registry is not None
-            else None
-        )
-        source_tools = {
-            tool.name: tool for tool in tools.get((MCPSourceKind.CONNECTOR, name), [])
-        }
-        if connector_registry is not None:
-            for descriptor in connector_registry.get_catalog_tools(name):
-                source_tools.setdefault(
-                    descriptor.name,
-                    MCPToolSummary(
-                        name=descriptor.name,
-                        description=descriptor.description or "",
-                        enabled=False,
-                    ),
-                )
-        sources.append(
-            MCPSourceSummary(
-                name=name,
-                kind=MCPSourceKind.CONNECTOR,
-                transport="connector",
-                status=status,
-                tools=sorted(source_tools.values(), key=lambda tool: tool.name),
-                error=error,
-            )
-        )
-    return sources
+    del agent_loop, discovery_errors
+    return MCPState()
 
 
 def project_session_log(agent_loop: AgentLoop) -> SessionLogSummary:

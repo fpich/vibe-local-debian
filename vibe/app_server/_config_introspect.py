@@ -37,15 +37,11 @@ POPULAR_SETTINGS: frozenset[str] = frozenset({
     "active_model",
     "theme",
     "default_agent",
-    "mcp_servers",
     "auto_compact_threshold",
     "bypass_tool_permissions",
     "autocopy_to_clipboard",
     "ask_confirmation_on_exit",
     "enable_notifications",
-    "enable_auto_update",
-    "voice_mode_enabled",
-    "enable_telemetry",
 })
 
 _SCALAR_KINDS: tuple[tuple[type, ConfigFieldKind], ...] = (

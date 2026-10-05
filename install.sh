@@ -3,6 +3,54 @@
 # Installe aussi le CLI vibe depuis ce dépôt.
 set -euo pipefail
 
+# Version épinglée + empreinte du script officiel uv. Mettre à jour les deux
+# valeurs ensemble lors d’un changement de version.
+UV_INSTALLER_VERSION="0.11.26"
+UV_INSTALLER_SHA256="92fa9085d24c214bb4445cc1da8c15ca9cca8cffb34726240fa08c5302e94ccc"
+
+sha256_of() {
+  local file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+  else
+    return 1
+  fi
+}
+
+install_uv_verified() {
+  local installer actual_sha256
+  installer="$(mktemp)"
+
+  if ! curl -LsSf "https://astral.sh/uv/${UV_INSTALLER_VERSION}/install.sh" -o "$installer"; then
+    rm -f -- "$installer"
+    echo "Erreur: téléchargement de l’installateur uv impossible." >&2
+    exit 3
+  fi
+
+  if ! actual_sha256="$(sha256_of "$installer")"; then
+    rm -f -- "$installer"
+    echo "Erreur: aucun outil SHA-256 disponible pour vérifier uv." >&2
+    exit 3
+  fi
+
+  if [[ "$actual_sha256" != "$UV_INSTALLER_SHA256" ]]; then
+    rm -f -- "$installer"
+    echo "Erreur: empreinte SHA-256 de l’installateur uv invalide; exécution refusée." >&2
+    echo "  attendue: $UV_INSTALLER_SHA256" >&2
+    echo "  obtenue : $actual_sha256" >&2
+    exit 3
+  fi
+
+  if ! sh "$installer"; then
+    rm -f -- "$installer"
+    echo "Erreur: installation de uv échouée." >&2
+    exit 3
+  fi
+  rm -f -- "$installer"
+}
+
 if [[ ! -r /etc/os-release ]]; then
   echo "Erreur: /etc/os-release absent; Debian 13 requis." >&2
   exit 2
@@ -17,11 +65,10 @@ fi
 
 echo "==> Système: ${PRETTY_NAME:-Debian 13}"
 
-echo "==> Dépendances de build (compilateur Rust du CLI)"
+echo "==> Dépendances système"
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
-  build-essential pkg-config cmake rustc cargo \
-  libasound2-dev
+  curl ca-certificates
 
 echo "==> Installation de Kitty (terminal)"
 if ! dpkg -s kitty >/dev/null 2>&1; then
@@ -33,7 +80,7 @@ fi
 
 echo "==> Installation de uv"
 if ! command -v uv >/dev/null 2>&1; then
-  curl -LsSf https://astral.sh/uv/install.sh | bash
+  install_uv_verified
   export PATH="$HOME/.local/bin:$PATH"
 else
   echo "    uv déjà installé: $(uv --version)"
@@ -46,12 +93,9 @@ fi
 
 echo "==> Installation du CLI vibe depuis ce dépôt"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-if ! uv tool list 2>/dev/null | grep -qE "^mistral-vibe(-v2x8.*)?:"; then
-  uv tool install "$SCRIPT_DIR"
-else
-  echo "    vibe déjà installé; mise à jour..."
-  uv tool upgrade mistral-vibe 2>/dev/null || uv tool install --reinstall "$SCRIPT_DIR"
-fi
+# Toujours installer explicitement la copie locale pour éviter toute résolution
+# accidentelle du nom de distribution sur un index public.
+uv tool install --force "$SCRIPT_DIR"
 
 echo "==> Configuration globale (~/.vibe/config.toml)"
 mkdir -p "$HOME/.vibe"
@@ -72,5 +116,9 @@ echo
 echo "Terminé. Utilisation:"
 echo "  kitty            # terminal recommandé"
 echo "  vibe              # agent dans n'importe quel projet"
-echo "  curl -s http://127.0.0.1:8080/v1/models   # worker1 (KAT) doit lister worker"
-echo "  curl -s http://127.0.0.1:8081/v1/models   # worker2 (Qwen3.5) doit lister worker"
+echo "  ${HOME}/.vibe/config.toml   # configure api_base pour tes serveurs llama.cpp"
+if [[ -f "$HOME/.vibe/config.toml" ]]; then
+  echo "  Endpoints configurés:"
+  grep -E '^[[:space:]]*api_base[[:space:]]*=' "$HOME/.vibe/config.toml" \
+    | sed 's/^/    /' || true
+fi

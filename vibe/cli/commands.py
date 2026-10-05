@@ -6,25 +6,11 @@ import platform
 
 from vibe.cli.constants import CLIPBOARD_IMAGE_PASTE_SUPPORTED_SYSTEM
 
-# Commands temporarily hidden from the CLI. The handlers, widgets, and code are
-# left fully intact; a command reappears as soon as its name is removed from
-# this set. "mcp" also covers its "/connectors" alias.
-HIDDEN_COMMANDS: frozenset[str] = frozenset({
-    "mcp",
-    "proxy-setup",
-    "remote-project",
-    "teleport",
-    "voice",
-    "whoami",
-    "leanstall",
-    "unleanstall",
-})
-
 
 @dataclass(frozen=True)
 class CommandContext:
-    registry_skills_enabled: bool = False
-    experimental_harness: bool = False
+    """Runtime command context for the local-only CLI."""
+
 
 
 CommandAvailability = Callable[[CommandContext], bool]
@@ -47,7 +33,7 @@ class CommandRegistry:
         context: CommandContext | None = None,
     ) -> None:
         if excluded_commands is None:
-            excluded_commands = sorted(HIDDEN_COMMANDS)
+            excluded_commands = []
         self._disabled_commands = set(excluded_commands)
         self._commands: dict[str, Command] = {}
         self.refresh(context)
@@ -69,12 +55,6 @@ class CommandRegistry:
                 aliases=frozenset(["/model"]),
                 description="Select active model",
                 handler="_show_model",
-            ),
-            "skills": Command(
-                aliases=frozenset(["/skills"]),
-                description="Browse, import, and manage skills",
-                handler="_show_skills",
-                is_available=lambda ctx: ctx.registry_skills_enabled,
             ),
             "thinking": Command(
                 aliases=frozenset(["/thinking"]),
@@ -145,27 +125,6 @@ class CommandRegistry:
                 handler="_show_status",
                 side_channel=True,
             ),
-            "whoami": Command(
-                aliases=frozenset(["/whoami"]),
-                description="Display the Mistral signed-in user, workspace, and plan",
-                handler="_show_whoami",
-                side_channel=True,
-            ),
-            "teleport": Command(
-                aliases=frozenset(["/teleport"]),
-                description="Teleport session to Vibe Code Web",
-                handler="_teleport_command",
-            ),
-            "remote-project": Command(
-                aliases=frozenset(["/remote-project"]),
-                description="Select the Vibe Code Web project for this repository",
-                handler="_vibe_code_project_command",
-            ),
-            "proxy-setup": Command(
-                aliases=frozenset(["/proxy-setup"]),
-                description="Configure proxy and SSL certificate settings",
-                handler="_show_proxy_setup",
-            ),
             "resume": Command(
                 aliases=frozenset(["/resume", "/continue"]),
                 description="Browse, resume, or delete saved sessions",
@@ -177,48 +136,10 @@ class CommandRegistry:
                 handler="_rename_session",
                 side_channel=True,
             ),
-            "mcp": Command(
-                aliases=frozenset(["/mcp", "/connectors"]),
-                description=(
-                    "Display available MCP servers and connectors. "
-                    "Pass a name to list tools; subcommands: add <url> "
-                    "[--transport http|streamable-http], status, login <alias>, "
-                    "logout <alias>"
-                ),
-                handler="_show_mcp",
-            ),
-            "plugins": Command(
-                aliases=frozenset(["/plugins"]),
-                description="Display the plugins this session is running",
-                handler="_show_plugins",
-                is_available=lambda ctx: ctx.experimental_harness,
-            ),
-            "reload-plugins": Command(
-                aliases=frozenset(["/reload-plugins"]),
-                description="Re-pin this session's plugins and report what changed",
-                handler="_reload_plugins",
-                is_available=lambda ctx: ctx.experimental_harness,
-            ),
             "todo": Command(
                 aliases=frozenset(["/todo"]),
                 description="Show the current todo list",
                 handler="_show_todos",
-                is_available=lambda ctx: ctx.experimental_harness,
-            ),
-            "voice": Command(
-                aliases=frozenset(["/voice"]),
-                description="Configure voice settings",
-                handler="_show_voice_settings",
-            ),
-            "leanstall": Command(
-                aliases=frozenset(["/leanstall"]),
-                description="Install the Lean 4 agent (leanstral)",
-                handler="_install_lean",
-            ),
-            "unleanstall": Command(
-                aliases=frozenset(["/unleanstall"]),
-                description="Uninstall the Lean 4 agent",
-                handler="_uninstall_lean",
             ),
             "rewind": Command(
                 aliases=frozenset(["/rewind"]),
@@ -249,12 +170,6 @@ class CommandRegistry:
                     "Use `/loop <interval> <prompt>`, `/loop list`, or `/loop cancel <id|all>`"
                 ),
                 handler="_loop_command",
-            ),
-            "data-retention": Command(
-                aliases=frozenset(["/data-retention"]),
-                description="Show data retention information",
-                handler="_show_data_retention",
-                side_channel=True,
             ),
             "theme": Command(
                 aliases=frozenset(["/theme"]),

@@ -13,7 +13,6 @@ from vibe.app_server._model import ProtocolModel
 from vibe.app_server._projector import EventProjector
 from vibe.app_server._runtime import AgentRuntimeFactory, RootOpenRequest
 from vibe.app_server.client import AppServerClient
-from vibe.app_server.connector_catalog import ConnectorCatalogService
 from vibe.app_server.events import AppServerEvent, ClientProjection
 from vibe.app_server.models import (
     IdleSessionStatus,
@@ -151,7 +150,6 @@ def start_test_app_server_pair(
     *,
     account_gateway: AccountGateway | None = None,
     identity_gateway: IdentityGateway | None = None,
-    connector_catalog_service: ConnectorCatalogService | None = None,
 ) -> tuple[AppServerClient, AppServer]:
     """Use when a test needs to poke the server side directly."""
     client_transport, server_transport = memory_transport_pair()
@@ -160,7 +158,6 @@ def start_test_app_server_pair(
         server_transport,
         account_gateway=account_gateway,
         identity_gateway=identity_gateway,
-        connector_catalog_service=connector_catalog_service,
     )
     client = AppServerClient(client_transport, run_peer=server.serve)
     return client, server
@@ -171,13 +168,11 @@ def start_test_app_server(
     *,
     account_gateway: AccountGateway | None = None,
     identity_gateway: IdentityGateway | None = None,
-    connector_catalog_service: ConnectorCatalogService | None = None,
 ) -> AppServerClient:
     client, _ = start_test_app_server_pair(
         agent_loop,
         account_gateway=account_gateway,
         identity_gateway=identity_gateway,
-        connector_catalog_service=connector_catalog_service,
     )
     return client
 
@@ -188,7 +183,6 @@ def build_test_app_server(
     *,
     account_gateway: AccountGateway | None = None,
     identity_gateway: IdentityGateway | None = None,
-    connector_catalog_service: ConnectorCatalogService | None = None,
 ) -> AppServer:
     runtime_factory = AgentRuntimeFactory()
 
@@ -208,7 +202,6 @@ def build_test_app_server(
         runtime_factory=runtime_factory,
         account_gateway=account_gateway,
         identity_gateway=identity_gateway,
-        connector_catalog_service=connector_catalog_service,
     )
 
 
@@ -223,14 +216,12 @@ async def create_test_app_server_session(
     *,
     account_gateway: AccountGateway | None = None,
     identity_gateway: IdentityGateway | None = None,
-    connector_catalog_service: ConnectorCatalogService | None = None,
 ) -> AppServerSession:
     return await attach_test_app_server_session(
         start_test_app_server(
             agent_loop,
             account_gateway=account_gateway,
             identity_gateway=identity_gateway,
-            connector_catalog_service=connector_catalog_service,
         )
     )
 

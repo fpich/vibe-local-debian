@@ -7,12 +7,6 @@ from typing import Any, cast
 
 from pydantic import JsonValue
 
-from vibe.app_server._account import AccountController, AccountGateway
-from vibe.app_server._admin_config import (
-    apply_admin_config as _apply_admin_config,
-    refresh_admin_layer,
-    report_admin_config_outcome,
-)
 from vibe.app_server._config_introspect import (
     HIDDEN_SETTINGS,
     POPULAR_SETTINGS,
@@ -26,9 +20,7 @@ from vibe.app_server._config_write import (
 )
 from vibe.app_server._dispatch import DispatchResult, RequestFailure, method_not_found
 from vibe.app_server._execution import SessionExecution
-from vibe.app_server._identity import IdentityController, IdentityGateway
 from vibe.app_server._model import ProtocolModel, validate_wire
-from vibe.app_server._narration import NarrationContext, NarrationService
 from vibe.app_server._projection import (
     project_agents,
     project_config,
@@ -49,16 +41,8 @@ from vibe.app_server._session_model import (
 )
 from vibe.app_server._skills_service import SkillsController
 from vibe.app_server.config import ProxySettingsView
-from vibe.app_server.models import (
-    AccountView,
-    IdentityView,
-    MCPState,
-    ScheduledLoop,
-    SkillSummary,
-)
+from vibe.app_server.models import MCPState, ScheduledLoop, SkillSummary
 from vibe.app_server.protocol import (
-    AccountReadParams,
-    AccountReadResponse,
     AgentInstallParams,
     AgentsListParams,
     AgentsListResponse,
@@ -85,11 +69,6 @@ from vibe.app_server.protocol import (
     DiagnosticsLogsReadParams,
     DiagnosticsLogsReadResponse,
     EmptyResponse,
-    FeedbackRecordParams,
-    FeedbackShouldShowParams,
-    FeedbackShouldShowResponse,
-    IdentityReadParams,
-    IdentityReadResponse,
     LoopsClearParams,
     LoopsClearResponse,
     LoopsCreateParams,
@@ -99,28 +78,18 @@ from vibe.app_server.protocol import (
     LoopsListParams,
     LoopsListResponse,
     ModelConfigWriteParams,
-    NarrationSummarizeParams,
-    NarrationSummarizeResponse,
     ProtocolErrorCode,
     RuntimeReadParams,
     RuntimeReadResponse,
     RuntimeSnapshot,
     StatsReadParams,
     StatsReadResponse,
-    TelemetryRecordParams,
     ToolsListParams,
     ToolsListResponse,
 )
 from vibe.core.agent_loop import AgentLoop
 from vibe.core.config import VibeConfigSchema
-from vibe.core.config.admin_config import MANAGED_CONFIG_TIMEOUT, AdminConfigApplyResult
 from vibe.core.config.orchestrator import ConfigOrchestrator, ConfigPatchValidationError
-from vibe.core.feedback import (
-    record_feedback_asked,
-    record_feedback_given,
-    record_feedback_snoozed,
-    should_show_feedback,
-)
 from vibe.core.log_reader import LogReader
 from vibe.core.loop import LoopError, LoopManager
 from vibe.core.proxy_setup import (
@@ -130,9 +99,8 @@ from vibe.core.proxy_setup import (
     set_proxy_var,
     unset_proxy_var,
 )
-from vibe.core.types import Role, ScheduledLoop as CoreScheduledLoop
-from vibe.feedback import FEEDBACK_SNOOZED_COOLDOWN_SECONDS
-from vibe.observability.logging import logger, set_config_log_level
+from vibe.core.types import ScheduledLoop as CoreScheduledLoop
+from vibe.observability.logging import set_config_log_level
 
 
 class _LegacySkillsHost:
@@ -190,26 +158,14 @@ class ResourceRequestHandler:
         agent_loop: AgentLoop,
         execution: SessionExecution,
         notify: Callable[[str, ProtocolModel], Awaitable[None]],
-        account_gateway: AccountGateway | None = None,
         current_event_id: Callable[[str], int] | None = None,
-        identity_gateway: IdentityGateway | None = None,
     ) -> None:
         self._agent_loop = agent_loop
         self._execution = execution
         self._notify = notify
         self._current_event_id = current_event_id or (lambda _session_id: 0)
-        self._account = AccountController(agent_loop, account_gateway)
-        self._identity = IdentityController(agent_loop, identity_gateway)
         self._loops = LoopManager(agent_loop.session_logger)
         self._logs = LogReader()
-        self._narration = NarrationService(
-            lambda: NarrationContext(
-                config=agent_loop.config,
-                launch_context=agent_loop.launch_context,
-                parent_session_id=agent_loop.parent_session_id,
-                user_plan=agent_loop.user_plan,
-            )
-        )
         self._skills = SkillsController(
             _LegacySkillsHost(
                 agent_loop, execution, self.runtime_snapshot, self._require_session
@@ -223,10 +179,6 @@ class ResourceRequestHandler:
         match namespace:
             case "runtime":
                 result = self._dispatch_runtime(method, raw_params)
-            case "account":
-                result = await self._dispatch_account(method, raw_params)
-            case "identity":
-                result = await self._dispatch_identity(method, raw_params)
             case "config":
                 result = await self._dispatch_config(method, raw_params)
             case "agents":
@@ -239,10 +191,6 @@ class ResourceRequestHandler:
                 result = await self._dispatch_connectors(method, raw_params)
             case "loops":
                 result = await self._dispatch_loops(method, raw_params)
-            case "narration":
-                result = await self._dispatch_narration(method, raw_params)
-            case "telemetry" | "feedback":
-                result = self._dispatch_client_event(method, raw_params)
             case _:
                 raise method_not_found(method)
         return result
@@ -274,11 +222,7 @@ class ResourceRequestHandler:
     def next_loop_due_in(self) -> float:
         return self._loops.next_due_in()
 
-    async def read_account(self) -> AccountView:
-        return await self._account.read()
 
-    async def read_identity(self) -> IdentityView | None:
-        return await self._identity.read()
 
     def due_loop(self) -> CoreScheduledLoop | None:
         return self._loops.due()
@@ -315,23 +259,7 @@ class ResourceRequestHandler:
     def _clear_mcp_discovery_errors(self) -> None:
         self._mcp_discovery_errors.clear()
 
-    async def _dispatch_account(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        if method != "account/read":
-            raise method_not_found(method)
-        params = validate_wire(AccountReadParams, raw_params)
-        self._require_session(params.session_id)
-        return DispatchResult(AccountReadResponse(account=await self.read_account()))
 
-    async def _dispatch_identity(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        if method != "identity/read":
-            raise method_not_found(method)
-        params = validate_wire(IdentityReadParams, raw_params)
-        self._require_session(params.session_id)
-        return DispatchResult(IdentityReadResponse(identity=await self.read_identity()))
 
     async def _dispatch_config(
         self, method: str, raw_params: dict[str, Any]
@@ -377,15 +305,6 @@ class ResourceRequestHandler:
                 raise method_not_found(method)
         return DispatchResult(response, runtime_updated=runtime_updated)
 
-    async def _dispatch_narration(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        if method != "narration/summarize":
-            raise method_not_found(method)
-        params = validate_wire(NarrationSummarizeParams, raw_params)
-        self._require_session(params.session_id)
-        summary = await self._narration.summarize(params)
-        return DispatchResult(NarrationSummarizeResponse(summary=summary))
 
     async def _dispatch_agents(
         self, method: str, raw_params: dict[str, Any]
@@ -490,64 +409,8 @@ class ResourceRequestHandler:
             raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
         return DispatchResult(response)
 
-    def _dispatch_client_event(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        if method == "telemetry/record":
-            return self._dispatch_telemetry(raw_params)
-        return self._dispatch_feedback(method, raw_params)
 
-    def _dispatch_telemetry(self, raw_params: dict[str, Any]) -> DispatchResult:
-        params = validate_wire(TelemetryRecordParams, raw_params)
-        self._require_session(params.session_id)
-        client = self._agent_loop.telemetry_client
-        client.send_telemetry_event(
-            params.name,
-            params.properties,
-            correlation_id=(
-                client.last_correlation_id if params.correlate_last_request else None
-            ),
-        )
-        return DispatchResult(EmptyResponse())
 
-    def _dispatch_feedback(
-        self, method: str, raw_params: dict[str, Any]
-    ) -> DispatchResult:
-        match method:
-            case "feedback/shouldShow":
-                params = validate_wire(FeedbackShouldShowParams, raw_params)
-                self._require_session(params.session_id)
-                user_messages = sum(
-                    message.role is Role.user and not message.injected
-                    for message in self._agent_loop.messages
-                )
-                response: ProtocolModel = FeedbackShouldShowResponse(
-                    show=should_show_feedback(
-                        telemetry_active=self._agent_loop.telemetry_client.is_active(),
-                        is_mistral_model=(
-                            self._agent_loop.config.is_active_model_mistral()
-                        ),
-                        user_message_count=(
-                            user_messages + params.pending_user_messages
-                        ),
-                        cache_store=self._agent_loop.cache_store,
-                    ),
-                    snooze_duration_seconds=FEEDBACK_SNOOZED_COOLDOWN_SECONDS,
-                )
-            case "feedback/record":
-                params = validate_wire(FeedbackRecordParams, raw_params)
-                self._require_session(params.session_id)
-                match params.action:
-                    case "asked":
-                        record_feedback_asked(self._agent_loop.cache_store)
-                    case "given":
-                        record_feedback_given(self._agent_loop.cache_store)
-                    case "snoozed":
-                        record_feedback_snoozed(self._agent_loop.cache_store)
-                response = EmptyResponse()
-            case _:
-                raise method_not_found(method)
-        return DispatchResult(response)
 
     def _config_read(self, params: ConfigReadParams) -> ConfigReadResponse:
         if params.session_id is not None:
@@ -557,10 +420,8 @@ class ResourceRequestHandler:
             1 for skill in project_skills(self._agent_loop) if skill.source != "builtin"
         )
         _, hooks_count = project_diagnostics(self._agent_loop)
-        mcp_servers_total = len(self._agent_loop.config.mcp_servers)
-        mcp_servers_enabled = sum(
-            1 for server in self._agent_loop.config.mcp_servers if not server.disabled
-        )
+        mcp_servers_total = 0
+        mcp_servers_enabled = 0
         return ConfigReadResponse(
             config=config,
             skills_count=skills_count,
@@ -651,14 +512,6 @@ class ResourceRequestHandler:
     ) -> ConfigMutationResponse:
         self._execution.require_idle()
         self._require_session(params.session_id)
-        # Best-effort: an admin-fetch failure must never break the user's reload.
-        # asyncio.timeout caps the full retry budget so /reload stays responsive;
-        # startup still uses the uncapped retry policy via apply_admin_config().
-        try:
-            async with asyncio.timeout(MANAGED_CONFIG_TIMEOUT * 1.5):
-                self._report_admin_config_outcome(await self._refresh_admin_layer())
-        except Exception as exc:
-            logger.debug("Admin config refresh failed on reload", exc_info=exc)
         if params.reload_runtime:
             self._clear_mcp_discovery_errors()
             await self._agent_loop.config_orchestrator.reload()
@@ -666,29 +519,6 @@ class ResourceRequestHandler:
         else:
             await self._agent_loop.refresh_config()
         return self._config_mutation_response()
-
-    async def apply_admin_config(self) -> bool:
-        """Pull org-enforced config and merge it as the highest-priority layer.
-
-        Runs only when a Mistral API key is in use. Any failure is silent: the
-        admin layer stays empty and has no impact on the client. Returns whether
-        the effective config changed, so the caller can push a runtime update.
-        """
-        return await _apply_admin_config(
-            self._agent_loop.config_orchestrator,
-            apply=self._refresh_agent_config,
-            telemetry=self._agent_loop.telemetry_client,
-        )
-
-    async def _refresh_agent_config(self) -> bool:
-        await self._agent_loop.refresh_config()
-        return True
-
-    def _report_admin_config_outcome(self, result: AdminConfigApplyResult) -> None:
-        report_admin_config_outcome(result, telemetry=self._agent_loop.telemetry_client)
-
-    async def _refresh_admin_layer(self) -> AdminConfigApplyResult:
-        return await refresh_admin_layer(self._agent_loop.config_orchestrator)
 
     async def _config_proxy_read(
         self, params: ConfigProxyReadParams

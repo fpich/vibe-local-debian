@@ -4,8 +4,6 @@ import asyncio
 from contextlib import AbstractAsyncContextManager
 from typing import Protocol
 
-from vibe.app_server._account import AccountGateway
-from vibe.app_server._identity import IdentityGateway
 from vibe.app_server._model import ProtocolModel
 from vibe.app_server.models import PublicCallbackEntry
 from vibe.app_server.protocol import ClientCapabilities, ClientInfo
@@ -19,10 +17,6 @@ class SessionBackendServices(Protocol):
     def current_session_id(self) -> str: ...
 
     def event_watermark(self, session_id: str) -> int: ...
-
-    def account_gateway(self) -> AccountGateway | None: ...
-
-    def identity_gateway(self) -> IdentityGateway | None: ...
 
     def lifecycle_transition(self) -> AbstractAsyncContextManager[None]: ...
 

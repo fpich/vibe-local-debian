@@ -7,11 +7,6 @@ from vibe.cli.commands import CommandRegistry
 
 
 @dataclass(frozen=True, slots=True)
-class Teleport:
-    target: str
-
-
-@dataclass(frozen=True, slots=True)
 class SlashCommand:
     pass
 
@@ -37,7 +32,7 @@ class Prompt:
     text: str
 
 
-ClassifiedInput = Teleport | SlashCommand | Skill | Bash | EmptyBash | Prompt
+ClassifiedInput = SlashCommand | Skill | Bash | EmptyBash | Prompt
 
 
 def classify(
@@ -46,8 +41,6 @@ def classify(
     commands: CommandRegistry,
     resolve_skill: Callable[[str], Skill | None],
 ) -> ClassifiedInput:
-    if value.startswith("&") and commands.has_command("teleport"):
-        return Teleport(target=value[1:])
     if commands.parse_command(value) is not None:
         return SlashCommand()
     if value.startswith("/"):

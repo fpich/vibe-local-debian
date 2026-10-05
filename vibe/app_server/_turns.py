@@ -1140,14 +1140,8 @@ class TurnController:  # noqa: PLR0904
     def _record_mentions(
         self, stats: MentionStats | None, message_id: str | None
     ) -> None:
-        if stats is None or stats.count == 0:
-            return
-        self._agent_loop.telemetry_client.send_at_mention_inserted(
-            nb_mentions=stats.count,
-            context_types=stats.context_types,
-            file_extensions=stats.file_extensions or None,
-            message_id=message_id,
-        )
+        # Mention telemetry was removed from the local-only runtime.
+        return
 
     def _cancel_callbacks(self, reason: str) -> None:
         for record in self._callbacks.values():

@@ -73,66 +73,6 @@ from vibe.utils.tool_presentation import (
 )
 
 
-class AccountStatus(StrEnum):
-    READY = auto()
-    MISSING_KEY = auto()
-    UNAUTHORIZED = auto()
-    UNAVAILABLE = auto()
-
-
-class AccountPlanKind(StrEnum):
-    API = auto()
-    CHAT = auto()
-    MISTRAL_CODE = auto()
-
-
-class AccountActionKind(StrEnum):
-    SWITCH_API_KEY = auto()
-    UPGRADE_TO_PRO = auto()
-
-
-class AccountPlanView(ProtocolModel):
-    kind: AccountPlanKind
-    name: str
-    title: str | None = None
-
-
-class AccountAction(ProtocolModel):
-    kind: AccountActionKind
-    url: str
-
-
-class AccountView(ProtocolModel):
-    status: AccountStatus
-    plan: AccountPlanView | None = None
-    plan_offer: AccountAction | None = None
-    rate_limit_action: AccountAction | None = None
-    teleport_eligible: bool = False
-    teleport_action: AccountAction | None = None
-
-
-class IdentityEntityView(ProtocolModel):
-    id: str
-    name: str
-
-
-class IdentityView(ProtocolModel):
-    id: str
-    email: str | None = None
-    first_name: str | None = None
-    last_name: str | None = None
-    workspace: IdentityEntityView | None = None
-    organization: IdentityEntityView | None = None
-
-    @property
-    def name(self) -> str | None:
-        if self.first_name and self.last_name:
-            return f"{self.first_name} {self.last_name}"
-        if self.first_name:
-            return self.first_name
-        return self.email
-
-
 class FileImageSource(ProtocolModel):
     kind: Literal["file"] = "file"
     path: str
@@ -472,110 +412,36 @@ class DebugLogPage(ProtocolModel):
     cursor: int | None = None
 
 
-class VibeCodeRepository(ProtocolModel):
-    repo_url: str
-    default_branch: str | None = None
 
 
-class VibeCodeProject(ProtocolModel):
-    project_id: str
-    name: str
-    repositories: list[VibeCodeRepository] = Field(default_factory=list)
-    is_read_only: bool = False
 
 
-class RemoteProjectLink(ProtocolModel):
-    repo_root: str
-    repo_url: str
-    project_id: str
-    project_name: str
 
 
-class VibeCodePickerContext(ProtocolModel):
-    repo_root: str
-    repo_url: str
-    repo_name: str
-    saved_link: RemoteProjectLink | None = None
 
 
-class VibeCodeGitInfo(ProtocolModel):
-    remote_name: str
-    remote_url: str
-    repo: str
-    branch: str | None = None
-    default_branch: str | None = None
 
 
-class VibeCodePickerState(ProtocolModel):
-    projects: list[VibeCodeProject]
-    next_cursor: str | None = None
-    repo_url: str = ""
-
-    @property
-    def has_more(self) -> bool:
-        return self.next_cursor is not None
 
 
-class VibeCodePickerView(ProtocolModel):
-    context: VibeCodePickerContext
-    state: VibeCodePickerState
-    git: VibeCodeGitInfo
-    saved_project_link_cleared: bool = False
-    project_repo_remote_changed: bool = False
 
 
-type VibeCodePickerPurpose = Literal["configure", "teleport"]
 
 
-class TeleportSummarizingContext(ProtocolModel):
-    kind: Literal["summarizing_context"] = "summarizing_context"
-    operation_id: str
 
 
-class TeleportCheckingGit(ProtocolModel):
-    kind: Literal["checking_git"] = "checking_git"
-    operation_id: str
 
 
-class TeleportPushRequired(ProtocolModel):
-    kind: Literal["push_required"] = "push_required"
-    operation_id: str
-    unpushed_count: int
-    branch_not_pushed: bool = False
 
 
-class TeleportPushing(ProtocolModel):
-    kind: Literal["pushing"] = "pushing"
-    operation_id: str
 
 
-class TeleportStartingWorkflow(ProtocolModel):
-    kind: Literal["starting_workflow"] = "starting_workflow"
-    operation_id: str
 
 
-class TeleportComplete(ProtocolModel):
-    kind: Literal["complete"] = "complete"
-    operation_id: str
-    url: str
 
 
-class TeleportFailed(ProtocolModel):
-    kind: Literal["failed"] = "failed"
-    operation_id: str
-    error: PublicError
 
 
-type TeleportEvent = Annotated[
-    TeleportSummarizingContext
-    | TeleportCheckingGit
-    | TeleportPushRequired
-    | TeleportPushing
-    | TeleportStartingWorkflow
-    | TeleportComplete
-    | TeleportFailed,
-    Field(discriminator="kind"),
-]
 
 
 class AgentSummary(ProtocolModel):

@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 
-from vibe import _experimental_harness
 import vibe.cli.entrypoint as entrypoint
 from vibe.cli.entrypoint import parse_arguments
 from vibe.core.config.harness_files import (
@@ -36,88 +33,16 @@ def test_enabled_and_disabled_tools_are_independent(
     assert args.disabled_tools == ["bash"]
 
 
-def test_experimental_harness_flag_is_parseable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    args = _parse(monkeypatch, ["--experimental-harness"])
-
-    assert args.experimental_harness is True
 
 
-def test_smart_approve_enables_the_experimental_harness(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # Smart approve is a Unified Harness classify gate with no legacy equivalent, so
-    # --smart-approve must turn on the experimental harness rather than relabel a
-    # legacy session that runs ordinary permissions.
-    args = _parse(monkeypatch, ["--smart-approve"])
-
-    assert args.smart_approve is True
-    assert args.experimental_harness is True
-    assert args.agent == "smart-approve"
 
 
-def test_experimental_harness_is_hidden_without_package(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.setattr(
-        _experimental_harness, "experimental_harness_available", lambda: False
-    )
-
-    with pytest.raises(SystemExit) as exc_info:
-        _parse(monkeypatch, ["--help"])
-
-    assert exc_info.value.code == 0
-    assert "--experimental-harness" not in capsys.readouterr().out
 
 
-def test_experimental_harness_is_visible_with_package(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.setattr(
-        _experimental_harness, "experimental_harness_available", lambda: True
-    )
-
-    with pytest.raises(SystemExit) as exc_info:
-        _parse(monkeypatch, ["--help"])
-
-    assert exc_info.value.code == 0
-    assert "--experimental-harness" in capsys.readouterr().out
 
 
-def test_experimental_harness_factory_comes_from_harness_distribution(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    imported_modules: list[str] = []
-
-    def create_host_stub():
-        raise NotImplementedError("Harness stub selected")
-
-    def import_stub(module_name: str):
-        imported_modules.append(module_name)
-        return SimpleNamespace(create_harness_host=create_host_stub)
-
-    monkeypatch.setattr(_experimental_harness, "import_module", import_stub)
-
-    with pytest.raises(NotImplementedError, match="Harness stub selected"):
-        _experimental_harness.create_experimental_harness_host()
-
-    assert imported_modules == ["mistralai_vibe_local_harness.vibe"]
 
 
-def test_experimental_harness_factory_reports_unavailable_package(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def unavailable(_module_name: str):
-        raise ModuleNotFoundError
-
-    monkeypatch.setattr(_experimental_harness, "import_module", unavailable)
-
-    with pytest.raises(
-        _experimental_harness.ExperimentalHarnessUnavailableError,
-        match="^The Unified Harness backend is not available$",
-    ):
-        _experimental_harness.create_experimental_harness_host()
 
 
 def test_worktree_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:

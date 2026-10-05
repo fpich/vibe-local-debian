@@ -15,7 +15,6 @@ from tests.stubs.app_server import create_test_app_server_session
 from tests.stubs.fake_account_gateway import FakeAccountGateway
 from tests.stubs.fake_backend import FakeBackend
 from vibe.app_server._account import WhoAmIResult
-from vibe.app_server.connector_catalog import ConnectorCatalogService
 from vibe.app_server.models import AccountPlanKind
 from vibe.cli.textual_ui.app import VibeApp
 from vibe.cli.textual_ui.widgets.chat_input import ChatTextArea
@@ -74,8 +73,6 @@ class BaseSnapshotTestApp(VibeApp):
         **kwargs,
     ):
         agent_loop_kwargs: dict = {}
-        if "mcp_registry" in kwargs:
-            agent_loop_kwargs["mcp_registry"] = kwargs.pop("mcp_registry")
 
         resolved_agent_loop = agent_loop or build_test_agent_loop(
             config=config or default_config(),
@@ -95,16 +92,12 @@ class BaseSnapshotTestApp(VibeApp):
                 )
             ),
         )
-        connector_catalog_service: ConnectorCatalogService | None = kwargs.pop(
-            "connector_catalog_service", None
-        )
 
         super().__init__(
             history_file=kwargs.pop("history_file", Path(".vibehistory")),
             app_server=lambda: create_test_app_server_session(
                 resolved_agent_loop,
                 account_gateway=account_gateway,
-                connector_catalog_service=connector_catalog_service,
             ),
             **kwargs,
         )

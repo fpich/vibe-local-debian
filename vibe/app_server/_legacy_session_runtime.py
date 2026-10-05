@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from vibe.app_server._account import AccountGateway
 from vibe.app_server._dispatch import RequestFailure
 from vibe.app_server._execution import (
     SessionExecution,
@@ -21,7 +20,6 @@ from vibe.app_server._handler import (
     RootLifecycle,
 )
 from vibe.app_server._host import HostRequestHandler
-from vibe.app_server._identity import IdentityGateway
 from vibe.app_server._legacy_session_backend import (
     LegacySessionBackend,
     LegacySessionBackendHost,
@@ -39,11 +37,6 @@ from vibe.app_server._runtime import (
     RuntimeUnfinishedMigrationError,
     close_agent_loop,
 )
-from vibe.app_server._session_backend_port import (
-    ResolvedConnectorCatalog,
-    ResolvedConnectorSelection,
-    ResolvedMCPCatalog,
-)
 from vibe.app_server._session_backend_services import SessionBackendServices
 from vibe.app_server._session_history import SessionHistory
 from vibe.app_server._sessions import SessionRuntime, SessionRuntimeRegistry
@@ -52,11 +45,6 @@ from vibe.app_server._turns import TurnConflictError, TurnController
 from vibe.app_server._utils import now_ms, public_error
 from vibe.app_server._worktree_effects import WorktreeEffect
 from vibe.app_server._worktree_session import SessionWorktrees, WorktreeResolution
-from vibe.app_server.connector_catalog import (
-    ConnectorCatalogError,
-    ConnectorCatalogService,
-)
-from vibe.app_server.mcp_catalog import MCPCatalogService
 from vibe.app_server.models import (
     JsonPatchOperation,
     PublicCallbackEntry,
@@ -70,7 +58,6 @@ from vibe.app_server.protocol import (
     AgentConfig,
     HistoryEntryAddedParams,
     ProtocolErrorCode,
-    RuntimeUpdatedParams,
     ServerErrorParams,
     SessionContinueParams,
     SessionOpenParams,
@@ -111,20 +98,12 @@ class LegacySessionRuntimeController:
         host_handler: HostRequestHandler,
         stage_root: StageRoot | None,
         services: SessionBackendServices,
-        mcp_catalog_service: MCPCatalogService | None = None,
-        connector_catalog_service: ConnectorCatalogService | None = None,
-        account_gateway: AccountGateway | None = None,
-        identity_gateway: IdentityGateway | None = None,
     ) -> None:
         self._open_root = open_root
         self._runtime_factory = runtime_factory
         self._host_handler = host_handler
         self._stage_root = stage_root
         self._services = services
-        self._mcp_catalog_service = mcp_catalog_service
-        self._connector_catalog_service = connector_catalog_service
-        self._account_gateway = account_gateway
-        self._identity_gateway = identity_gateway
         self._scheduler_enabled = False
         self._scheduler_task: asyncio.Task[None] | None = None
         self._title_drain_task: asyncio.Task[None] | None = None
@@ -272,22 +251,14 @@ class LegacySessionRuntimeController:
         task.add_done_callback(self._resume_tasks.discard)
         self._track_task(task)
 
-    def _bind_root(
-        self,
-        agent_loop: AgentLoop,
-        mcp_catalog: ResolvedMCPCatalog | None,
-        connector_catalog: ResolvedConnectorCatalog | None,
-        connector_selection: ResolvedConnectorSelection | None,
-    ) -> None:
+    def _bind_root(self, agent_loop: AgentLoop) -> None:
         execution = SessionExecution()
         history = SessionHistory(project_history(agent_loop))
         resources = ResourceRequestHandler(
             agent_loop,
             execution,
             self._services.notify,
-            self._account_gateway,
             current_event_id=self._services.event_watermark,
-            identity_gateway=self._identity_gateway,
         )
         coordinator = RootSessionCoordinator(
             agent_loop,
@@ -353,22 +324,6 @@ class LegacySessionRuntimeController:
             handler,
             self._sessions,
             last_session_pointer.record,
-            mcp_catalog=mcp_catalog,
-            mcp_authorization_provider=(
-                self._mcp_catalog_service.authentication
-                if self._mcp_catalog_service is not None
-                else None
-            ),
-            mcp_descriptor_cache_root=(
-                Path(agent_loop.config.session_logging.save_dir)
-                .expanduser()
-                .resolve()
-                .parent
-                / "mcp-descriptors"
-                / "legacy"
-            ),
-            connector_catalog=connector_catalog,
-            connector_selection=connector_selection,
         )
 
     async def _replace_root(
@@ -453,19 +408,7 @@ class LegacySessionRuntimeController:
     ) -> PublicSessionState:
         self._sessions.release_root(previous.session)
         try:
-            (
-                connector_catalog,
-                connector_selection,
-            ) = await self._resolve_connector_configuration(replacement)
-            self._bind_root(
-                replacement,
-                await self._resolve_mcp_catalog(replacement),
-                connector_catalog,
-                connector_selection,
-            )
-            await self._apply_connector_configuration(
-                connector_catalog, connector_selection
-            )
+            self._bind_root(replacement)
         except BaseException:
             self._sessions.bind_root(previous.session)
             self._root = previous
@@ -475,7 +418,6 @@ class LegacySessionRuntimeController:
         try:
             await self._sessions.close_children()
             self._root_session.attach(replacement.session_id)
-            replacement.start_initialize_experiments()
         except BaseException:
             with suppress(BaseException):
                 await replacement_backend.shutdown()
@@ -519,19 +461,7 @@ class LegacySessionRuntimeController:
         opened_worktree: WorktreeResolution,
     ) -> PublicSessionState:
         try:
-            (
-                connector_catalog,
-                connector_selection,
-            ) = await self._resolve_connector_configuration(agent_loop)
-            self._bind_root(
-                agent_loop,
-                await self._resolve_mcp_catalog(agent_loop),
-                connector_catalog,
-                connector_selection,
-            )
-            await self._apply_connector_configuration(
-                connector_catalog, connector_selection
-            )
+            self._bind_root(agent_loop)
             if created_worktree is not None:
                 await self._report_created_worktree(agent_loop, created_worktree)
             started = await self._handler.dispatch(
@@ -543,7 +473,6 @@ class LegacySessionRuntimeController:
             )
             assert isinstance(started.response, SessionStartResponse)
             state = started.response.state
-            self._schedule_admin_config_fetch()
             self._worktrees.hold(
                 agent_loop.cwd, agent_loop.session_id, opened_worktree.pending_hold
             )
@@ -564,64 +493,6 @@ class LegacySessionRuntimeController:
             else:
                 await close_agent_loop(agent_loop)
             raise
-
-    async def _apply_connector_configuration(
-        self,
-        catalog: ResolvedConnectorCatalog | None,
-        selection: ResolvedConnectorSelection | None,
-    ) -> None:
-        if catalog is None or selection is None:
-            return
-        backend = self._require_root()
-        if backend.session.agent_loop.connector_registry is None:
-            return
-        await backend.reconfigure_connectors(catalog, selection, force=False)
-
-    async def _resolve_mcp_catalog(
-        self, agent_loop: AgentLoop
-    ) -> ResolvedMCPCatalog | None:
-        if self._mcp_catalog_service is None:
-            return None
-        return await self._mcp_catalog_service.resolve_catalog(
-            agent_loop.config_orchestrator
-        )
-
-    async def _resolve_connector_configuration(
-        self, agent_loop: AgentLoop
-    ) -> tuple[ResolvedConnectorCatalog | None, ResolvedConnectorSelection | None]:
-        service = self._connector_catalog_service
-        if service is None:
-            return None, None
-        try:
-            catalog = await service.resolve_catalog(agent_loop.config_orchestrator)
-        except ConnectorCatalogError:
-            logger.warning("Connector catalog is unavailable while binding the session")
-            catalog = None
-        selection = service.resolve_selection(agent_loop.config_orchestrator, catalog)
-        return catalog, selection
-
-    def _schedule_admin_config_fetch(self) -> None:
-        task = asyncio.create_task(
-            self._fetch_admin_config(), name="vibe-admin-config-fetch"
-        )
-        self._track_task(task)
-
-    async def _fetch_admin_config(self) -> None:
-        if self._root is None:
-            return
-        try:
-            changed = await self._resources.apply_admin_config()
-        except Exception as exc:
-            logger.debug("Admin config fetch failed", exc_info=exc)
-            return
-        if changed and self._root is not None:
-            await self._services.notify(
-                "runtime/updated",
-                RuntimeUpdatedParams(
-                    session_id=self._agent_loop.session_id,
-                    runtime=self._resources.runtime_snapshot(),
-                ),
-            )
 
     async def _open_runtime(
         self,
@@ -876,10 +747,6 @@ def create_legacy_session_backend_host(
     host_handler: HostRequestHandler,
     stage_root: StageRoot | None,
     services: SessionBackendServices,
-    mcp_catalog_service: MCPCatalogService | None = None,
-    connector_catalog_service: ConnectorCatalogService | None = None,
-    account_gateway: AccountGateway | None = None,
-    identity_gateway: IdentityGateway | None = None,
 ) -> LegacySessionBackendHost:
     return LegacySessionRuntimeController(
         open_root=open_root,
@@ -887,8 +754,4 @@ def create_legacy_session_backend_host(
         host_handler=host_handler,
         stage_root=stage_root,
         services=services,
-        mcp_catalog_service=mcp_catalog_service,
-        connector_catalog_service=connector_catalog_service,
-        account_gateway=account_gateway,
-        identity_gateway=identity_gateway,
     ).create_host()

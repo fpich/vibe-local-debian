@@ -26,7 +26,6 @@ from pydantic import (
     model_validator,
 )
 
-from vibe.core.experiments.models import EvalResponse
 from vibe.core.tools.models import RequiredPermission
 from vibe.user_content import UserDisplayContent, UserResource
 from vibe.utils.pricing import session_token_cost
@@ -211,12 +210,6 @@ class SessionMetadata(BaseModel):
     # Null/null is the lazy migration: old sessions remain seen.
     unseen_at: str | None = None
     seen_at: str | None = None
-    # The sticky GrowthBook variant assignment, persisted so a resumed session
-    # keeps its buckets. NOTE: plan/org attributes and user_plan are user-scoped,
-    # not session-scoped, so they are deliberately NOT persisted here — they are
-    # re-resolved from the user-scoped whoami/identity cache on every session, so
-    # resuming never reports a stale plan.
-    experiments: EvalResponse | None = None
     # Session-scoped config snapshot. New sessions pin ``active_model`` to its
     # resolved alias before their first user turn; older snapshots remain valid.
     config: dict[str, JsonValue] | None = None

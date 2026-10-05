@@ -171,7 +171,7 @@ def get_platform_id() -> str:
     """Canonical lowercase platform identifier (e.g. ``windows``, ``darwin``, ``linux``).
 
     Matches the values expected by ``ExperimentAttributes.os`` and is suitable for
-    machine-readable contexts (telemetry, experiment targeting). Falls back to the
+    machine-readable contexts. Falls back to the
     raw ``sys.platform`` value for unknown platforms.
     """
     return _PLATFORM_IDS.get(sys.platform, sys.platform)

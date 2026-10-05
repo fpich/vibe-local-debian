@@ -3,10 +3,7 @@ from __future__ import annotations
 from vibe.app_server._model import ProtocolModel
 from vibe.config_values import (
     THINKING_LEVELS as THINKING_LEVELS,
-    AudioClient,
-    SpeechOutputFormat,
     ThinkingLevel as ThinkingLevel,
-    TranscriptionEncoding,
 )
 
 
@@ -18,34 +15,14 @@ class ModelConfigView(ProtocolModel):
     display_name: str
 
 
-class TranscribeModelConfigView(ProtocolModel):
-    name: str
-    sample_rate: int
-    encoding: TranscriptionEncoding
-    language: str
-    target_streaming_delay_ms: int
 
 
-class AudioProviderView(ProtocolModel):
-    api_base: str
-    api_key_env_var: str
-    client: AudioClient
 
 
-class TranscriptionConfigView(ProtocolModel):
-    model: TranscribeModelConfigView
-    provider: AudioProviderView
 
 
-class TTSModelConfigView(ProtocolModel):
-    name: str
-    voice: str
-    response_format: SpeechOutputFormat
 
 
-class SpeechConfigView(ProtocolModel):
-    model: TTSModelConfigView
-    provider: AudioProviderView
 
 
 class ProxySettingsView(ProtocolModel):
@@ -62,7 +39,6 @@ class ConfigView(ProtocolModel):
     # than the pixels.
     images_supported: bool = False
     # Cold-cache first launch
-    awaiting_experiment_model: bool = False
     default_model_alias: str
     default_agent: str = "accept-edits"
     theme: str
@@ -72,23 +48,14 @@ class ConfigView(ProtocolModel):
     autocopy_to_clipboard: bool
     file_watcher_for_autocomplete: bool
     ask_confirmation_on_exit: bool
-    voice_mode_enabled: bool
-    narrator_enabled: bool
     show_thinking_nodes: bool
     show_subagent_status_list: bool
     worktree_limit: int
-    enable_update_checks: bool
     enable_notifications: bool
     experimental_enable_tab_status: bool
     # Consent gate for client-local sinks (the Rust client's crash reporter).
     # Datalake events stay server-gated; clients never decide that.
-    enable_telemetry: bool = True
-    experimental_enable_registry_skills: bool = False
     models: list[ModelConfigView]
-    transcribe_models: list[str]
-    tts_models: list[str]
-    transcription: TranscriptionConfigView
-    speech: SpeechConfigView
     validation_warnings: list[str]
 
     def model_display_name(self, alias: str) -> str:

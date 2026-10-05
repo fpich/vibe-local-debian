@@ -157,7 +157,7 @@ function install_vibe() {
     info "Installing mistral-vibe from GitHub repository using uv..."
     uv tool install mistral-vibe
 
-    success "Mistral Vibe installed successfully! (commands: vibe, vibe-acp)"
+    success "Mistral Vibe installed successfully! (command: vibe)"
 }
 
 function update_vibe() {
@@ -205,7 +205,6 @@ function main() {
         echo "  vibe"
         echo
         echo "Or for ACP mode:"
-        echo "  vibe-acp"
     else
         local UV_BIN_DIR
         local VIBE_BIN_PATH=""

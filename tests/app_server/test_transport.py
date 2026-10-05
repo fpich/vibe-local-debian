@@ -116,25 +116,6 @@ async def test_stdio_server_creates_the_harness_behind_its_transport(
 
 
 @pytest.mark.asyncio
-async def test_stdio_server_forwards_experimental_harness_selection(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    harness = AsyncMock(spec=HarnessServer)
-    factory = AsyncMock(return_value=harness)
-    monkeypatch.setattr(stdio, "create_harness_server", factory)
-
-    await stdio.serve_stdio(
-        reader=BytesIO(), writer=BytesIO(), experimental_harness=True
-    )
-
-    call = factory.await_args
-    assert call is not None
-    _, kwargs = call
-    assert kwargs == {
-        "transport_kind": "stdio",
-        "experimental_harness": True,
-        "legacy_harness": False,
-    }
 
 
 @pytest.mark.asyncio

@@ -25,7 +25,6 @@ from vibe.app_server.models import (
     SessionTextContentBlock,
     TextContentBlock,
 )
-from vibe.core.tracing import build_otel_span_exporter_config
 from vibe.core.types import ImageAttachment as CoreImageAttachment
 from vibe.core.vision import ImageDescriber, complete_vision
 from vibe.utils.images import MAX_IMAGES_PER_MESSAGE
@@ -183,17 +182,8 @@ class SessionImageDescriber:
 
 
 def _otel_enabled(config: VibeConfigSchema) -> bool:
-    # The same gate the legacy loop applies to its own completions: without a
-    # resolvable exporter the tracer instruments the call and drops the spans.
-    if not (config.enable_telemetry and config.enable_otel):
-        return False
-    return (
-        build_otel_span_exporter_config(
-            config.otel_endpoint, config.get_mistral_provider()
-        )
-        is not None
-    )
-
+    del config
+    return False
 
 def _reject_beyond_limit(count: int) -> None:
     # The CLI and ACP both cap a message here, but the app-server protocol

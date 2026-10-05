@@ -1,31 +1,32 @@
-# vibe-local-debian — hard fork local de Mistral Vibe
+# vibe-local-debian
 
-Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai/mistral-vibe) : le contenu amont est vendé ici en commit racine unique, **aucune synchronisation avec l'amont n'est prévue**. Les évolutions se font directement dans ce dépôt.
+Agent de code CLI **local-first** pour Debian 13, dérivé de Mistral Vibe et simplifié pour utiliser exclusivement des serveurs `llama.cpp` compatibles avec l'API OpenAI.
 
-**Objectif** : agent de code CLI sur Debian 13 avec backends `llama.cpp` auto-hébergés — **worker1 (KAT)** et **worker2 (Qwen3.5)**, alias serveur `worker` sur chaque port. Aucune API cloud : les serveurs llama.cpp peuvent tourner en localhost ou sur une machine distante du réseau local (il suffit d'adapter `api_base`).
+La branche stable **1.2.1** conserve le moteur agentique Python, la TUI Textual, les sessions, la compaction, les worktrees Git et les permissions d'outils. Les surfaces cloud et les runtimes alternatifs de l'amont ont été retirés.
 
-## Version 1.2.0 — optimisations du backend local
+## Périmètre du fork
 
-- **Cache de prompt llama.cpp préservé** : les rafraîchissements byte-identiques du prompt système sont ignorés et le snapshot des tools sérialisés est mémoïsé — aucun drift d'un octet par tour, le cache de préfixe du serveur survit aux rebuilds.
-- **Périmètre d'outils dynamique** : après la première requête d'une epoch de contexte, les tools distants (MCP/connecteurs) jamais utilisés sont retirés du payload ; les builtins restent toujours inclus ; l'usage est réinitialisé à chaque compaction/reset.
-- **Titres de session sans appel LLM** : `session_logging.auto_title = "first_message"` (défaut local) dérive le titre du premier message utilisateur ; `"llm"` génère en arrière-plan ; `"off"` garde l'aperçu. L'ancien booléen `generate_titles` reste accepté (true → llm, false → first_message).
-- **Télémétrie paresseuse** : le comptage O(contexte) des caractères est court-circuité quand la télétrie est désactivée — moins de CPU par tour en local.
-- **`read_file` : 800 lignes par appel** (au lieu de 2000) avec l'indicateur `offset`/`limit` pour relire la suite par fenêtre — moins de contexte noyé par lecture.
-- **`allowed_models = ["worker"]`** : le sélecteur `/model` ne propose que worker1 (KAT) et worker2 (Qwen3.5) — les modèles cloud par défaut (mistral/devstral) sont exclus.
-- **`enable_connectors = false`** : aucun connecteur cloud, rien n'est appelé hors des serveurs llama.cpp.
-- Tout le reste tourne sur le **modèle actif** (`active_model`) : worker2 n'est utilisé que s'il est sélectionné via `/model`.
+Le chemin d'exécution principal est volontairement réduit :
 
-## Ce qui est spécifique à ce fork
+```text
+Textual CLI
+    ↓
+local app-server
+    ↓
+AgentLoop Python
+    ↓
+llama.cpp (OpenAI-compatible)
+    ↓
+read_file / write_file / edit / grep / bash / todo / ask_user_question
+    ↓
+workspace + permissions
+```
 
-| Fichier | Rôle |
-|---|---|
-| `install.sh` | Installation Debian 13 : Kitty + uv + CLI vibe + config globale |
-| `.vibe/config.toml` | Config de projet : providers `llamacpp-worker1`/`llamacpp-worker2` → alias `worker1`/`worker2`, télémétrie/updates coupés, compaction auto à 90k |
-| `uninstall.sh` | Désinstallation complète : retire le CLI et supprime toutes les données (`~/.vibe`) |
+Ne font plus partie du produit : authentification Mistral, providers cloud Mistral, ACP, CLI Rust, Unified Harness Rust, MCP/connecteurs distants, plugins distants, `web_search`, `web_fetch`, Teleport/Vibe Code, voice/narration, Sentry/OTEL/télémétrie et update notifier.
 
-Tout le reste est le vendor de l'amont (`mistral-vibe` 2.25.8 au moment du fork), licence Apache-2.0 conservée.
+> **Local-first ne signifie pas sandbox réseau.** Le client ne contient plus d'outil web dédié ni de backend cloud, mais l'outil `bash` peut lancer des programmes ayant eux-mêmes accès au réseau si l'utilisateur les autorise. Le serveur LLM peut également se trouver sur le LAN.
 
-## Installation (Debian 13)
+## Installation — Debian 13
 
 ```bash
 git clone https://github.com/fpich/vibe-local-debian.git
@@ -34,147 +35,177 @@ cd vibe-local-debian
 ```
 
 Le script :
-1. installe **Kitty** via apt (terminal recommandé pour le TUI) ;
-2. installe **uv** dans `~/.local/bin` ;
-3. installe le CLI **vibe** depuis ce dépôt (`uv tool install .`) ;
-4. copie la config locale dans `~/.vibe/config.toml` (seulement si absent).
 
-Si nécessaire : `export PATH="$HOME/.local/bin:$PATH"` dans `~/.bashrc`.
+1. vérifie Debian 13 ;
+2. installe `curl`, les certificats CA et Kitty si nécessaire ;
+3. installe `uv` avec un installateur épinglé et vérifié par SHA-256 si `uv` est absent ;
+4. installe **ce dépôt local** avec `uv tool install --force` ;
+5. copie `.vibe/config.toml` vers `~/.vibe/config.toml` uniquement si la configuration globale n'existe pas déjà.
 
-## Backends llama.cpp
-
-Deux serveurs llama.cpp sont requis, chacun avec l'alias `--alias worker` (côté client, les modèles sont distingués par leur `api_base`). Ils peuvent tourner **en localhost ou sur une machine distante** du réseau local — la config par défaut de ce dépôt pointe vers `127.0.0.1` ; pour un serveur distant, remplacer par son adresse IP dans `api_base` :
-
-- **worker1** — KAT sur le port `8080` ;
-- **worker2** — Qwen3.5 sur le port `8081`.
-
-Exemple d'unit systemd (adapter le `-m` et le port par serveur) :
-
-```ini
-# /etc/systemd/system/llama-worker.service (machine GPU)
-[Service]
-Type=simple
-WorkingDirectory=/opt/llama.cpp
-Environment=CUDA_VISIBLE_DEVICES=0
-ExecStart=/usr/local/bin/llama-server \
-  -m /opt/models/<modele>.gguf \
-  --host 127.0.0.1 --port 8080 --alias worker \
-  -c 262144 -np 1 --split-mode none --main-gpu 0 -ngl all \
-  --n-cpu-moe 40 --fit off --load-mode mmap -fa on \
-  -ctk q8_0 -ctv q8_0 -b 2048 -ub 512 -t 8 -tb 8 \
-  --jinja \
-  --temp <temp> --top-p <top_p> --top-k 20 --min-p 0 \
-  --presence-penalty <pp> --repeat-penalty <rp>
-Restart=on-failure
-RestartSec=2
-```
-
-Points clés : `--jinja` (tool-calling), `--alias worker` (modèle exposé), `-c 262144` (256k contexte), `-ctk/-ctv q8_0` + `-fa on` (tenir 256k en 6 Go de VRAM), `-np 1` (une session à la fois).
-
-**Paramètres d'échantillonnage** — à fixer côté serveur (le client n'envoie que la température) ; le `top_k` par défaut de llama.cpp est 40 : passe-le à 20 dans l'unit systemd.
-
-## Modèles actifs
-
-La config de projet expose **deux modèles** vers deux serveurs llama.cpp (alias serveur `worker` sur chaque port) — bascule = un seul changement dans `.vibe/config.toml` (`active_model`) :
-
-| active_model | Modèle | Endpoint | temp client | top_p (serveur) | top_k | min_p | presence_penalty | repetition_penalty | thinking |
-|---|---|---|---|---|---|---|---|---|---|
-| `worker1` | KAT | `127.0.0.1:8080` | 1.0 | 0.95 | 20 | 0 | 1.5 | 1.0 | ON (preserve_thinking ON) |
-| `worker2` | Qwen3.5 | `127.0.0.1:8081` | 0.7 | 0.8 | 20 | 0 | 1.5 | 1.0 | OFF |
-
-Gestion des services (sur la machine qui héberge llama.cpp) :
+Pour une mise à jour du code sans toucher à ta configuration :
 
 ```bash
-sudo systemctl enable --now llama-worker1.service
-sudo systemctl enable --now llama-worker2.service
-systemctl status llama-worker1.service llama-worker2.service
+cd ~/vibe-local-debian
+uv tool install --force .
 ```
 
-Vérification depuis la machine Debian :
+## Configurer le serveur llama.cpp
+
+La configuration utilisateur est :
+
+```text
+~/.vibe/config.toml
+```
+
+La configuration fournie par le dépôt est :
+
+```text
+.vibe/config.toml
+```
+
+Par défaut, les deux workers pointent sur la machine locale :
+
+```toml
+api_base = "http://127.0.0.1:8080/v1"  # worker1
+api_base = "http://127.0.0.1:8081/v1"  # worker2
+```
+
+Pour un serveur LAN, par exemple `192.168.1.116` :
+
+```toml
+[[providers]]
+name = "llamacpp-worker1"
+api_base = "http://192.168.1.116:8080/v1"
+
+[[providers]]
+name = "llamacpp-worker2"
+api_base = "http://192.168.1.116:8081/v1"
+```
+
+Vérification :
 
 ```bash
-curl -s http://127.0.0.1:8080/v1/models   # doit lister "worker"
-curl -s http://127.0.0.1:8081/v1/models   # doit lister "worker"
+curl -s http://192.168.1.116:8080/v1/models
+curl -s http://192.168.1.116:8081/v1/models
 ```
 
-⚠️ `--host 127.0.0.1` limite l'écoute à la machine locale : aucun port exposé sur le LAN.
+Chaque serveur doit exposer un modèle nommé `worker`, typiquement avec :
 
-## Utilisation — démarrer dans un projet
+```bash
+llama-server \
+  -m /chemin/vers/modele.gguf \
+  --host 0.0.0.0 \
+  --port 8080 \
+  --alias worker \
+  --jinja
+```
 
-Dans le répertoire du projet (le dossier où l'agent doit travailler) :
+Si le client et `llama.cpp` tournent sur la même machine, préfère `--host 127.0.0.1`. Si le serveur est distant, lie-le à son IP LAN ou à `0.0.0.0` et limite l'accès avec le pare-feu. HTTP sur le LAN n'est pas chiffré ; utilise HTTPS/reverse proxy si le réseau n'est pas de confiance.
+
+## Modèles fournis
+
+La config du dépôt expose deux aliases côté client :
+
+| Alias | Usage prévu | Port par défaut | Thinking |
+|---|---|---:|---|
+| `worker1` | KAT / analyse et refactoring | 8080 | `high` |
+| `worker2` | Qwen3.5 / tâches rapides | 8081 | `off` |
+
+Le serveur expose dans les deux cas le nom `worker`. `allowed_models = ["worker"]` est appliqué en mode **fail-closed** : si aucun modèle autorisé n'est disponible, le client ne retombe pas sur une liste cloud.
+
+La compaction automatique est configurée à **90 000 tokens** pour les deux workers.
+
+## Utilisation
+
+Dans le répertoire que l'agent doit traiter :
 
 ```bash
 cd ~/mon-projet
 vibe
 ```
 
-C'est tout. L'agent ouvre un TUI interactif, lit les fichiers du répertoire courant et travaille dedans. Il faut lancer `vibe` **depuis la racine du projet** — c'est le dossier de travail de l'agent, et les sessions sont rattachées à ce dossier.
+Test minimal :
 
-### Session de travail type
+```bash
+mkdir -p ~/test-vibe
+cd ~/test-vibe
+git init
+echo "print('hello')" > app.py
+vibe
+```
 
-1. Décris la tâche en language naturel : « corrige le bug dans src/auth.py », « ajoute un test pour la fonction X ».
-2. L'agent explore (outils read/grep), propose ou applique des modifications, te montre les diffs.
-3. Approuve ou refuse chaque action sensible selon le profil d'agent choisi.
-4. Termine par « commit » ou fais-le toi-même.
+Exemples de démarrage :
 
-### Commandes de démarrage utiles
+```bash
+vibe                              # TUI interactif
+vibe --continue                   # dernière session
+vibe --resume                     # sélecteur de sessions
+vibe -p "analyse le dépôt"        # mode one-shot
+vibe --workdir ~/src/projet       # choisit explicitement le workspace
+vibe --agent plan                 # profil lecture/planification
+vibe --auto-approve -p "..."      # sans prompts d'approbation : à utiliser avec prudence
+```
 
-| Commande | Usage |
-|---|---|
-| `vibe` | Session interactive dans le dossier courant |
-| `vibe --continue` | Reprend la dernière session de ce dossier |
-| `vibe --resume` | Ouvre un sélecteur des sessions **de ce dossier** |
-| `vibe -p "fais X"` | Mode one-shot : exécute et sort (idéal scripts/cron) |
-| `vibe --agent NAME` | Profile spécifique (`plan` = lecture seule, `auto-approve` = tout approuvé) |
+Commandes principales dans la TUI : `/help`, `/config`, `/model`, `/thinking`, `/reload`, `/clear`, `/compact`, `/status`, `/resume`, `/rename`, `/todo`, `/rewind`, `/branch`, `/retry`, `/loop`, `/theme`, `/log`, `/log-level` et `/exit`.
 
-### En session — les commandes essentielles
+## Outils exposés au modèle
 
-| Commande | Effet |
-|---|---|
-| `/help` | Liste toutes les commandes disponibles |
-| `/model` | Bascule worker1 (KAT) ↔ worker2 (Qwen3.5) sans quitter |
-| `Shift+Tab` | Cycle les profils d'agent (ask → plan → accept-edits…) |
-| `/resume` ou `/continue` | Reprend une session précédente |
-| `/clear` (alias `/new`) | Nouvelle conversation à zéro (suit le modèle par défaut) |
-| `/exit` | Quitter (ou `exit`, `quit`, `:q`) |
+Le profil local fourni n'expose que :
 
-### Pour être productif
+```text
+bash
+read_file
+write_file
+edit
+grep
+ask_user_question
+todo
+```
 
-- **Créer un `AGENTS.md` à la racine du projet** : l'agent le lit automatiquement au démarrage et suit les consignes qu'il contient (style de code, commandes de build/test, conventions). C'est le meilleur levier de productivité.
-- **Donner des tâches ciblées** : une tâche = un objectif clair. Les tâches larges (« améliore le projet ») diluent les petits contextes locaux.
-- **worker1 (KAT) pour l'analyse et le refactoring** (thinking ON) ; **worker2 (Qwen3.5) pour les tâches simples et rapides**. Bascule via `/model`.
-- **Le compteur de contexte est affiché** (`X/90k tokens`) : la **compaction automatique se déclenche à 90k tokens** — au-delà, l'agent résume et continue. Pas besoin de gérer.
-- **`@fichier`** dans le message pour pointer un fichier directement ; **`/`** pour l'autocomplétion des commandes.
-- Les sessions sont **rattachées au dossier** : relancer `vibe` au même endroit retrouve l'historique (`/resume`).
+`task` et `skill` existent encore dans le moteur pour compatibilité interne mais ne sont pas exposés dans le profil minimal. Les outils réseau `web_search` et `web_fetch` ont été supprimés.
 
-**Compteurs masqués dans la bannière d'accueil** (réversibles via `HIDDEN_BANNER_COUNTERS` dans `vibe/cli/textual_ui/widgets/banner/banner.py`) : connectors et MCP servers.
+## Sécurité et workspace
 
-**Commandes masquées temporairement** (code intact, réactivables dans `vibe/cli/commands.py` via `HIDDEN_COMMANDS`) : `/connectors`, `/mcp`, `/proxy-setup`, `/remote-project`, `/teleport`, `/voice`, `/whoami`, `/leanstall`, `/unleanstall`.
+Vibe est un agent capable de lire, modifier des fichiers et exécuter des commandes. Les protections du workspace et les demandes d'approbation restent actives, mais elles ne remplacent pas un conteneur ou une VM.
 
-**Désactivé volontairement** (config) :
-- voice mode (transcription cloud non configurée) ;
-- télémétrie, OTEL, update-checks, auto-update ;
-- promo VSCode (apparaît au pire une fois, compteur local).
+Recommandations :
 
-**Aucune clé Mistral requise.**
+- lance `vibe` à la racine exacte du projet ;
+- évite `--auto-approve` sur un dépôt non fiable ;
+- inspecte les commandes `bash` qui demandent une permission ;
+- ne stocke pas de secrets inutiles dans le workspace ;
+- garde le serveur llama.cpp inaccessible depuis Internet ;
+- utilise un compte Unix dédié ou un conteneur pour du code réellement non fiable.
 
-## Configuration
-
-- Projet : `.vibe/config.toml` (versionné ici).
-- Globale : `~/.vibe/config.toml` (installée par `install.sh`).
-- Providers : `llamacpp-worker1` → `http://127.0.0.1:8080/v1`, `llamacpp-worker2` → `http://127.0.0.1:8081/v1` ; les modèles sont exposés sous l'alias serveur `worker` (`worker1` actif par défaut), compaction auto à 90k tokens.
-- Surcharges rapides : copie du fichier et édition de `api_base` / `alias`.
+Voir [SECURITY.md](SECURITY.md) pour le modèle de menace détaillé.
 
 ## AGENTS.md
 
-L'`AGENTS.md` du dépôt est adapté au fork : contraintes self-hosted (pas de cloud, backends llama.cpp, télémétrie désactivée) + conventions de contribution au code du CLI (ADRs, `uv run pytest`, ruff/pyright). Il guide l'agent quand il travaille dans ce dépôt. Pour orienter l'agent dans **d'autres projets**, créer un `AGENTS.md` à la racine de chaque projet.
+Place un `AGENTS.md` à la racine d'un projet pour fournir à l'agent les conventions de code, commandes de build/test et contraintes locales. Le dépôt contient son propre [AGENTS.md](AGENTS.md) pour les contributions au fork.
 
-## Points de vigilance
+## Développement
 
-- Le **tool-calling du modèle actif** est le facteur limitant : si l'agent n'utilise pas bien les outils, c'est le modèle, pas la config.
-- Terminal moderne requis (Kitty recommandé, xfce4-terminal fonctionne avec des raccourcis multilignes parfois limités).
-- Ce fork ne suit pas l'amont : les mises à jour de sécurité/fonctionnalités de mistral-vibe ne sont pas rapatriées automatiquement.
+```bash
+uv sync --group dev
+uv run pytest
+uv run ruff check vibe tests/local
+uv run pyright
+uv build --wheel
+```
 
-## Licence
+La suite de tests maintenue du fork se concentre sur les invariants local-only, l'intégrité du runtime legacy Python, le packaging et les protections install/uninstall. Les anciens tests de fonctionnalités supprimées ne font plus partie de la suite stable.
 
-Apache-2.0 (héritée de l'amont, voir `LICENSE`). Le code amont est la propriété de ses auteurs ; ce fork respecte les termes de la licence.
+Documentation complémentaire :
+
+- [Architecture](docs/architecture.md)
+- [Configuration](docs/configuration.md)
+- [Tests et stabilisation](docs/testing.md)
+- [Documentation](docs/README.md)
+- [Historique](CHANGELOG.md)
+
+## Compatibilité et origine
+
+- Debian 13 ciblé pour l'installateur.
+- Python 3.12 et 3.13 supportés par le package stable.
+- Le nom de distribution Python reste `mistral-vibe` pour conserver la compatibilité avec l'installation existante et les chemins `uv tool`.
+- Le code est dérivé de Mistral Vibe sous licence Apache-2.0. Ce fork est indépendant et ne suit pas automatiquement l'amont.

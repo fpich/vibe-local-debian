@@ -1,8 +1,7 @@
-# What's new in v2.25.8
+# What's new in v1.2.1
 
-- **Queued prompts**: messages you queue while Vibe is working are now sent together in one turn, not one at a time
-- **Stable session models**: resumed conversations keep the model selected for that session
-- **Compact tool call groups**: consecutive tool calls now fold into a one-line summary (e.g. "Running commands" while in progress, "Ran commands" when done). Click to expand the full list, or use Ctrl+O to toggle all groups at once. File edits and writes are included in the fold.
-- **Experimental harness**: You can now try our new experimental harness with the --experimental-harness flag.
-- **Loops in VS Code**: Schedule recurring prompts from the chat input — open the loop panel via the + menu or the loop icon, set an interval and prompt, and let it run on a schedule.
-- **Images on any model**: attach screenshots even when your active model has no vision — a vision-capable model on the same provider describes them for it (`--experimental-harness`).
+- **Stabilized Python runtime**: startup issues introduced during the 1.2.0 cleanup are fixed and protected by regression tests.
+- **Local-only product boundary**: cloud auth/providers, ACP, MCP/connectors, Rust runtimes, dedicated web tools, voice, telemetry and Teleport are no longer part of the supported runtime.
+- **Safer local install**: `install.sh` always installs the current checkout and never upgrades the distribution name from a public package index.
+- **Two self-hosted workers**: configure `worker1` and `worker2` in `~/.vibe/config.toml`; localhost and LAN llama.cpp servers are supported.
+- **Focused coding tools**: the default model-visible tools are bash, read/write/edit, grep, ask-user and todo.

@@ -26,11 +26,6 @@ from vibe.cli.textual_ui.widgets.chat_input.paste_path import (
     rewrite_bare_image_paths_in_text,
 )
 from vibe.cli.textual_ui.widgets.vscode_compat import patch_vscode_space
-from vibe.cli.voice_manager.voice_manager_port import (
-    RecordingStartError,
-    TranscribeState,
-    VoiceManagerPort,
-)
 
 _WORD = re.compile(r"\w+")
 _TRAILING_WORD = re.compile(r"\w+$")
@@ -157,7 +152,6 @@ class ChatTextArea(TextArea):
     def __init__(
         self,
         command_registry: CommandRegistry,
-        voice_manager: VoiceManagerPort | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -176,7 +170,6 @@ class ChatTextArea(TextArea):
         self._completion_manager: MultiCompletionManager | None = None
         self._app_has_focus: bool = True
         self._focus_relinquished: bool = False
-        self._voice_manager = voice_manager
         self._last_keystroke_time: float = 0.0
         self._click_chain: int = 0
         self._chain_consumed: bool = False
@@ -527,45 +520,13 @@ class ChatTextArea(TextArea):
 
     feedback_active: bool = False
 
-    def replace_voice_manager(self, voice_manager: VoiceManagerPort | None) -> None:
-        # The text area holds the manager reference for Ctrl+R and stop/cancel;
-        # swap in the real one after the session is ready (cold mount-first path).
-        self._voice_manager = voice_manager
 
-    async def _handle_voice_key(self, event: events.Key) -> bool:
-        if not self._voice_manager:
-            return False
-
-        # Handle key pressed during audio recording
-        if self._voice_manager.transcribe_state != TranscribeState.IDLE:
-            event.prevent_default()
-            event.stop()
-            if event.key == "ctrl+c":  # Escape is handled in app.py
-                self._voice_manager.cancel_recording()
-            elif self._voice_manager.transcribe_state == TranscribeState.RECORDING:
-                await self._voice_manager.stop_recording()
-            return True
-
-        # Handle audio record keybind
-        if self._voice_manager.is_enabled and event.key == "ctrl+r":
-            event.prevent_default()
-            event.stop()
-            try:
-                self._voice_manager.start_recording()
-            except RecordingStartError as e:
-                self.notify(str(e), severity="warning", markup=False)
-            return True
-
-        return False
 
     def time_since_last_keystroke(self) -> float:
         return time.monotonic() - self._last_keystroke_time
 
     async def _on_key(self, event: events.Key) -> None:  # noqa: PLR0911, PLR0912, PLR0915
         self._last_keystroke_time = time.monotonic()
-
-        if await self._handle_voice_key(event):
-            return
 
         self._mark_cursor_moved_if_needed()
 
@@ -803,8 +764,6 @@ class ChatTextArea(TextArea):
     @property
     def mode_characters(self) -> set[InputMode]:
         chars: set[InputMode] = {"!", "/"}
-        if self._command_registry.has_command("teleport"):
-            chars.add("&")
         return chars
 
     @property

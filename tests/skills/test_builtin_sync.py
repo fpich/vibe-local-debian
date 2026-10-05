@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import yaml
 
 from tests.conftest import build_test_vibe_config
 from tests.skills.conftest import create_skill
@@ -90,46 +89,3 @@ class TestBuiltinSkills:
         # the user's skill is the only claimant, so it wins rather than vanishing.
         assert manager.available_skills["vibe"].description == "Custom vibe override"
         assert "skill-creator" not in manager.available_skills
-
-
-class TestBuiltinSkillsShippedAsPluginSkills:
-    """The `vibe` plugin carries a copy of each Python builtin.
-
-    The copies are what a unified session loads; the Python originals still
-    serve the legacy Host. Until the originals go, the pair has to be kept from
-    drifting on the two fields that decide behaviour — the name the skill is
-    reached by and the description the model routes on.
-    """
-
-    def _plugin_skill(self, name: str) -> dict[str, object]:
-        import vibe.plugins.builtins as builtins_pkg
-
-        path = (
-            Path(builtins_pkg.__file__).parent / "vibe" / "skills" / name / "SKILL.md"
-        )
-        text = path.read_text(encoding="utf-8")
-        _, frontmatter, body = text.split("---\n", 2)
-        return {**yaml.safe_load(frontmatter), "body": body.strip()}
-
-    @pytest.mark.parametrize("name", sorted(BUILTIN_SKILLS))
-    def test_every_builtin_has_a_plugin_copy(self, name: str) -> None:
-        assert self._plugin_skill(name)["name"] == name
-
-    @pytest.mark.parametrize("name", sorted(BUILTIN_SKILLS))
-    def test_the_copy_routes_on_the_same_description(self, name: str) -> None:
-        assert (
-            self._plugin_skill(name)["description"] == BUILTIN_SKILLS[name].description
-        )
-
-    @pytest.mark.parametrize("name", sorted(BUILTIN_SKILLS))
-    def test_the_copy_keeps_the_invocability_of_the_original(self, name: str) -> None:
-        copy = self._plugin_skill(name)
-        assert copy.get("user-invocable", True) == BUILTIN_SKILLS[name].user_invocable
-
-    def test_the_vibe_copy_does_not_pin_a_version_it_cannot_know(self) -> None:
-        # A checked-in file cannot interpolate the running version the way
-        # vibe.py does, so the copy points at main rather than at whatever
-        # version happened to be current when it was generated.
-        body = str(self._plugin_skill("vibe")["body"])
-        assert "__VIBE_VERSION__" not in body
-        assert "https://github.com/mistralai/mistral-vibe/blob/main/README.md" in body

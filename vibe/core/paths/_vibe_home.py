@@ -16,14 +16,6 @@ TRUSTED_FOLDERS_FILE = GlobalPath(lambda: VIBE_HOME.path / "trusted_folders.toml
 LOG_DIR = GlobalPath(lambda: VIBE_HOME.path / "logs")
 LOG_FILE = GlobalPath(lambda: VIBE_HOME.path / "logs" / "vibe.log")
 CACHE_FILE = GlobalPath(lambda: VIBE_HOME.path / "cache.toml")
-PROJECTS_FILE = GlobalPath(lambda: VIBE_HOME.path / "projects.toml")
-CONNECTOR_BOOTSTRAP_CACHE_FILE = GlobalPath(
-    lambda: VIBE_HOME.path / "connector_bootstrap_cache.json"
-)
-EXPERIMENT_EVAL_CACHE_FILE = GlobalPath(
-    lambda: VIBE_HOME.path / "experiment_eval_cache.json"
-)
-WHOAMI_CACHE_FILE = GlobalPath(lambda: VIBE_HOME.path / "whoami_cache.json")
 HISTORY_FILE = GlobalPath(lambda: VIBE_HOME.path / "vibehistory")
 PLANS_DIR = GlobalPath(lambda: VIBE_HOME.path / "plans")
 
@@ -55,8 +47,7 @@ def restrict_vibe_home_permissions() -> None:
 def bootstrap_vibe_home() -> None:
     """Create the Vibe home owner-only and seed the history file.
 
-    Both entrypoints (CLI and ACP) call this before anything else writes
-    under the home.
+    The CLI calls this before anything else writes under the home.
     """
     restrict_vibe_home_permissions()
     history_file = HISTORY_FILE.path

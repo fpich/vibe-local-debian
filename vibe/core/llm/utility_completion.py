@@ -2,86 +2,26 @@ from __future__ import annotations
 
 from vibe.core.config import ModelConfig, ProviderConfig, VibeConfigSchema
 from vibe.core.llm.backend.factory import create_backend
-from vibe.core.telemetry.build_metadata import build_request_metadata
+from vibe.core.local_runtime import build_request_metadata
 from vibe.core.types import LLMMessage, Role
-from vibe.core.utils.matching import name_matches
 from vibe.utils.api_keys import resolve_api_key
 from vibe.utils.http import get_user_agent
-
-# A small, fast model preferred for background niceties (titles, worktree names):
-# latency and cost matter more than reasoning depth.
-_FAST_MODEL = ModelConfig(
-    name="mistral-vibe-cli-fast",
-    provider="mistral",
-    alias="mistral-small",
-    input_price=0.1,
-    output_price=0.3,
-)
 
 
 def select_utility_model(
     config: VibeConfigSchema,
 ) -> tuple[ModelConfig, ProviderConfig]:
-    """Pick the model (and its provider) for a secondary/utility completion.
-
-    The cheap fast Mistral model is preferred whenever a Mistral provider is
-    usable — configured (one always is, via the built-in defaults), the allowlist
-    permits the model, and its key resolves — even when the session's *active*
-    provider is something else. A utility call is a short transcript snippet for a
-    background nicety (a title, a worktree name), not the session's code, so it is
-    worth routing to the fast, cheap model rather than an expensive coding model.
-    When no Mistral provider is usable, the utility call falls back to the
-    session's active model and provider.
-    """
-    active = config.get_active_model()
-    active_provider = config.get_provider_for_model(active)
+    """Use the explicitly configured local utility model or the active model."""
     configured = getattr(config, "utility_model", None)
     if configured is not None:
         return configured, config.get_provider_for_model(configured)
-    utility_provider = _fast_utility_provider(config)
-    if utility_provider is not None:
-        return _FAST_MODEL, utility_provider
-    return active, active_provider
+    active = config.get_active_model()
+    return active, config.get_provider_for_model(active)
 
 
 def is_fast_utility_model(config: VibeConfigSchema) -> bool:
-    """Whether the utility model resolves to the cheap fast model.
-
-    False means it fell back to the session's active model, which may be large
-    and expensive, so callers can throttle background use accordingly.
-    """
-    model, _ = select_utility_model(config)
-    if model.name == _FAST_MODEL.name:
-        return True
-    # An explicitly configured utility model is by design a cheap, separate
-    # worker (e.g. a second local llama.cpp server), so periodic titles are
-    # affordable and the active model's cache stays untouched.
+    """A dedicated local utility worker is considered cheap enough for background work."""
     return getattr(config, "utility_model", None) is not None
-
-
-def _fast_utility_provider(config: VibeConfigSchema) -> ProviderConfig | None:
-    """The Mistral provider to run the fast utility model on, or None to fall back.
-
-    Usable means: a Mistral provider is configured, the allowlist permits the fast
-    model, and its key resolves. A key check keeps ``is_fast_utility_model`` honest
-    so a missing ``MISTRAL_API_KEY`` falls back to the active model instead of a
-    doomed cross-provider call. A keyless local provider (empty env var) is never
-    skipped for want of a key.
-    """
-    if not _fast_model_allowed(config):
-        return None
-    provider = config.get_mistral_provider()
-    if provider is None:
-        return None
-    if provider.api_key_env_var and not resolve_api_key(provider.api_key_env_var):
-        return None
-    return provider
-
-
-def _fast_model_allowed(config: VibeConfigSchema) -> bool:
-    return not config.allowed_models or name_matches(
-        _FAST_MODEL.name, config.allowed_models
-    )
 
 
 async def run_utility_completion(

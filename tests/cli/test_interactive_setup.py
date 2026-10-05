@@ -4,10 +4,10 @@ import argparse
 from typing import Any
 
 import pytest
-
 from tests.update_notifier.adapters.fake_update_cache_repository import (
     FakeUpdateCacheRepository,
 )
+
 from vibe.app_server import local as local_harness_mod
 from vibe.cli import cli as cli_mod
 from vibe.cli.textual_ui import app as textual_app_mod
@@ -89,11 +89,3 @@ def test_trust_flag_skips_the_trust_prompt(captured_startup: dict[str, Any]) -> 
     _run(_make_args(trust=True))
 
     assert captured_startup["startup"].prompt_for_workspace_trust is False
-
-
-def test_experimental_harness_is_forwarded_to_local_harness(
-    captured_startup: dict[str, Any],
-) -> None:
-    _run(_make_args(experimental_harness=True))
-
-    assert captured_startup["harness_options"].experimental_harness is True

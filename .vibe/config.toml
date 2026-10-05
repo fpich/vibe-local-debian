@@ -1,7 +1,7 @@
 # vibe — configuration locale, backend llama.cpp uniquement
-# Fichier de project : chargé en priorité sure ~/.vibe/config.toml
+# Fichier de project : modèle copié vers ~/.vibe/config.toml lors de la première installation
 
-# Deux serveurs llama.cpp locaux (alias serveur « worker » sure chaque port).
+# Deux serveurs llama.cpp locaux ou LAN (alias serveur « worker » sure chaque port).
 # Côté client, chaque modèle a son alias distinct : basculer = changer
 # uniquement active_model.
 # ── Modèle actif : "worker1" ou "worker2" ─────────────────────────────────
@@ -10,14 +10,20 @@ active_model = "worker1"
 # modèles cloud par défaut mistral/devstral du sélecteur /config).
 allowed_models = ["worker"]
 
-# ── Cloud désactivé ────────────────────────────────────────────────────────
-enable_telemetry = false
-enable_otel = false
-otel_endpoint = ""
-enable_update_checks = false
-enable_auto_update = false
-# Aucun connecteur cloud (Mistral connectors) : rien n'est appelé hors localhost
-enable_connectors = false
+
+# ── Outils exposés à l’agent ───────────────────────────────────────────────
+# Allowlist stricte : seuls les outils nécessaires au coding agent local sont
+# visible par le modèle. Les outils réseau web_fetch/web_search ont été supprimés ;
+# task et skill ne sont pas exposés dans ce profil minimal.
+enabled_tools = [
+  "bash",
+  "read_file",
+  "write_file",
+  "edit",
+  "grep",
+  "ask_user_question",
+  "todo",
+]
 
 
 # ── Serveur 1 : 127.0.0.1:8080 (KAT) ───────────────────────────────────

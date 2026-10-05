@@ -44,7 +44,6 @@ async def cancel_tasks[ResultT](
 class SessionExecutionKind(StrEnum):
     LIFECYCLE = auto()
     TURN = auto()
-    TELEPORT = auto()
     SHELL = auto()
 
 

@@ -210,20 +210,11 @@ class OpenAIAdapter(APIAdapter):
         return LLMChunk(message=message, usage=usage, stop=stop)
 
 
-def _vertex_anthropic_adapter() -> APIAdapter:
-    # Imported on use because the Vertex adapter pulls in google.auth, which is
-    # heavy enough to be noticeable at CLI startup.
-    from vibe.core.llm.backend.vertex import VertexAnthropicAdapter
-
-    return VertexAnthropicAdapter()
-
-
 _ADAPTERS: dict[str, Callable[[], APIAdapter]] = {
     "openai": OpenAIAdapter,
     "reasoning": ReasoningAdapter,
     "anthropic": AnthropicAdapter,
     "openai-responses": OpenAIResponsesAdapter,
-    "vertex-anthropic": _vertex_anthropic_adapter,
 }
 
 
@@ -388,8 +379,6 @@ class GenericBackend:
         if resolved is None:
             return None, None
         api_key, origin = resolved
-        if api_style == "vertex-anthropic":
-            return api_key, None
         return api_key, origin
 
     async def complete(

@@ -12,7 +12,7 @@ Run both before merging any `TYPE_CHECKING` / lazy-import change (see `AGENTS.md
 uv run python scripts/check_import_contracts.py
 ```
 
-Imports every `from <mod> import <name>` across `vibe/` and `tests/` to verify it resolves at runtime. Catches cross-file re-exports ruff `TC004` (per-file) misses. Also rebuilds Pydantic models to catch lazily-failing field types. Missing non-vibe deps are non-blocking warnings.
+Imports every `from <mod> import <name>` across `vibe/` and the maintained `tests/local/` suite to verify it resolves at runtime. Catches cross-file re-exports ruff `TC004` (per-file) misses. Also rebuilds Pydantic models to catch lazily-failing field types. Missing non-vibe deps are non-blocking warnings.
 
 ### `suggest_lazy_imports.py` — informational
 

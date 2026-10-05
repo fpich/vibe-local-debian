@@ -14,16 +14,9 @@ from textual.widgets import Static
 from vibe.cli.commands import CommandRegistry
 from vibe.cli.history_manager import HistoryManager
 from vibe.cli.input_modes import InputMode
-from vibe.cli.textual_ui.recording.recording_indicator import RecordingIndicator
 from vibe.cli.textual_ui.widgets.chat_input.text_area import ChatTextArea
 from vibe.cli.textual_ui.widgets.no_markup_static import NoMarkupStatic
 from vibe.cli.textual_ui.widgets.spinner import SpinnerMixin, SpinnerType
-from vibe.cli.voice_manager.voice_manager_port import (
-    TranscribeState,
-    VoiceManagerListener,
-    VoiceManagerPort,
-)
-from vibe.observability.logging import logger
 
 
 class _PromptSpinner(SpinnerMixin, Static):
@@ -39,7 +32,7 @@ class _PromptSpinner(SpinnerMixin, Static):
         self.start_spinner_timer()
 
 
-class ChatInputBody(VoiceManagerListener, Widget):
+class ChatInputBody(Widget):
     class Submitted(Message):
         def __init__(self, value: str) -> None:
             self.value = value
@@ -84,7 +77,6 @@ class ChatInputBody(VoiceManagerListener, Widget):
         self,
         command_registry: CommandRegistry,
         history_file: Path | None = None,
-        voice_manager: VoiceManagerPort | None = None,
         queue_edit_active_getter: Callable[[], bool] | None = None,
         queue_items_getter: Callable[[], list[tuple[int, str]]] | None = None,
         queue_selected_index_getter: Callable[[], int | None] | None = None,
@@ -95,8 +87,6 @@ class ChatInputBody(VoiceManagerListener, Widget):
         self.prompt_widget: NoMarkupStatic | None = None
         self._command_registry = command_registry
         self._switching_mode = False
-        self._voice_manager = voice_manager
-        self._recording_indicator: RecordingIndicator | None = None
         self._queue_edit_active_getter = queue_edit_active_getter
         self._queue_items_getter = queue_items_getter
         self._queue_selected_index_getter = queue_selected_index_getter
@@ -120,42 +110,19 @@ class ChatInputBody(VoiceManagerListener, Widget):
             self.input_widget = ChatTextArea(
                 id="input",
                 command_registry=self._command_registry,
-                voice_manager=self._voice_manager,
             )
             yield self.input_widget
 
     def on_mount(self) -> None:
         if self.input_widget:
             self.input_widget.focus()
-        if self._voice_manager:
-            self._voice_manager.add_listener(self)
 
-    def on_unmount(self) -> None:
-        if self._voice_manager:
-            self._voice_manager.remove_listener(self)
-
-    def replace_voice_manager(self, voice_manager: VoiceManagerPort | None) -> None:
-        # Compose binds the noop voice manager on the cold mount-first path; the
-        # real manager arrives later via _initialize_client_dependencies. Re-bind
-        # the listener and the text-area's manager reference so Ctrl+R and
-        # transcribe callbacks reach the real manager.
-        if self._voice_manager is voice_manager:
-            return
-        if self._voice_manager:
-            self._voice_manager.remove_listener(self)
-        self._voice_manager = voice_manager
-        if voice_manager:
-            voice_manager.add_listener(self)
-        if self.input_widget:
-            self.input_widget.replace_voice_manager(voice_manager)
 
     def _parse_mode_and_text(self, text: str) -> tuple[InputMode, str]:
         if text.startswith("!"):
             return "!", text[1:]
         elif text.startswith("/"):
             return "/", text[1:]
-        elif text.startswith("&") and self._command_registry.has_command("teleport"):
-            return "&", text[1:]
         else:
             return ">", text
 
@@ -611,80 +578,3 @@ class ChatInputBody(VoiceManagerListener, Widget):
 
         if cursor_offset is not None:
             self.input_widget.set_cursor_offset(max(0, min(cursor_offset, len(text))))
-
-    def on_transcribe_state_change(self, state: TranscribeState) -> None:
-        if state == TranscribeState.RECORDING:
-            self._start_recording_ui()
-        elif state == TranscribeState.IDLE:
-            self._stop_recording_ui()
-
-    def on_transcribe_text(self, text: str) -> None:
-        if not self.input_widget:
-            return
-        self.input_widget.insert(text)
-
-    def on_transcribe_error(self, message: str) -> None:
-        self._reset_recording_ui()
-        self.notify(
-            f"Voice transcription failed: {message}", severity="error", markup=False
-        )
-
-    def on_transcribe_notice(self, message: str) -> None:
-        self.post_message(self.InlineNoticeRequested(message, timeout=2.0))
-
-    def _start_recording_ui(self) -> None:
-        if not self._voice_manager:
-            return
-        # Don't stack a second indicator if one is already showing (VIBE-3435).
-        if self._recording_indicator is not None:
-            return
-
-        try:
-            self.screen.get_widget_by_id("input-box").add_class("border-recording")
-
-            if self.input_widget:
-                self.input_widget.cursor_blink = False
-                self.input_widget.add_class("recording")
-            if self.prompt_widget:
-                self.prompt_widget.display = False
-            self._recording_indicator = RecordingIndicator(self._voice_manager)
-            self.query_one(Horizontal).mount(self._recording_indicator, before=0)
-        except Exception as e:
-            logger.error("Failed to start recording UI", exc_info=e)
-            self._reset_recording_ui()
-
-    def _stop_recording_ui(self) -> None:
-        try:
-            self.screen.get_widget_by_id("input-box").remove_class("border-recording")
-
-            if self.input_widget:
-                self.input_widget.cursor_blink = True
-                self.input_widget.remove_class("recording")
-            if self.prompt_widget:
-                self.prompt_widget.display = True
-                self._update_prompt()
-            if self._recording_indicator:
-                self._recording_indicator.remove()
-                self._recording_indicator = None
-        except Exception as e:
-            logger.error("Failed to stop recording UI", exc_info=e)
-            self._reset_recording_ui()
-
-    def _reset_recording_ui(self) -> None:
-        try:
-            self.screen.get_widget_by_id("input-box").remove_class("border-recording")
-        except Exception:
-            pass
-
-        if self.input_widget:
-            self.input_widget.cursor_blink = True
-            self.input_widget.remove_class("recording")
-        if self.prompt_widget:
-            self.prompt_widget.display = True
-            self._update_prompt()
-        if self._recording_indicator:
-            try:
-                self._recording_indicator.remove()
-            except Exception:
-                pass
-            self._recording_indicator = None

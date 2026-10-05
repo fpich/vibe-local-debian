@@ -13,43 +13,19 @@ from rich.markup import escape
 from vibe import __version__
 from vibe.cli.session_exit import print_session_resume_message
 from vibe.cli.terminal_detect import detect_terminal
-from vibe.cli.update_notifier import (
-    FileSystemUpdateCacheRepository,
-    PyPIUpdateGateway,
-    UpdateCacheRepository,
-    UpdateError,
-    UpdateGateway,
-    get_pending_update_from_cache,
-    get_update_if_available,
-    mark_update_as_dismissed,
-)
-from vibe.core.config import MissingAPIKeyError, VibeConfigSchema, load_dotenv_values
+from vibe.core.config import VibeConfigSchema, load_dotenv_values
 from vibe.core.config.default_orchestrator import build_default_orchestrator
 from vibe.core.config.layer import ConfigStorageError
 from vibe.core.config.orchestrator import ConfigOrchestrator
 from vibe.core.paths import HISTORY_FILE, bootstrap_vibe_home
-from vibe.core.telemetry.build_metadata import build_launch_context
-from vibe.core.telemetry.types import LaunchContext
-from vibe.observability.logging import logger
-from vibe.observability.sentry import init_sentry
 
-# The TUI app, onboarding, update prompt, and programmatic runner are each
-# imported at their call site: every launch needs at most one of them, and
-# they are too heavy to load speculatively at startup.
+# The TUI and programmatic runner are imported at their call sites so startup
+# only loads the surface the user selected.
 
 if TYPE_CHECKING:
     from vibe.app_server.local import LocalSessionIntent
-    from vibe.setup.update_prompt import UpdatePromptMode
 
 
-def _build_cli_launch_context() -> LaunchContext:
-    return build_launch_context(
-        agent_entrypoint="cli",
-        agent_version=__version__,
-        client_name="vibe_cli",
-        client_version=__version__,
-        terminal_emulator=detect_terminal(),
-    )
 
 
 def get_prompt_from_stdin() -> str | None:
@@ -95,26 +71,6 @@ def load_config_orchestrator_or_exit() -> ConfigOrchestrator[VibeConfigSchema]:
         sys.exit(1)
 
 
-def require_api_key_or_onboard(
-    orchestrator: ConfigOrchestrator[VibeConfigSchema], *, interactive: bool
-) -> ConfigOrchestrator[VibeConfigSchema]:
-    try:
-        orchestrator.config.require_active_provider_api_key()
-        return orchestrator
-    except MissingAPIKeyError as e:
-        if not interactive:
-            print(
-                f"Error: {e}. Set the environment variable (e.g. in ~/.vibe/.env "
-                "or your shell), or run `vibe --setup` once interactively.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        from vibe.setup.onboarding import run_onboarding
-
-        return run_onboarding(
-            launch_context=_build_cli_launch_context(), orchestrator=orchestrator
-        )
 
 
 def _agent_selection(args: argparse.Namespace) -> tuple[str | None, bool]:
@@ -156,7 +112,6 @@ def _run_programmatic_mode(args: argparse.Namespace, stdin_prompt: str | None) -
     from vibe.cli.programmatic import (
         OutputFormat,
         ProgrammaticLimitError,
-        ProgrammaticTeleportError,
         run_programmatic,
     )
 
@@ -171,8 +126,6 @@ def _run_programmatic_mode(args: argparse.Namespace, stdin_prompt: str | None) -
         session_intent = _session_intent(args, allow_picker=False)
         final_response = run_programmatic(
             harness_options=LocalHarnessOptions(
-                experimental_harness=args.experimental_harness,
-                legacy_harness=args.legacy_harness,
                 client=ClientDescriptor(
                     info=ClientInfo(
                         name="vibe_programmatic",
@@ -206,16 +159,12 @@ def _run_programmatic_mode(args: argparse.Namespace, stdin_prompt: str | None) -
             ),
             prompt=programmatic_prompt or "",
             output_format=output_format,
-            teleport=args.teleport,
         )
         if final_response:
             print(final_response)
         sys.exit(0)
     except ProgrammaticLimitError as e:
         print(e, file=sys.stderr)
-        sys.exit(1)
-    except ProgrammaticTeleportError as e:
-        print(f"Teleport error: {e}", file=sys.stderr)
         sys.exit(1)
     except AppServerResponseError as e:
         print(f"Error: {e.error.message}", file=sys.stderr)
@@ -228,7 +177,6 @@ def _run_programmatic_mode(args: argparse.Namespace, stdin_prompt: str | None) -
 def _run_interactive_mode(
     args: argparse.Namespace,
     stdin_prompt: str | None,
-    update_cache_repository: UpdateCacheRepository,
     *,
     autocopy_to_clipboard: bool,
 ) -> None:
@@ -256,8 +204,6 @@ def _run_interactive_mode(
 
     harness = LocalHarness(
         LocalHarnessOptions(
-            experimental_harness=args.experimental_harness,
-            legacy_harness=args.legacy_harness,
             client=ClientDescriptor(
                 info=ClientInfo(
                     name="vibe_tui",
@@ -286,10 +232,8 @@ def _run_interactive_mode(
         summary = run_textual_ui(
             start_app_server=harness.connect,
             history_file=HISTORY_FILE.path,
-            update_cache_repository=update_cache_repository,
             startup=StartupOptions(
                 initial_prompt=args.initial_prompt or stdin_prompt,
-                teleport_on_start=args.teleport,
                 show_resume_picker=args.resume is True,
                 is_resuming_session=(
                     args.continue_session or isinstance(args.resume, str)
@@ -308,169 +252,29 @@ def _run_interactive_mode(
     print_session_resume_message(summary)
 
 
-def _show_update_prompt(
-    repository: UpdateCacheRepository,
-    latest_version: str,
-    *,
-    theme: str | None,
-    dismiss_on_continue: bool,
-    prompt_mode: UpdatePromptMode,
-) -> None:
-    from vibe.setup.update_prompt import UpdatePromptResult, ask_update_prompt
-
-    result = ask_update_prompt(
-        __version__, latest_version, theme=theme, prompt_mode=prompt_mode
-    )
-
-    match result:
-        case UpdatePromptResult.CONTINUE:
-            if dismiss_on_continue:
-                try:
-                    asyncio.run(mark_update_as_dismissed(repository, latest_version))
-                except OSError as exc:
-                    logger.debug("Failed to persist dismissed update", exc_info=exc)
-            return
-        case UpdatePromptResult.QUIT:
-            sys.exit(0)
-        case UpdatePromptResult.UPDATED:
-            rprint(
-                f"[green]✔ Vibe was updated from {__version__} to "
-                f"{latest_version}.[/]\n  Run [bold]vibe[/] to start using the "
-                "new version."
-            )
-            sys.exit(0)
-        case UpdatePromptResult.UPDATE_FAILED:
-            rprint(
-                "[yellow]Vibe could not update automatically.[/]\n"
-                "  Update manually with your package manager (for example "
-                "[bold]uv tool upgrade mistral-vibe[/]), or keep using "
-                f"the current version ({__version__}) for now."
-            )
-            sys.exit(1)
 
 
-def _maybe_run_startup_update_prompt(
-    config: VibeConfigSchema, repository: UpdateCacheRepository
-) -> None:
-    if not config.enable_update_checks:
-        return
-
-    try:
-        latest_version = asyncio.run(
-            get_pending_update_from_cache(repository, __version__)
-        )
-    except OSError as exc:
-        logger.debug("Failed to read pending update from cache", exc_info=exc)
-        return
-
-    if latest_version is None:
-        return
-
-    from vibe.setup.update_prompt import UpdatePromptMode
-
-    _show_update_prompt(
-        repository,
-        latest_version,
-        theme=config.theme,
-        dismiss_on_continue=True,
-        prompt_mode=UpdatePromptMode.STARTUP,
-    )
 
 
-def _run_check_upgrade(
-    repository: UpdateCacheRepository,
-    *,
-    update_notifier: UpdateGateway | None = None,
-    theme: str | None = None,
-) -> None:
-    from vibe.setup.update_prompt import UpdatePromptMode
-
-    notifier = update_notifier or PyPIUpdateGateway(project_name="mistral-vibe")
-    try:
-        update = asyncio.run(
-            get_update_if_available(
-                update_notifier=notifier,
-                current_version=__version__,
-                update_cache_repository=repository,
-                force_check=True,
-            )
-        )
-    except UpdateError as exc:
-        rprint(f"[red]✗ Update check failed:[/] {exc.message}")
-        sys.exit(1)
-    except OSError as exc:
-        logger.debug("Failed to persist forced update check", exc_info=exc)
-        rprint("[red]✗ Update check failed while writing the update cache.[/]")
-        sys.exit(1)
-
-    if update is None:
-        rprint(f"[green]Vibe is already up to date ({__version__}).[/]")
-        return
-
-    _show_update_prompt(
-        repository,
-        update.latest_version,
-        theme=theme,
-        dismiss_on_continue=False,
-        prompt_mode=UpdatePromptMode.CHECK_UPGRADE,
-    )
 
 
 def run_cli(args: argparse.Namespace) -> None:
-    sentry_enabled = False
-
     load_dotenv_values()
     bootstrap_vibe_home()
 
-    if args.setup:
-        from vibe.setup.onboarding import run_onboarding
-
-        orchestrator = load_config_orchestrator_or_exit()
-        run_onboarding(
-            launch_context=_build_cli_launch_context(), orchestrator=orchestrator
-        )
-        sys.exit(0)
-
     try:
-        update_cache_repository = FileSystemUpdateCacheRepository()
-        if getattr(args, "check_upgrade", False):
-            from vibe.cli.theme import resolve_theme_name
-
-            config = load_config_orchestrator_or_exit().config
-            _run_check_upgrade(
-                update_cache_repository, theme=resolve_theme_name(config.theme)
-            )
-            sys.exit(0)
-
         is_interactive = args.prompt is None
-        orchestrator = require_api_key_or_onboard(
-            load_config_orchestrator_or_exit(), interactive=is_interactive
-        )
+        orchestrator = load_config_orchestrator_or_exit()
         config = orchestrator.config
-        if is_interactive:
-            _maybe_run_startup_update_prompt(config, update_cache_repository)
-        sentry_enabled = init_sentry(
-            enabled=config.enable_telemetry,
-            headless=not is_interactive,
-            tags=_build_cli_launch_context().sentry_tags(),
-        )
         stdin_prompt = get_prompt_from_stdin()
         if is_interactive:
             _run_interactive_mode(
                 args=args,
                 stdin_prompt=stdin_prompt,
-                update_cache_repository=update_cache_repository,
-                autocopy_to_clipboard=config.autocopy_to_clipboard,
+                    autocopy_to_clipboard=config.autocopy_to_clipboard,
             )
         else:
             _run_programmatic_mode(args=args, stdin_prompt=stdin_prompt)
-
     except (KeyboardInterrupt, EOFError):
         rprint("\n[dim]Bye![/]")
         sys.exit(0)
-    finally:
-        if sentry_enabled:
-            import sentry_sdk
-
-            if sentry_sdk.is_initialized():
-                sentry_sdk.flush(timeout=5)

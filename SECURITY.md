@@ -1,50 +1,45 @@
-# Security Policy
+# Politique de sécurité
 
-This policy describes how to report suspected security vulnerabilities in
-Mistral Vibe.
+`vibe-local-debian` est un fork indépendant orienté exécution locale. Il n'est pas un produit Mistral AI et les vulnérabilités spécifiques à ce fork ne doivent pas être envoyées au support Mistral.
 
-## Reporting a vulnerability
+## Signaler une vulnérabilité
 
-Report suspected vulnerabilities privately to
-[security@mistral.ai](mailto:security@mistral.ai).
+Privilégier un signalement privé via les mécanismes de sécurité du dépôt GitHub. Si aucun canal privé n'est disponible, ouvrir une issue avec uniquement une description générale et demander un canal privé avant de publier un exploit, un secret ou des données sensibles.
 
-Please do not disclose vulnerability details in public GitHub issues,
-discussions, or pull requests before coordinating with the security team.
-If you are unsure whether an issue is security-related, report it privately.
+Inclure si possible : version/commit, Debian/Python utilisés, étapes minimales de reproduction, configuration pertinente avec secrets masqués, impact attendu et différence entre comportement attendu et observé.
 
-English is the preferred language for reports.
+## Modèle de menace
 
-## What to include
+Le produit est conçu pour que **l'inférence** soit effectuée par un ou plusieurs serveurs `llama.cpp` choisis par l'utilisateur. Les backends cloud Mistral, MCP/connecteurs distants, outils web dédiés, télémétrie, Sentry et update notifier ont été retirés.
 
-Please provide, where available:
+Cela ne constitue toutefois pas une sandbox réseau ou système :
 
-- The affected Vibe version or commit, operating system, and installation method.
-- Reproduction steps or a minimal proof of concept.
-- Expected versus actual behavior and the potential security impact.
-- Relevant configuration and redacted logs or screenshots.
+- `bash` peut exécuter un programme qui accède au réseau ;
+- un build/test du project peut télécharger des dépendances ;
+- un serveur `llama.cpp` placé sure le LAN reçoit les prompts, extraits de fichiers et résultats d'outils transmis au modèle ;
+- HTTP ne chiffre pas ce traffic ;
+- les permissions Vibe réduisent les actions accidentelles mais ne remplacent pas l'isolation Unix, un conteneur ou une VM.
 
-For agent-related issues, include the triggering input, agent profile,
-tool permissions, relevant MCP servers or hooks, and any approval prompts.
-Describe what the attacker controls, what the user authorized, and which
-permission or trust check you believe was bypassed.
+## Frontière du workspace
 
-If possible, indicate whether the latest release is affected, but do not
-delay reporting. Use synthetic data where possible and remove live
-credentials, personal data, and unrelated confidential information.
+Le répertoire courant est la frontière principale de travail. Les accès sensibles ou extérieurs au workspace passent par le système de permissions lorsque le profil ne les autorise pas explicitement.
 
-## Coordinated disclosure
+Pour du code non fiable :
 
-Please coordinate public disclosure with the security team to allow time
-for investigation and remediation.
+- ne pas utiliser `--auto-approve`/`--yolo` ;
+- utiliser un compte Unix sans secrets et avec des droits minimaux ;
+- préférer un conteneur/VM si le dépôt peut être hostile ;
+- examiner les commands shell proposées avant approbation.
 
-Limit testing to systems and accounts you own or are authorized to test.
-Avoid service disruption and accessing or modifying other users' data.
+## Serveur llama.cpp distant
 
-## Related security information
+Pour un serveur sure le LAN :
 
-Current Mistral security contacts are published in
-[security.txt](https://mistral.ai/.well-known/security.txt).
+- écouter sure une IP LAN dédiée lorsque possible plutôt que sure toutes les interfaces ;
+- filtrer les ports 8080/8081 avec le pare-feu ;
+- ne pas exposer les endpoints directement sure Internet ;
+- utiliser TLS ou un tunnel si le réseau n'est pas de confiance.
 
-For reports submitted through
-[Mistral's HackerOne program](https://hackerone.com/58acc269-165e-4d18-a2d8-61f296cdea60/embedded_submissions/new),
-the program's published scope and terms apply.
+## Secrets
+
+Le profil par défaut ne requiert aucune clé Mistral. Éviter de placer des tokens dans `AGENTS.md`, les prompts, les fichiers de logs ou le dépôt. Les logs sont stockés sous `$VIBE_HOME/logs` (par défaut `~/.vibe/logs`).

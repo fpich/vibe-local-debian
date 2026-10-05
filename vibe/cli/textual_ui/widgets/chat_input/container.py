@@ -24,7 +24,6 @@ from vibe.cli.textual_ui.widgets.chat_input.completion_manager import (
 from vibe.cli.textual_ui.widgets.chat_input.completion_popup import CompletionPopup
 from vibe.cli.textual_ui.widgets.chat_input.subagent_list import SubagentList
 from vibe.cli.textual_ui.widgets.chat_input.text_area import ChatTextArea
-from vibe.cli.voice_manager.voice_manager_port import VoiceManagerPort
 
 SAFETY_BORDER_CLASSES: dict[AgentSafety, str] = {
     AgentSafety.SAFE: "border-safe",
@@ -71,7 +70,6 @@ class ChatInputContainer(Vertical):  # noqa: PLR0904 - cohesive input surface AP
         agent_name: str = "",
         skill_entries_getter: Callable[[], list[tuple[str, str]]] | None = None,
         file_watcher_for_autocomplete_getter: Callable[[], bool] | None = None,
-        voice_manager: VoiceManagerPort | None = None,
         queue_edit_active_getter: Callable[[], bool] | None = None,
         queue_items_getter: Callable[[], list[tuple[int, str]]] | None = None,
         queue_selected_index_getter: Callable[[], int | None] | None = None,
@@ -86,7 +84,6 @@ class ChatInputContainer(Vertical):  # noqa: PLR0904 - cohesive input surface AP
         self._file_watcher_for_autocomplete_getter = (
             file_watcher_for_autocomplete_getter
         )
-        self._voice_manager = voice_manager
         self._queue_edit_active_getter = queue_edit_active_getter
         self._queue_items_getter = queue_items_getter
         self._queue_selected_index_getter = queue_selected_index_getter
@@ -131,7 +128,6 @@ class ChatInputContainer(Vertical):  # noqa: PLR0904 - cohesive input surface AP
                 history_file=self._history_file,
                 command_registry=self._command_registry,
                 id="input-body",
-                voice_manager=self._voice_manager,
                 queue_edit_active_getter=self._queue_edit_active_getter,
                 queue_items_getter=self._queue_items_getter,
                 queue_selected_index_getter=self._queue_selected_index_getter,
@@ -335,12 +331,6 @@ class ChatInputContainer(Vertical):  # noqa: PLR0904 - cohesive input surface AP
     def replace_command_registry(self, registry: CommandRegistry) -> None:
         self._command_registry = registry
 
-    def replace_voice_manager(self, voice_manager: VoiceManagerPort | None) -> None:
-        if self._voice_manager is voice_manager:
-            return
-        self._voice_manager = voice_manager
-        if self._body:
-            self._body.replace_voice_manager(voice_manager)
 
     def set_agent_name(self, name: str) -> None:
         self._agent_name = name

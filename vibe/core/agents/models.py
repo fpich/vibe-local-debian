@@ -131,39 +131,12 @@ EXPLORE = AgentProfile(
 LEAN = AgentProfile(
     name=BuiltinAgentName.LEAN,
     display_name="Lean",
-    description="Specialized mode for Lean 4 code analysis, proof assistance, and theorem proving",
+    description="Specialized mode for Lean 4 code analysis and proof assistance using the active local model",
     safety=AgentSafety.NEUTRAL,
     agent_type=AgentType.AGENT,
     install_required=True,
     overrides={
         "system_prompt_id": "lean",
-        "active_model": "leanstral",
-        "allowed_models": ["labs-leanstral-1-5"],
-        "providers": [
-            {
-                "name": "mistral-testing",
-                "api_base": "https://api.mistral.ai/v1",
-                "api_key_env_var": "MISTRAL_API_KEY",
-                "backend": "mistral",
-            }
-        ],
-        "models": [
-            {
-                "name": "labs-leanstral-1-5",
-                "provider": "mistral-testing",
-                "alias": "leanstral",
-                "thinking": "high",
-                "temperature": 1.0,
-                "auto_compact_threshold": 90_000,
-            }
-        ],
-        "compaction_model": {
-            "name": "mistral-small-latest",
-            "provider": "mistral-testing",
-            "alias": "devstral-compact",
-            "temperature": 0.2,
-            "thinking": "off",
-        },
         "tools": {"bash": {"default_timeout": 1200}},
         "disabled_tools": ["exit_plan_mode"],
     },

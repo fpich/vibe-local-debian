@@ -42,12 +42,10 @@ if TYPE_CHECKING:
     from vibe.core.agents.manager import AgentManager
     from vibe.core.config import VibeConfigSchema
     from vibe.core.hooks.models import HookConfigResult
+    from vibe.core.local_runtime import LaunchContext
     from vibe.core.skills.manager import SkillManager
     from vibe.core.subagents import SubagentRunnerPort
-    from vibe.core.telemetry.types import LaunchContext
     from vibe.core.tools.io_port import ToolIOPort
-    from vibe.core.tools.mcp.pool import MCPConnectionPool
-    from vibe.core.tools.mcp_sampling import MCPSamplingHandler
     from vibe.core.tools.models import RequiredPermission
     from vibe.core.tools.permissions import PermissionContext, PermissionStore
     from vibe.core.types import (
@@ -81,7 +79,7 @@ class InvokeContext:
     agent_manager: AgentManager | None = field(default=None)
     interaction_requests: InteractionRequestPort | None = field(default=None)
     subagent_runner: SubagentRunnerPort | None = field(default=None)
-    sampling_callback: MCPSamplingHandler | None = field(default=None)
+    sampling_callback: Any | None = field(default=None)
     session_dir: Path | None = field(default=None)
     launch_context: LaunchContext | None = field(default=None)
     plan_file_path: Path | None = field(default=None)
@@ -93,7 +91,7 @@ class InvokeContext:
     permission_store: PermissionStore | None = field(default=None)
     hook_config_result: HookConfigResult | None = field(default=None)
     session_id: str | None = field(default=None)
-    mcp_pool: MCPConnectionPool | None = field(default=None)
+    mcp_pool: Any | None = field(default=None)
     tool_io: ToolIOPort | None = field(default=None)
 
 

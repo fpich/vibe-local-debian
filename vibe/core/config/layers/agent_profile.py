@@ -8,14 +8,8 @@ from vibe.core.config.layer import ConfigLayer, RawConfig
 from vibe.core.config.types import LayerConfigSnapshot
 from vibe.observability.logging import logger
 
-# Fields an agent profile must never override. These route credentials -- the
-# account call sends the API key to console_base_url, teleport sends it to
-# vibe_code_sessions_base_url -- so a profile from an untrusted checkout could
-# otherwise redirect them to an attacker host and exfiltrate the key.
+# Fields an agent profile must never override because they may route credentials.
 PROTECTED_FIELDS = frozenset({
-    "vibe_base_url",
-    "console_base_url",
-    "vibe_code_sessions_base_url",
 })
 
 

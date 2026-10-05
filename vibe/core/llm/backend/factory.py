@@ -19,12 +19,6 @@ if TYPE_CHECKING:
     from vibe.core.utils import RetryObserver
 
 
-def _create_mistral_backend(**kwargs: Any) -> BackendLike:
-    from vibe.core.llm.backend.mistral import MistralBackend
-
-    return MistralBackend(**kwargs)
-
-
 def _create_generic_backend(**kwargs: Any) -> BackendLike:
     from vibe.core.llm.backend.generic import GenericBackend
 
@@ -35,7 +29,6 @@ def _create_generic_backend(**kwargs: Any) -> BackendLike:
 # level: the backends pull in heavy dependencies that would otherwise slow CLI
 # startup.
 BACKEND_FACTORY: dict[Backend, Callable[..., BackendLike]] = {
-    Backend.MISTRAL: _create_mistral_backend,
     Backend.GENERIC: _create_generic_backend,
 }
 
@@ -52,21 +45,15 @@ def create_backend(
     on_retry: RetryObserver | None = None,
 ) -> BackendLike:
     backend = Backend(provider.backend)
+    if backend is not Backend.GENERIC:
+        raise ValueError(
+            f"Backend {backend.value!r} is not supported by the local-only build"
+        )
     factory = BACKEND_FACTORY[backend]
-    transport_timeouts: dict[str, float] = (
-        {
-            "connect_timeout": connect_timeout,
-            "write_timeout": write_timeout,
-            "pool_timeout": pool_timeout,
-        }
-        if backend is Backend.MISTRAL
-        else {}
-    )
     return factory(
         provider=provider,
         timeout=timeout,
         retry_max_elapsed_time=retry_max_elapsed_time,
-        enable_otel=enable_otel,
+        enable_otel=False,
         on_retry=on_retry,
-        **transport_timeouts,
     )
