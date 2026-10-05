@@ -46,7 +46,6 @@ def _build_wheel(dist_dir: Path) -> Path:
         )
     with zipfile.ZipFile(wheels[0]) as wheel:
         names = wheel.namelist()
-        assert any(name.startswith("vibe/_bin/vibe-rs") for name in names)
         assert any(
             name.startswith("mistralai_vibe_local_harness/_native.") for name in names
         )
@@ -89,8 +88,7 @@ def test_fresh_wheel_install_can_spawn_cli_and_complete_happy_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("VIBE_SKIP_RUST_TUI", raising=False)
-    monkeypatch.delenv("VIBE_CLI", raising=False)
+
     wheel_path = _build_wheel(tmp_path / "dist")
     vibe_executable = _install_fresh_wheel(tmp_path, wheel_path)
 

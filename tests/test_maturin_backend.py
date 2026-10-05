@@ -99,86 +99,7 @@ def test_stage_harness_accepts_public_root_runtime(
     assert (bundled_runtime / "__init__.py").read_text() == "SOURCE = 'public-root'\n"
 
 
-def test_stage_rust_cli_builds_into_private_target(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    backend = _load_backend(monkeypatch)
-    project = tmp_path / "project"
-    manifest = project / "vibe/cli-rust/Cargo.toml"
-    target = project / ".native-build/vibe-rs-target"
-    bundled = project / "vibe/_bin" / backend._TUI_NAME
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text("[package]\nname='vibe-rs'\n")
-    calls: list[tuple[list[str], Path, dict[str, str]]] = []
-
-    def run(command: list[str], *, cwd: Path, env: dict[str, str], check: bool) -> None:
-        assert check
-        calls.append((command, cwd, env))
-        built = target / "release" / backend._TUI_NAME
-        built.parent.mkdir(parents=True)
-        built.write_bytes(b"rust-cli")
-
-    monkeypatch.setattr(backend, "_PROJECT_ROOT", project)
-    monkeypatch.setattr(backend, "_TUI_MANIFEST", manifest)
-    monkeypatch.setattr(backend, "_TUI_TARGET", target)
-    monkeypatch.setattr(backend, "_BUNDLED_TUI", bundled)
-    monkeypatch.setattr(backend.subprocess, "run", run)
-    monkeypatch.setenv("CARGO_BUILD_FLAGS", "--no-default-features")
-
-    backend._stage_rust_cli()
-
-    command, cwd, environment = calls[0]
-    assert command[-1] == "--no-default-features"
-    assert "--locked" in command
-    assert cwd == project
-    assert environment["CARGO_TARGET_DIR"] == str(target)
-    assert bundled.read_bytes() == b"rust-cli"
-
-
-def test_stage_rust_cli_skip_preserves_existing_binary(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    backend = _load_backend(monkeypatch)
-    bundled = tmp_path / "vibe/_bin" / backend._TUI_NAME
-    bundled.parent.mkdir(parents=True)
-    bundled.write_bytes(b"editable-rust-cli")
-    monkeypatch.setattr(backend, "_BUNDLED_TUI", bundled)
-    monkeypatch.setenv("VIBE_SKIP_RUST_TUI", "1")
-
-    backend._stage_rust_cli()
-
-    assert bundled.read_bytes() == b"editable-rust-cli"
-
-
-def test_stage_rust_cli_failure_preserves_existing_binary(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    backend = _load_backend(monkeypatch)
-    project = tmp_path / "project"
-    manifest = project / "vibe/cli-rust/Cargo.toml"
-    target = project / ".native-build/vibe-rs-target"
-    bundled = project / "vibe/_bin" / backend._TUI_NAME
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text("[package]\nname='vibe-rs'\n")
-    bundled.parent.mkdir(parents=True)
-    bundled.write_bytes(b"editable-rust-cli")
-    monkeypatch.setattr(backend, "_PROJECT_ROOT", project)
-    monkeypatch.setattr(backend, "_TUI_MANIFEST", manifest)
-    monkeypatch.setattr(backend, "_TUI_TARGET", target)
-    monkeypatch.setattr(backend, "_BUNDLED_TUI", bundled)
-
-    def fail_build(*_args: object, **_kwargs: object) -> None:
-        raise OSError("compiler failed")
-
-    monkeypatch.setattr(backend.subprocess, "run", fail_build)
-
-    with pytest.raises(OSError, match="compiler failed"):
-        backend._stage_rust_cli()
-
-    assert bundled.read_bytes() == b"editable-rust-cli"
-
-
-def test_build_wheel_stages_both_native_inputs(
+def test_build_wheel_stages_native_inputs(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     backend = _load_backend(monkeypatch)
@@ -192,7 +113,6 @@ def test_build_wheel_stages_both_native_inputs(
     monkeypatch.setattr(backend, "_HARNESS_TARGET", tmp_path / "harness-target")
     monkeypatch.setattr(backend.sys, "platform", "linux")
     monkeypatch.setattr(backend, "_wheel_harness", wheel_harness)
-    monkeypatch.setattr(backend, "_stage_rust_cli", lambda: calls.append("tui"))
 
     def build_wheel(*args: object) -> str:
         calls.append("wheel")
@@ -205,7 +125,7 @@ def test_build_wheel_stages_both_native_inputs(
     monkeypatch.setattr(backend.maturin, "build_wheel", build_wheel, raising=False)
 
     assert backend.build_wheel("dist") == "mistral_vibe.whl"
-    assert calls == ["harness", "tui", "wheel"]
+    assert calls == ["harness", "wheel"]
 
 
 def test_wheel_staging_restores_editable_runtime(

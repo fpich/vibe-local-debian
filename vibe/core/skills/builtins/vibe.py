@@ -419,12 +419,8 @@ Otherwise the server uses OAuth and starts browser login by default. Pass
 Use `vibe mcp remove <name>` to remove a server from the user configuration;
 stored OAuth credentials are deleted when available.
 
-With `VIBE_CLI=rust`, shell `mcp add` uses the OAuth-only `/mcp add` syntax:
-`vibe mcp add https://mcp.linear.app/mcp --name linear --no-login`.
-It accepts repeatable `--scope`, `--transport`, and `--allow-insecure-http`;
-without `--no-login`, it starts browser login. Both `add` and `remove NAME`
-update user config without a chat session. Use `VIBE_CLI=python vibe mcp add`
-for the stdio/static-auth flags above. `remove` is argv-only, not a slash command.
+Both `add` and `remove NAME` update user config without a chat session.
+`remove` is argv-only, not a slash command.
 
 Hosted OAuth MCP servers can also be added from inside Vibe:
 

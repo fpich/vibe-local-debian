@@ -156,7 +156,6 @@ module-name = "mistralai_vibe_local_harness._native"
 python-source = "."
 python-packages = ["vibe", "mistralai_vibe_local_harness"]
 include = [
-    { path = "vibe/_bin/*", format = "wheel" },
     # The runtime is staged during the build and ignored by Git. Include it
     # explicitly so Maturin does not filter its Python sources out.
     { path = "mistralai_vibe_local_harness/*", format = "wheel" },
@@ -165,7 +164,6 @@ include = [
 exclude = [
     "**/__pycache__/**",
     "**/*.pyc",
-    "vibe/cli-rust/**",
 ]
 features = ["extension-module"]
 
@@ -179,9 +177,6 @@ exclude-newer = "2 days"
 cache-keys = [
     { file = "pyproject.toml" },
     { file = "build_backend/**/*.py" },
-    { file = "vibe/cli-rust/Cargo.toml" },
-    { file = "vibe/cli-rust/Cargo.lock" },
-    { file = "vibe/cli-rust/src/**/*.rs" },
     { file = "harness/core/Cargo.toml" },
     { file = "harness/core/Cargo.lock" },
     { file = "harness/core/src/**/*.rs" },

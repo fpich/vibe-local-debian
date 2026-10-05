@@ -6,8 +6,6 @@ import os
 from pathlib import Path
 import re
 import runpy
-import subprocess
-import sys
 import tempfile
 import zipfile
 
@@ -17,16 +15,11 @@ def version_from_sha(sha: str) -> str:
     return f"0.0.0+{int(sha) if sha.isdecimal() else sha}"
 
 
-def stamp_version(version: str, *, rust: bool) -> None:
+def stamp_version(version: str) -> None:
     targets = {
         "pyproject.toml": r"""(?m)^(\s*version\s*=\s*)['"][^'"]*['"]""",
         "vibe/__init__.py": r"""(?m)^(__version__\s*=\s*)['"][^'"]*['"]""",
     }
-    if rust:
-        for name in ("Cargo.toml", "Cargo.lock"):
-            targets[f"vibe/cli-rust/{name}"] = (
-                r'(?m)^(name = "vibe-rs"\nversion = )"[^"]+"$'
-            )
     updates: dict[Path, str] = {}
     for name, pattern in targets.items():
         path = Path(name)
@@ -45,8 +38,8 @@ def stamp_version(version: str, *, rust: bool) -> None:
         print(f"Updated {path} to {version}")
 
 
-def verify_wheel(version: str, *, rust: bool) -> None:
-    pattern = "*.whl" if rust else "*-py3-none-any.whl"
+def verify_wheel(version: str) -> None:
+    pattern = "*.whl"
     (wheel_path,) = Path("dist").glob(pattern)
     with zipfile.ZipFile(wheel_path) as wheel, tempfile.TemporaryDirectory() as tmp:
         metadata_path = next(
@@ -60,33 +53,20 @@ def verify_wheel(version: str, *, rust: bool) -> None:
                 f"Version mismatch: expected {version}, "
                 f"metadata={metadata['Version']}, Python={python_version}"
             )
-        if rust:
-            binary_name = "vibe/_bin/vibe-rs" + (
-                ".exe" if sys.platform == "win32" else ""
-            )
-            binary = Path(wheel.extract(binary_name, tmp))
-            binary.chmod(binary.stat().st_mode | 0o111)
-            rust_version = subprocess.check_output(
-                [str(binary), "--version"], text=True, timeout=30
-            ).strip()
-            if rust_version != f"vibe {version}":
-                raise SystemExit(
-                    f"Version mismatch: expected vibe {version}, Rust={rust_version}"
-                )
     print(f"Wheel versions match {version}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("stamp", "verify"))
-    parser.add_argument("--rust", action="store_true")
+
     args = parser.parse_args()
     version = version_from_sha(os.environ["SHORT_SHA"])
     match args.action:
         case "stamp":
-            stamp_version(version, rust=args.rust)
+            stamp_version(version)
         case "verify":
-            verify_wheel(version, rust=args.rust)
+            verify_wheel(version)
 
 
 if __name__ == "__main__":

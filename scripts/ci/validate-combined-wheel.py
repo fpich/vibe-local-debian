@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from importlib import metadata
-import os
 from pathlib import Path
 
 import mistralai_vibe_local_harness._native as harness_native
@@ -27,16 +26,8 @@ def main() -> None:
     if vibe_module_path is None:
         raise RuntimeError("Vibe package location is unavailable")
 
-    rust_cli_name = "vibe-rs.exe" if os.name == "nt" else "vibe-rs"
-    rust_cli_path = Path(vibe_module_path).parent / "_bin" / rust_cli_name
-    if not rust_cli_path.is_file():
-        raise RuntimeError("Rust CLI is missing")
-    if os.name != "nt" and not os.access(rust_cli_path, os.X_OK):
-        raise RuntimeError("Rust CLI is not executable")
-
     print(f"mistral-vibe {vibe_version}")
     print(f"Harness extension: {native_path.name}")
-    print(f"Rust CLI: {rust_cli_path.name}")
 
 
 if __name__ == "__main__":

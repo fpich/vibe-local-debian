@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 import shlex
 import shutil
-import subprocess
 import sys
 import tempfile
 from typing import Any
@@ -23,10 +22,6 @@ _STAGED_CORE = _BUILD_ROOT / "harness-core"
 _HARNESS_TARGET = _BUILD_ROOT / "harness-target"
 _RUNTIME_PACKAGE = Path("runtimes/python/python/mistralai_vibe_local_harness")
 _BUNDLED_RUNTIME = _PROJECT_ROOT / "mistralai_vibe_local_harness"
-_TUI_MANIFEST = _PROJECT_ROOT / "vibe" / "cli-rust" / "Cargo.toml"
-_TUI_TARGET = _BUILD_ROOT / "vibe-rs-target"
-_TUI_NAME = "vibe-rs.exe" if sys.platform == "win32" else "vibe-rs"
-_BUNDLED_TUI = _PROJECT_ROOT / "vibe" / "_bin" / _TUI_NAME
 
 
 class NativeBuildError(RuntimeError):
@@ -80,7 +75,6 @@ def build_wheel(
     metadata_directory: str | None = None,
 ) -> str:
     with _wheel_harness(), _maturin_environment(portable_linux_wheel=True):
-        _stage_rust_cli()
         return maturin.build_wheel(wheel_directory, config_settings, metadata_directory)
 
 
@@ -213,41 +207,6 @@ def _wheel_harness() -> Iterator[None]:
         if moved_original:
             shutil.move(backup, _BUNDLED_RUNTIME)
         shutil.rmtree(swap_root, ignore_errors=True)
-
-
-def _stage_rust_cli() -> None:
-    if os.environ.get("VIBE_SKIP_RUST_TUI"):
-        return
-
-    environment = os.environ.copy()
-    environment["CARGO_TARGET_DIR"] = str(_TUI_TARGET)
-    command = [
-        "cargo",
-        "build",
-        "--release",
-        "--locked",
-        "--manifest-path",
-        str(_TUI_MANIFEST),
-        "--bin",
-        "vibe-rs",
-        *shlex.split(os.environ.get("CARGO_BUILD_FLAGS", "")),
-    ]
-    try:
-        subprocess.run(command, cwd=_PROJECT_ROOT, env=environment, check=True)
-    except FileNotFoundError as error:
-        raise NativeBuildError("Cargo is required to build the Vibe wheel") from error
-
-    built = _TUI_TARGET / "release" / _TUI_NAME
-    if not built.is_file():
-        raise NativeBuildError(f"Rust CLI build did not produce {built}")
-    staged = _TUI_TARGET.parent / f"staged-{_TUI_NAME}"
-    staged.unlink(missing_ok=True)
-    _BUNDLED_TUI.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        shutil.copy2(built, staged)
-        staged.replace(_BUNDLED_TUI)
-    finally:
-        staged.unlink(missing_ok=True)
 
 
 @contextmanager
