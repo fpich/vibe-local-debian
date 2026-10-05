@@ -4,6 +4,17 @@ Hard fork **non suivi** de [mistralai/mistral-vibe](https://github.com/mistralai
 
 **Objectif** : agent de code CLI sur Debian 13 avec backends `llama.cpp` auto-hébergés — **worker1 (KAT)** et **worker2 (Qwen3.5)**, alias serveur `worker` sur chaque port. Aucune API cloud : les serveurs llama.cpp peuvent tourner en localhost ou sur une machine distante du réseau local (il suffit d'adapter `api_base`).
 
+## Version 1.2.0 — optimisations du backend local
+
+- **Cache de prompt llama.cpp préservé** : les rafraîchissements byte-identiques du prompt système sont ignorés et le snapshot des tools sérialisés est mémoïsé — aucun drift d'un octet par tour, le cache de préfixe du serveur survit aux rebuilds.
+- **Périmètre d'outils dynamique** : après la première requête d'une epoch de contexte, les tools distants (MCP/connecteurs) jamais utilisés sont retirés du payload ; les builtins restent toujours inclus ; l'usage est réinitialisé à chaque compaction/reset.
+- **Titres de session sans appel LLM** : `session_logging.auto_title = "first_message"` (défaut local) dérive le titre du premier message utilisateur ; `"llm"` génère en arrière-plan ; `"off"` garde l'aperçu. L'ancien booléen `generate_titles` reste accepté (true → llm, false → first_message).
+- **Télémétrie paresseuse** : le comptage O(contexte) des caractères est court-circuité quand la télétrie est désactivée — moins de CPU par tour en local.
+- **`read_file` : 800 lignes par appel** (au lieu de 2000) avec l'indicateur `offset`/`limit` pour relire la suite par fenêtre — moins de contexte noyé par lecture.
+- **`allowed_models = ["worker"]`** : le sélecteur `/model` ne propose que worker1 (KAT) et worker2 (Qwen3.5) — les modèles cloud par défaut (mistral/devstral) sont exclus.
+- **`enable_connectors = false`** : aucun connecteur cloud, rien n'est appelé hors des serveurs llama.cpp.
+- Tout le reste tourne sur le **modèle actif** (`active_model`) : worker2 n'est utilisé que s'il est sélectionné via `/model`.
+
 ## Ce qui est spécifique à ce fork
 
 | Fichier | Rôle |
