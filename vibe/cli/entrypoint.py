@@ -97,8 +97,7 @@ def parse_arguments() -> argparse.Namespace:
         "--enabled-tools",
         action="append",
         metavar="TOOL",
-        help="Enable specific tools. In programmatic mode (-p), this disables "
-        "all other tools. "
+        help="Allowlist of tools: when set, only these tools are active. "
         "Can use exact names, glob patterns (e.g., 'bash*'), or "
         "regex with 're:' prefix. Can be specified multiple times.",
     )

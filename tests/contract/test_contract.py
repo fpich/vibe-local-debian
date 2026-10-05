@@ -107,6 +107,40 @@ class TestStartup:
         available = config.available_models()
         assert set(available) == {"worker1", "worker2"}
 
+    def test_allowed_models_fail_closed_on_no_match(self) -> None:
+        """An allowlist entry matching nothing must leave nothing selectable."""
+        config = build_test_vibe_config(
+            models=[WORKER1, WORKER2],
+            active_model="worker1",
+            allowed_models=["no-such-model"],
+        )
+        assert config.available_models() == {}
+
+    def test_empty_allowed_models_allows_all(self) -> None:
+        config = build_test_vibe_config(
+            models=[WORKER1, WORKER2], active_model="worker1"
+        )
+        assert set(config.available_models()) == {"worker1", "worker2"}
+
+    def test_enabled_tools_is_an_allowlist(self) -> None:
+        """A non-empty enabled_tools leaves only matching tools active."""
+        from vibe.core.tools.manager import ToolManager
+
+        config = build_test_vibe_config(enabled_tools=["read_file", "grep"])
+        manager = ToolManager(lambda: config)
+        tools = manager.available_tools
+        assert "read_file" in tools
+        assert "grep" in tools
+        assert "bash" not in tools
+        assert "write_file" not in tools
+
+    def test_enabled_tools_fail_closed_on_no_match(self) -> None:
+        from vibe.core.tools.manager import ToolManager
+
+        config = build_test_vibe_config(enabled_tools=["no-such-tool"])
+        manager = ToolManager(lambda: config)
+        assert manager.available_tools == {}
+
 
 class TestTools:
     @pytest.fixture

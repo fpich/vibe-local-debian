@@ -347,9 +347,11 @@ class VibeConfigSchema(ConfigSchema):
     allowed_models: Annotated[list[str], WithReplaceMerge()] = Field(
         default_factory=list,
         description=(
-            "An explicit list of model names/patterns to allow. If set, only these"
-            " models are selectable. An empty list allows all configured models."
-            " Supports glob patterns (e.g., 'mistral-*') and regex with 're:' prefix."
+            "An explicit allowlist of model names/patterns. If set, only these"
+            " models are selectable. Fail-closed: an entry matching no configured"
+            " model leaves nothing selectable. An empty list allows all"
+            " configured models. Supports glob patterns (e.g., 'worker*') and"
+            " regex with 're:' prefix."
         ),
     )
     compaction_model: Annotated[ModelConfig | None, WithShallowMerge()] = None
@@ -424,9 +426,11 @@ class VibeConfigSchema(ConfigSchema):
     enabled_tools: Annotated[list[str], WithReplaceMerge()] = Field(
         default_factory=list,
         description=(
-            "An explicit list of tool names/patterns to enable. If set, only these"
-            " tools will be active. Supports glob patterns (e.g., 'serena_*') and"
-            " regex with 're:' prefix (e.g., 're:^serena_.*')."
+            "An explicit allowlist of tool names/patterns. If set, only these"
+            " tools are active; everything else is disabled. Fail-closed: an"
+            " entry matching no registered tool leaves no tool active."
+            " Supports glob patterns (e.g., 'serena_*') and regex with 're:'"
+            " prefix (e.g., 're:^serena_.*')."
         ),
     )
     disabled_tools: Annotated[list[str], WithConcatMerge()] = Field(
@@ -671,19 +675,16 @@ class VibeConfigSchema(ConfigSchema):
     def available_models(self) -> dict[str, ModelConfig]:
         if not self.allowed_models:
             return self.models
-        allowed = {
+        # Fail closed at every layer: an allowlist entry that matches no
+        # configured model leaves nothing available rather than silently
+        # widening to "allow all". The mismatch already surfaces as a
+        # validation warning; a local-only config must never fall back to a
+        # model the operator did not allow.
+        return {
             alias: model
             for alias, model in self.models.items()
             if name_matches(model.name, self.allowed_models)
         }
-        if self.origin_of("allowed_models") == "admin":
-            # An administrator's policy must fail closed: an invalid policy must
-            # not allow a user-configured model to run.
-            return allowed
-        # A filter that matches nothing in a non-enforced config degrades to
-        # "allow all" rather than bricking model selection; the mismatch already
-        # surfaces as a warning.
-        return allowed or self.models
 
     def get_active_model(self) -> ModelConfig:
         if self.active_model and self.active_model not in self.models:
