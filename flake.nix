@@ -79,7 +79,28 @@
         # forbidden in the Nix build sandbox. Skip that optional executable;
         # the required Harness extension is still built by Maturin.
         mistral-vibe = prev.mistral-vibe.overrideAttrs (old: {
-          env = (old.env or {}) // {VIBE_SKIP_RUST_TUI = "1";};
+          env = (old.env or {}) // {
+            VIBE_SKIP_RUST_TUI = "1";
+            # Zig cross-linking (manylinux wheels) needs the ziglang package,
+            # which the sandbox cannot fetch; Nix builds for the host only.
+            VIBE_SKIP_PORTABLE_LINUX = "1";
+            # Maturin would otherwise try to bootstrap a Rust toolchain through
+            # puccinialin, an undeclared (and network-dependent) build dep.
+            MATURIN_NO_INSTALL_RUST = "1";
+          };
+          # The Harness extension (_native) is a hard import of the wheel, so
+          # vendor the crates up front and provide a real Rust toolchain.
+          cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+            inherit (old) pname version src;
+            sourceRoot = "${old.pname}-${old.version}/harness/core";
+            hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          };
+          nativeBuildInputs = (old.nativeBuildInputs or [])
+            ++ [
+              pkgs.rustPlatform.cargoSetupHook
+              pkgs.cargo
+              pkgs.rustc
+            ];
         });
       };
 

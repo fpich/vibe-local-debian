@@ -37,7 +37,9 @@ def get_requires_for_build_wheel(
     config_settings: Mapping[str, Any] | None = None,
 ) -> list[str]:
     requirements = maturin.get_requires_for_build_wheel(config_settings)
-    if sys.platform.startswith("linux"):
+    if sys.platform.startswith("linux") and not os.environ.get(
+        "VIBE_SKIP_PORTABLE_LINUX"
+    ):
         requirements.append("ziglang==0.16.0")
     return requirements
 
@@ -262,17 +264,14 @@ def _maturin_environment(*, portable_linux_wheel: bool = False) -> Iterator[None
         argument == "--compatibility" or argument.startswith("--compatibility=")
         for argument in arguments
     )
-    if (
+    portable = (
         portable_linux_wheel
         and sys.platform.startswith("linux")
-        and not has_compatibility
-    ):
+        and not os.environ.get("VIBE_SKIP_PORTABLE_LINUX")
+    )
+    if portable and not has_compatibility:
         arguments.extend(["--compatibility", "manylinux_2_28"])
-    if (
-        portable_linux_wheel
-        and sys.platform.startswith("linux")
-        and "--zig" not in arguments
-    ):
+    if portable and "--zig" not in arguments:
         arguments.append("--zig")
     os.environ["MATURIN_PEP517_ARGS"] = shlex.join(arguments)
     os.environ["CARGO_TARGET_DIR"] = str(_HARNESS_TARGET)
