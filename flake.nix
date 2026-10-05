@@ -93,9 +93,12 @@
           # importCargoLock needs no output hash: it fetches each crate with the
           # checksum pinned in Cargo.lock, avoiding a vendor-hash iteration loop.
           cargoDeps = pkgs.rustPlatform.importCargoLock {
-            cargoLock = ./harness/core/Cargo.lock;
-            cargoRoot = "harness/core";
+            lockFile = ./harness/core/Cargo.lock;
           };
+          # maturin builds a staged copy of harness/core; cargoSetupHook vendors
+          # into harness/core during configurePhase and the staged copy inherits
+          # the .cargo/config.toml, so Cargo resolves crates from the store.
+          cargoRoot = "harness/core";
           nativeBuildInputs = (old.nativeBuildInputs or [])
             ++ [
               pkgs.rustPlatform.cargoSetupHook
