@@ -41,11 +41,6 @@ case "$*" in
 exit 0
 VIBE
     chmod +x "$tool_bin_dir/vibe"
-    cat >"$tool_bin_dir/vibe-acp" <<'VIBE_ACP'
-#!/usr/bin/env bash
-exit 0
-VIBE_ACP
-    chmod +x "$tool_bin_dir/vibe-acp"
     ;;
   *)
     echo "unexpected uv invocation: $*" >&2
@@ -191,7 +186,6 @@ def test_install_succeeds_when_uv_bin_dir_is_already_on_path(tmp_path: Path) -> 
     assert result.returncode == 0
     assert "Installation completed successfully!" in result.stdout
     assert (fake_bin / "vibe").exists()
-    assert (fake_bin / "vibe-acp").exists()
 
 
 def test_install_fails_when_vibe_not_in_uv_tool_dir(tmp_path: Path) -> None:

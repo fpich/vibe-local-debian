@@ -14,17 +14,6 @@ TEXTUAL_UI_ROOT = Path(__file__).parents[3] / "vibe" / "cli" / "textual_ui"
 VIBE_ROOT = TEXTUAL_UI_ROOT.parents[1]
 CORE_ROOT = VIBE_ROOT / "core"
 PROGRAMMATIC_PATH = VIBE_ROOT / "cli" / "programmatic.py"
-ACP_RUNTIME_PATHS = (
-    VIBE_ROOT / "acp" / "agent.py",
-    VIBE_ROOT / "acp" / "content.py",
-    VIBE_ROOT / "acp" / "image_blocks.py",
-    VIBE_ROOT / "acp" / "session.py",
-    VIBE_ROOT / "acp" / "session_updates.py",
-    VIBE_ROOT / "acp" / "tool_io.py",
-    VIBE_ROOT / "acp" / "user_display_content.py",
-    VIBE_ROOT / "acp" / "utils.py",
-    *sorted((VIBE_ROOT / "acp" / "commands").rglob("*.py")),
-)
 PUBLIC_APP_SERVER_PATHS = tuple(
     VIBE_ROOT / "app_server" / name
     for name in (
@@ -163,9 +152,7 @@ def test_textual_does_not_install_callback_setters_or_observers() -> None:
     assert not violations, "\n".join(violations)
 
 
-@pytest.mark.parametrize(
-    "source_path", [PROGRAMMATIC_PATH, *ACP_RUNTIME_PATHS, *PUBLIC_APP_SERVER_PATHS]
-)
+@pytest.mark.parametrize("source_path", [PROGRAMMATIC_PATH, *PUBLIC_APP_SERVER_PATHS])
 def test_app_server_clients_do_not_import_core(source_path: Path) -> None:
     violations = [
         f"{source_path.relative_to(VIBE_ROOT)}:{line}: {module}"

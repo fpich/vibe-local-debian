@@ -13,28 +13,22 @@ if TYPE_CHECKING:
     from sentry_sdk.types import Event, Hint
 
 _CLI_SENTRY_DSN = None
-_ACP_SENTRY_DSN = None
 
 
 class SentryTarget(StrEnum):
     CLI = auto()
-    ACP = auto()
 
     @property
     def dsn(self) -> str | None:
         match self:
             case SentryTarget.CLI:
                 return _CLI_SENTRY_DSN
-            case SentryTarget.ACP:
-                return _ACP_SENTRY_DSN
 
     @property
     def server_name(self) -> str:
         match self:
             case SentryTarget.CLI:
                 return "vibe-cli"
-            case SentryTarget.ACP:
-                return "vibe-acp"
 
 
 # Benign exceptions to drop before reporting: clean Ctrl-C quit, and a broken

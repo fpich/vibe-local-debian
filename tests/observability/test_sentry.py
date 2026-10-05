@@ -42,7 +42,6 @@ def test_before_send_scrubs_paths_across_event():
 
 def test_sentry_target_maps_to_distinct_project_server_names():
     assert SentryTarget.CLI.server_name == "vibe-cli"
-    assert SentryTarget.ACP.server_name == "vibe-acp"
 
 
 @patch("sentry_sdk.set_tag")
@@ -54,15 +53,15 @@ def test_init_sentry_uses_primitive_settings_and_tags(
     enabled = init_sentry(
         enabled=True,
         headless=True,
-        tags={"entrypoint": "acp", "client_name": "vibe_acp"},
-        target=SentryTarget.ACP,
+        tags={"entrypoint": "cli", "client_name": "vibe_cli"},
+        target=SentryTarget.CLI,
     )
 
     assert enabled is True
-    assert init_mock.call_args.kwargs["server_name"] == "vibe-acp"
+    assert init_mock.call_args.kwargs["server_name"] == "vibe-cli"
     set_tag_mock.assert_any_call("headless", "true")
-    set_tag_mock.assert_any_call("entrypoint", "acp")
-    set_tag_mock.assert_any_call("client_name", "vibe_acp")
+    set_tag_mock.assert_any_call("entrypoint", "cli")
+    set_tag_mock.assert_any_call("client_name", "vibe_cli")
 
 
 @patch("sentry_sdk.init")

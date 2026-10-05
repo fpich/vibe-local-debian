@@ -16,7 +16,7 @@ echo "==> Désinstallation de vibe-local-debian"
 echo "    VIBE_HOME détecté: $VIBE_HOME"
 echo
 echo "Le script va supprimer :"
-echo "  1. Le CLI vibe (uv tool mistral-vibe: vibe, vibe-acp, vibe-app-server)"
+echo "  1. Le CLI vibe (uv tool mistral-vibe: vibe, vibe-app-server)"
 echo "  2. Toutes les données de $VIBE_HOME :"
 echo "     config.toml, sessions, historique, logs, worktrees,"
 echo "     plans, caches, trusted_folders, .env"
