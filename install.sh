@@ -3,6 +3,10 @@
 # Installe aussi le CLI vibe depuis ce dépôt.
 set -euo pipefail
 
+# PATH de l'utilisateur avant toute modification par ce script : sert au
+# message final, car on exporte ~/.local/bin pour installer uv ci-dessous.
+USER_PATH="$PATH"
+
 # Version épinglée + empreinte du script officiel uv. Mettre à jour les deux
 # valeurs ensemble lors d’un changement de version.
 UV_INSTALLER_VERSION="0.11.26"
@@ -107,7 +111,7 @@ else
   echo "    Config globale déjà présente ou config de projet absente; inchangée."
 fi
 
-if ! grep -q '.local/bin' <<<"$PATH"; then
+if ! grep -q '.local/bin' <<<"$USER_PATH"; then
   echo
   echo "Ajoutez ceci à votre ~/.bashrc puis rechargez:"
   echo '  export PATH="$HOME/.local/bin:$PATH"'
