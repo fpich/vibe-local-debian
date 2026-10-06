@@ -5,7 +5,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from vibe.core.types import LLMMessage
 from vibe.utils import AgentEntrypoint
 from vibe.utils.terminal import TerminalEmulator
 
@@ -70,11 +69,3 @@ def build_request_metadata(
         call_type=call_type,
         message_id=message_id,
     )
-
-
-def build_attachment_counts(
-    message: LLMMessage | None, *, supports_images: bool
-) -> dict[AttachmentKind, int]:
-    if message is None or not supports_images or not message.images:
-        return {}
-    return {AttachmentKind.IMAGE: len(message.images)}

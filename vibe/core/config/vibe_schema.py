@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, MutableMapping
+from collections.abc import MutableMapping
 import os
 from pathlib import Path
 import tomllib
@@ -133,19 +133,6 @@ def get_persisted_config() -> dict[str, Any]:
         raise RuntimeError(f"Invalid TOML in {file}: {e}") from e
     except OSError as e:
         raise RuntimeError(f"Cannot read {file}: {e}") from e
-
-
-def _unique_by(key: str) -> Callable[[list[Any]], list[Any]]:
-    def check(items: list[Any]) -> list[Any]:
-        seen: set[str] = set()
-        for item in items:
-            value = getattr(item, key)
-            if value in seen:
-                raise ValueError(f"Duplicate {key} {value!r}; must be unique")
-            seen.add(value)
-        return items
-
-    return check
 
 
 def _non_empty(items: list[Any]) -> list[Any]:

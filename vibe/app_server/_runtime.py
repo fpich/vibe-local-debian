@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-import stat
 import threading
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
@@ -39,7 +38,6 @@ from vibe.app_server.protocol import (
 from vibe.app_server.transport import JsonRpcTransport, memory_transport_pair
 from vibe.core.agent_loop import AgentLoop, AgentRuntimePolicy
 from vibe.core.agents.manager import AgentManager
-from vibe.core.agents.models import AgentProfile
 from vibe.core.config import (
     MissingAPIKeyError,
     SessionLoggingConfig,
@@ -60,90 +58,13 @@ from vibe.core.session.session_interop import resolve_legacy_session_reference
 from vibe.core.session.session_lease import SessionLease
 from vibe.core.session.session_loader import SessionLoader
 from vibe.core.session.session_permissions import start_restrict_session_log_permissions
-from vibe.core.system_prompt import ProjectContextProvider
 from vibe.core.tools.permissions import PermissionStore
 from vibe.core.tracing import setup_tracing
 from vibe.core.types import AgentStats, LLMMessage, Role, SessionMetadata
-from vibe.core.utils import get_windows_bash_path, is_windows
 from vibe.observability.logging import logger, set_config_log_level
 from vibe.utils.cache_store import FileSystemCacheStore
-from vibe.utils.paths import is_dangerous_directory
 
 _SHORT_SESSION_ID_LENGTH = 8
-type _CommandEnvironmentMode = Literal["unix", "git_bash", "powershell"]
-
-
-def _command_environment_mode() -> _CommandEnvironmentMode:
-    if not is_windows():
-        return "unix"
-    if get_windows_bash_path() is not None:
-        return "git_bash"
-    return "powershell"
-
-
-def _build_project_context_section(
-    config: VibeConfigSchema, harness_files: HarnessFilesManager, cwd: Path
-) -> str:
-    """Replicate the legacy system prompt's project-context block.
-
-    Includes the absolute working directory, git status (branch, main
-    branch, porcelain status, recent commits), and any extra working
-    directories — the same information ``build_system_prompt`` injects for
-    the legacy backend.
-    """
-    from string import Template
-
-    from vibe.core.prompts import UtilityPrompt
-
-    is_dangerous, reason = is_dangerous_directory(cwd)
-    if is_dangerous:
-        template = UtilityPrompt.DANGEROUS_DIRECTORY.read()
-        return Template(template).safe_substitute(
-            reason=reason.lower(), abs_path=cwd.resolve()
-        )
-
-    context = ProjectContextProvider(
-        config=config.project_context, root_path=cwd
-    ).get_full_context()
-
-    cwd_resolved = cwd.resolve()
-    extra_roots = [
-        root for root in harness_files.project_roots if root.resolve() != cwd_resolved
-    ]
-    if extra_roots:
-        dirs_lines = "\n".join(f" - {d}" for d in extra_roots)
-        context = (
-            f"{context}\n\nAdditional working directories (treated with the same "
-            f"file-access permissions as the primary working directory):\n" + dirs_lines
-        )
-    return context
-
-
-def _agent_profile_prompt(
-    profile: AgentProfile,
-) -> tuple[str | None, ConfigIssue | None]:
-    """The prompt text an agent profile asks for, or why it cannot have it.
-
-    Only a prompt id the profile itself declares is resolved as a file. The id
-    the config carries otherwise is a GrowthBook variant the SDK owns, and
-    reading a bundled Vibe prompt of the same name would quietly serve the
-    legacy text instead.
-    """
-    from vibe.core.prompts import MissingPromptFileError, load_system_prompt
-
-    prompt_id = profile.overrides.get("system_prompt_id")
-    if not isinstance(prompt_id, str) or not prompt_id:
-        return None, None
-    try:
-        return load_system_prompt(prompt_id), None
-    except (MissingPromptFileError, ValueError) as error:
-        logger.warning("Agent %r: %s", profile.name, error)
-        return None, ConfigIssue(
-            file=str(profile.source_path or profile.name),
-            message=f"Agent '{profile.name}': {error}",
-        )
-
-
 if TYPE_CHECKING:
     from vibe.app_server.server import AppServer
 
@@ -361,19 +282,6 @@ class _RootRuntimeBlueprint:
 # the last one out removes the tree: a stop is not the end of the process, and ACP
 # keeps opening sessions on it. A later session gets a fresh root, which
 # ``configure_storage`` accepts because nothing is bound by then.
-
-
-def _reopen_and_retry(
-    func: Callable[[str], None], path: str, exc: BaseException
-) -> None:
-    # The Harness checks plugin packages out as read-only trees under the same
-    # storage root the sessions live in, and nothing can be unlinked from one until
-    # its directory is writable again.
-    if not isinstance(exc, PermissionError):
-        raise exc
-    parent = Path(path).parent
-    parent.chmod(parent.stat().st_mode | stat.S_IRWXU)
-    func(path)
 
 
 @dataclass(frozen=True, slots=True)
@@ -701,12 +609,6 @@ class HarnessProcess:
             raise errors[0]
         if errors:
             raise BaseExceptionGroup("Failed to close staged session runtimes", errors)
-
-    async def build_session_runtime(self, options: SessionOptions) -> RuntimeSnapshot:
-        session_config = await self._build_session_config(options)
-        return build_runtime_snapshot(
-            options, session_config.config_orchestrator, session_config.harness_files
-        )
 
     async def _build_session_config(self, options: SessionOptions) -> _SessionConfig:
         cwd = Path(options.cwd or Path.cwd()).expanduser().resolve()

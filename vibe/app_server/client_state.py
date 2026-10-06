@@ -12,10 +12,8 @@ from vibe.app_server.models import (
 )
 from vibe.app_server.protocol import (
     AgentsListResponse,
-    DiagnosticsListResponse,
     RuntimeReadResponse,
     RuntimeSnapshot,
-    StatsReadResponse,
 )
 
 
@@ -71,15 +69,6 @@ class ClientSessionState:
         self.active_agent = response.active
         self.agents = list(response.agents)
         self.state.session.agent = response.active
-
-    def apply_stats(self, response: StatsReadResponse) -> None:
-        self.stats = response.stats
-        self.context_window = response.context_window
-        self.state.session.token_usage = response.stats.token_usage
-
-    def apply_diagnostics(self, response: DiagnosticsListResponse) -> None:
-        self.issues = list(response.issues)
-        self.hooks_count = response.hooks_count
 
     def apply_runtime(self, snapshot: RuntimeSnapshot) -> None:
         self.config = snapshot.config

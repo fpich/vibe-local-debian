@@ -4,12 +4,12 @@ import base64
 import binascii
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 import time
 
-from pydantic import BaseModel, JsonValue
+from pydantic import JsonValue
 
 from vibe.app_server.models import (
     FileImageSource as PublicFileImageSource,
@@ -74,10 +74,6 @@ def optional_time_ms(value: str | None) -> int | None:
 def time_ms(value: str, *, fallback: Callable[[], int] = now_ms) -> int:
     timestamp = _parse_time_ms(value)
     return timestamp if timestamp is not None else fallback()
-
-
-def iso_from_time_ms(value: int) -> str:
-    return datetime.fromtimestamp(value / 1000, UTC).isoformat()
 
 
 def decode_input(
@@ -186,7 +182,3 @@ def public_error(exc: Exception) -> PublicError:  # noqa: PLR0912
         case _:
             code = TurnErrorCode.INTERNAL_ERROR
     return PublicError(message=str(exc), code=code, details=details or None)
-
-
-def dump_model(model: BaseModel) -> dict[str, JsonValue]:
-    return model.model_dump(mode="json", by_alias=True)

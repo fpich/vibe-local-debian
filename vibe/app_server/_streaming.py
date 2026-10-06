@@ -4,9 +4,6 @@ import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 
-from vibe.app_server._model import ProtocolModel, validate_wire
-from vibe.app_server.client import AppServerClient
-
 _EVENT_QUEUE_MAX_SIZE = 64
 
 
@@ -52,24 +49,3 @@ async def stream_until_complete[EventT, ResultT](
             pending_event.cancel()
             with suppress(asyncio.CancelledError):
                 await pending_event
-
-
-async def stream_request[EventT, ResponseT: ProtocolModel](
-    client: AppServerClient,
-    method: str,
-    params: ProtocolModel,
-    events: asyncio.Queue[EventT],
-    response_type: type[ResponseT],
-) -> AsyncGenerator[EventT | ResponseT, None]:
-    request = asyncio.create_task(
-        client.request(method, params, wait_for_incoming=True)
-    )
-    try:
-        async for event in stream_until_complete(events, request):
-            yield event
-        yield validate_wire(response_type, await request)
-    finally:
-        if not request.done():
-            request.cancel()
-            with suppress(asyncio.CancelledError):
-                await request

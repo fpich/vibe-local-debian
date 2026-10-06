@@ -6,8 +6,6 @@ from vibe.app_server.models import (
     CompletedEffectState,
     EffectCallDisplay,
     EffectResultDisplay,
-    FailedEffectState,
-    PublicError,
     RunningEffectState,
     WorktreeEffectDetail,
     WorktreeEffectInput,
@@ -118,12 +116,3 @@ class WorktreeProgress:
     @property
     def state(self) -> RunningEffectState:
         return RunningEffectState()
-
-    def failed_state(self, error: BaseException) -> FailedEffectState:
-        message = str(error) or "Worktree creation failed"
-        return FailedEffectState(
-            error=PublicError(code=type(error).__name__, message=message),
-            display=EffectResultDisplay(
-                success=False, verb="Failed", message="Worktree creation failed"
-            ),
-        )

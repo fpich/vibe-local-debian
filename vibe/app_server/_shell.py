@@ -20,7 +20,6 @@ from vibe.app_server.models import (
     ShellEffectInput,
 )
 from vibe.app_server.protocol import ProtocolErrorCode, ShellRunParams, ShellRunResponse
-from vibe.core.config import VibeConfigSchema
 from vibe.core.types import ManualShellContext
 from vibe.core.utils import kill_async_subprocess
 from vibe.core.utils.shell import spawn_shell_command
@@ -33,20 +32,6 @@ DEFAULT_MAX_OUTPUT_BYTES = 16_000
 
 class ShellConflictError(RuntimeError):
     pass
-
-
-def manual_shell_output_limit(config: VibeConfigSchema) -> int:
-    """How much of a manual `!` command's output the model may see.
-
-    The legacy backend reads the resolved ``bash`` tool config off its
-    ``AgentLoop``; the Unified Harness has no such loop, so it reads the same
-    setting straight off the layered config.
-    """
-    raw = config.tools.get("bash") or {}
-    limit = raw.get("max_output_bytes")
-    if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0:
-        return limit
-    return DEFAULT_MAX_OUTPUT_BYTES
 
 
 def resolve_workspace_cwd(root: Path, requested_cwd: str | None) -> str:

@@ -189,11 +189,6 @@ class PendingNotification:
     params: ProtocolModel
 
 
-def _consume_task_result(task: asyncio.Task[object]) -> None:
-    if not task.cancelled():
-        task.exception()
-
-
 @dataclass(frozen=True, slots=True)
 class _ErrorDispatch:
     error: ProtocolError

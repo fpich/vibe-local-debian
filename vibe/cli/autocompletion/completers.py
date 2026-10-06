@@ -538,32 +538,3 @@ class PathCompleter(Completer):
             at_index = before_cursor.rfind("@")
             return (at_index, cursor_pos)
         return None
-
-
-class MultiCompleter(Completer):
-    def __init__(self, completers: list[Completer]) -> None:
-        self.completers = completers
-
-    def get_completions(self, text: str, cursor_pos: int) -> list[str]:
-        all_completions = []
-        for completer in self.completers:
-            completions = completer.get_completions(text, cursor_pos)
-            all_completions.extend(completions)
-
-        seen = set()
-        unique = []
-        for comp in all_completions:
-            if comp not in seen:
-                seen.add(comp)
-                unique.append(comp)
-
-        return unique
-
-    def get_replacement_range(
-        self, text: str, cursor_pos: int
-    ) -> tuple[int, int] | None:
-        for completer in self.completers:
-            range_result = completer.get_replacement_range(text, cursor_pos)
-            if range_result is not None:
-                return range_result
-        return None
