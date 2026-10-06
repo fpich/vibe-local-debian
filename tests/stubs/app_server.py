@@ -5,8 +5,6 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from vibe.app_server._account import AccountGateway
-from vibe.app_server._identity import IdentityGateway
 from vibe.app_server._legacy_composition import create_legacy_app_server
 from vibe.app_server._legacy_session_backend import LegacySessionBackend
 from vibe.app_server._model import ProtocolModel
@@ -54,12 +52,6 @@ class FakeSessionBackendServices:
 
     def event_watermark(self, session_id: str) -> int:
         return 0
-
-    def account_gateway(self) -> AccountGateway | None:
-        return None
-
-    def identity_gateway(self) -> IdentityGateway | None:
-        return None
 
     @asynccontextmanager
     async def lifecycle_transition(self) -> AsyncIterator[None]:
@@ -147,42 +139,21 @@ class CoreEventProjection:
 
 def start_test_app_server_pair(
     agent_loop: AgentLoop,
-    *,
-    account_gateway: AccountGateway | None = None,
-    identity_gateway: IdentityGateway | None = None,
 ) -> tuple[AppServerClient, AppServer]:
     """Use when a test needs to poke the server side directly."""
     client_transport, server_transport = memory_transport_pair()
-    server = build_test_app_server(
-        agent_loop,
-        server_transport,
-        account_gateway=account_gateway,
-        identity_gateway=identity_gateway,
-    )
+    server = build_test_app_server(agent_loop, server_transport)
     client = AppServerClient(client_transport, run_peer=server.serve)
     return client, server
 
 
-def start_test_app_server(
-    agent_loop: AgentLoop,
-    *,
-    account_gateway: AccountGateway | None = None,
-    identity_gateway: IdentityGateway | None = None,
-) -> AppServerClient:
-    client, _ = start_test_app_server_pair(
-        agent_loop,
-        account_gateway=account_gateway,
-        identity_gateway=identity_gateway,
-    )
+def start_test_app_server(agent_loop: AgentLoop) -> AppServerClient:
+    client, _ = start_test_app_server_pair(agent_loop)
     return client
 
 
 def build_test_app_server(
-    agent_loop: AgentLoop,
-    transport: JsonRpcTransport,
-    *,
-    account_gateway: AccountGateway | None = None,
-    identity_gateway: IdentityGateway | None = None,
+    agent_loop: AgentLoop, transport: JsonRpcTransport
 ) -> AppServer:
     runtime_factory = AgentRuntimeFactory()
 
@@ -197,11 +168,7 @@ def build_test_app_server(
         return agent_loop
 
     return create_legacy_app_server(
-        transport,
-        open_root=open_root,
-        runtime_factory=runtime_factory,
-        account_gateway=account_gateway,
-        identity_gateway=identity_gateway,
+        transport, open_root=open_root, runtime_factory=runtime_factory
     )
 
 
@@ -211,19 +178,8 @@ def legacy_backend(server: AppServer) -> LegacySessionBackend:
     return root
 
 
-async def create_test_app_server_session(
-    agent_loop: AgentLoop,
-    *,
-    account_gateway: AccountGateway | None = None,
-    identity_gateway: IdentityGateway | None = None,
-) -> AppServerSession:
-    return await attach_test_app_server_session(
-        start_test_app_server(
-            agent_loop,
-            account_gateway=account_gateway,
-            identity_gateway=identity_gateway,
-        )
-    )
+async def create_test_app_server_session(agent_loop: AgentLoop) -> AppServerSession:
+    return await attach_test_app_server_session(start_test_app_server(agent_loop))
 
 
 async def attach_test_app_server_session(

@@ -8,7 +8,7 @@ from tests.stubs.fake_interaction_requests import FakeInteractionRequests
 from vibe.core.agents.manager import AgentManager
 from vibe.core.agents.models import BUILTIN_AGENTS, AgentType
 from vibe.core.config import VibeConfigSchema
-from vibe.core.telemetry.types import LaunchContext, TerminalEmulator
+from vibe.core.local_runtime import LaunchContext, TerminalEmulator
 from vibe.core.tools.base import BaseToolState, InvokeContext, ToolError, ToolPermission
 from vibe.core.tools.builtins.task import Task, TaskArgs, TaskResult, TaskToolConfig
 from vibe.core.tools.permissions import PermissionContext
