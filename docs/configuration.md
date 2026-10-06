@@ -25,7 +25,7 @@ reasoning_field_name = "reasoning_content"
 emits_finish_reason = true
 ```
 
-Pour un serveur distant sure le LAN, modifier uniquement `api_base`, par example :
+Pour un serveur distant sur le LAN, modifier uniquement `api_base`, par exemple :
 
 ```toml
 api_base = "http://192.168.1.116:8080/v1"
@@ -68,7 +68,7 @@ Les deux modèles fournis utilisent :
 auto_compact_threshold = 90000
 ```
 
-Le seuil doit rester inférieur à la fenêtre réellement disponible sure le serveur afin de laisser de la marge pour la réponse, les tools et le résumé.
+Le seuil doit rester inférieur à la fenêtre réellement disponible sur le serveur afin de laisser de la marge pour la réponse, les tools et le résumé.
 
 ## Titres de session
 

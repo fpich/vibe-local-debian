@@ -32,7 +32,7 @@ uv run vibe
 
 ## Tests
 
-La suite stable par défaut est volontairement centrée sure le fork :
+La suite stable par défaut est volontairement centrée sur le fork :
 
 ```bash
 uv run pytest

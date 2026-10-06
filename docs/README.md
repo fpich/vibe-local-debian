@@ -1,6 +1,6 @@
 # Documentation de vibe-local-debian
 
-La documentation active du fork est volontairement courte et centrée sure le produit réellement livré.
+La documentation active du fork est volontairement courte et centrée sur le produit réellement livré.
 
 - [Architecture](architecture.md) — composants conservés et frontières du runtime.
 - [Configuration](configuration.md) — workers llama.cpp, modèles, outils et chemins.

@@ -16,7 +16,7 @@ Cela ne constitue toutefois pas une sandbox réseau ou système :
 
 - `bash` peut exécuter un programme qui accède au réseau ;
 - un build/test du project peut télécharger des dépendances ;
-- un serveur `llama.cpp` placé sure le LAN reçoit les prompts, extraits de fichiers et résultats d'outils transmis au modèle ;
+- un serveur `llama.cpp` placé sur le LAN reçoit les prompts, extraits de fichiers et résultats d'outils transmis au modèle ;
 - HTTP ne chiffre pas ce traffic ;
 - les permissions Vibe réduisent les actions accidentelles mais ne remplacent pas l'isolation Unix, un conteneur ou une VM.
 
@@ -33,11 +33,11 @@ Pour du code non fiable :
 
 ## Serveur llama.cpp distant
 
-Pour un serveur sure le LAN :
+Pour un serveur sur le LAN :
 
-- écouter sure une IP LAN dédiée lorsque possible plutôt que sure toutes les interfaces ;
+- écouter sur une IP LAN dédiée lorsque possible plutôt que sur toutes les interfaces ;
 - filtrer les ports 8080/8081 avec le pare-feu ;
-- ne pas exposer les endpoints directement sure Internet ;
+- ne pas exposer les endpoints directement sur Internet ;
 - utiliser TLS ou un tunnel si le réseau n'est pas de confiance.
 
 ## Secrets

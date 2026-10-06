@@ -43,11 +43,11 @@ uv run ruff format --check vibe tests/local
 uv run pyright
 ```
 
-Important : `compileall` seul ne suffit pas. Les erreurs de décorateurs exécutés à l'import (par example `@dataclass(slots=True)`) peuvent n'apparaître qu'au chargement réel du module.
+Important : `compileall` seul ne suffit pas. Les erreurs de décorateurs exécutés à l'import (par exemple `@dataclass(slots=True)`) peuvent n'apparaître qu'au chargement réel du module.
 
 ## Smoke test runtime
 
-Avant une release, sure Python 3.13 au minimum :
+Avant une release, sous Python 3.13 au minimum :
 
 ```bash
 vibe --version
