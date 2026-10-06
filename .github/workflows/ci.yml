@@ -42,7 +42,13 @@ jobs:
       - name: Lint maintained sources and tests
         run: uv run ruff check vibe tests/local
 
-      - name: Test stable fork contracts
+      - name: Check formatting of maintained sources and tests
+        run: uv run ruff format --check vibe tests/local
+
+      - name: Type-check the runtime
+        run: uv run pyright vibe
+
+      - name: Test stable fork contracts and e2e suites
         run: uv run pytest
 
       - name: Build pure-Python wheel

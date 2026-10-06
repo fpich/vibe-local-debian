@@ -16,7 +16,8 @@ En plus de `tests/local`, la suite par défaut collecte les suites legacy réint
 - `tests/core/agent_loop` — intégrité du runtime `AgentLoop` ;
 - `tests/core/autocompletion` — autocomplétion ;
 - `tests/core/utils` — utilitaires cœur ;
-- `tests/core/vision` — gestion des images.
+- `tests/core/vision` — gestion des images ;
+- `tests/e2e` — tests de caractérisation TUI avec mock server (pexpect, pty réels).
 
 Les suites legacy connues comme échouant sur POSIX (`tests/tools`, `tests/core/git`, `tests/core/paths`, `tests/core/tools`) ne sont pas dans le chemin par défaut ; elles peuvent être exécutées explicitement avec :
 
@@ -40,7 +41,7 @@ Les tests maintenus couvrent principalement :
 python -m compileall -q vibe
 uv run ruff check vibe tests/local
 uv run ruff format --check vibe tests/local
-uv run pyright
+uv run pyright vibe
 ```
 
 Important : `compileall` seul ne suffit pas. Les erreurs de décorateurs exécutés à l'import (par exemple `@dataclass(slots=True)`) peuvent n'apparaître qu'au chargement réel du module.

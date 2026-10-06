@@ -13,7 +13,9 @@ Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne so
 
 - Index unique des surfaces supprimées dans `docs/archive/README.md`.
 - Tests de régression sur le template de configuration livré et sur la sécurité réseau de l'outil bash.
-- Suite de tests par défaut élargie : `tests/backend`, `tests/core/agent_loop`, `tests/core/autocompletion`, `tests/core/utils`, `tests/core/vision` ; cible `make test-legacy` pour les suites legacy connues comme échouant sur POSIX.
+- Suite de tests par défaut élargie : `tests/backend`, `tests/core/agent_loop`, `tests/core/autocompletion`, `tests/core/utils`, `tests/core/vision`, `tests/e2e` ; cible `make test-legacy` pour les suites legacy connues comme échouant sur POSIX.
+- CI : vérification explicite du typage (`pyright vibe`) et du formatage (`ruff format --check`) à chaque push ; `make check` aligné (cibles `typecheck` et `format-check`).
+- Tests e2e réhabilités : `pexpect` ajouté aux dépendances dev, test d'onboarding adapté au produit local-only (démarrage direct de la TUI sans écran cloud).
 
 ### Fixed
 
