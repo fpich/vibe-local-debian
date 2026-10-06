@@ -2,7 +2,7 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
-## [Unreleased]
+## [1.2.4] - 2026-10-06
 
 ### Security
 

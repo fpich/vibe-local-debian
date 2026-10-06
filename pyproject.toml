@@ -1,6 +1,6 @@
 [project]
 name = "mistral-vibe"
-version = "1.2.3"
+version = "1.2.4"
 description = "Local-first CLI coding agent for self-hosted llama.cpp"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"

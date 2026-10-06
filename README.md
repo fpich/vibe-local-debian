@@ -2,7 +2,7 @@
 
 Agent de code CLI **local-first** pour Debian 13, dérivé de Mistral Vibe et simplifié pour utiliser exclusivement des serveurs `llama.cpp` compatibles avec l'API OpenAI.
 
-La branche stable **1.2.3** conserve le moteur agentique Python, la TUI Textual, les sessions, la compaction, les worktrees Git et les permissions d'outils. Les surfaces cloud et les runtimes alternatifs de l'amont ont été retirés.
+La branche stable **1.2.4** conserve le moteur agentique Python, la TUI Textual, les sessions, la compaction, les worktrees Git et les permissions d'outils. Les surfaces cloud et les runtimes alternatifs de l'amont ont été retirés.
 
 ## Périmètre du fork
 
@@ -205,7 +205,7 @@ Documentation complémentaire :
 
 ## Compatibilité et origine
 
-- Debian 13 ciblé pour l'installateur.
+- Debian 13 ciblé pour l'installateur ; le runtime est POSIX-only (les surfaces Windows ont été retirées).
 - Python 3.12 et 3.13 supportés par le package stable.
 - Le nom de distribution Python reste `mistral-vibe` pour conserver la compatibilité avec l'installation existante et les chemins `uv tool`.
 - Le code est dérivé de Mistral Vibe sous licence Apache-2.0. Ce fork est indépendant et ne suit pas automatiquement l'amont.
