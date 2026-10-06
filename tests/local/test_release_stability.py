@@ -14,7 +14,7 @@ def test_release_version_is_consistent() -> None:
     lock = (REPO_ROOT / "uv.lock").read_text()
 
     version = project["project"]["version"]
-    assert version == "1.2.1"
+    assert version == "1.2.2"
     assert f'__version__ = "{version}"' in package_source
     assert f'name = "mistral-vibe"\nversion = "{version}"' in lock
 
