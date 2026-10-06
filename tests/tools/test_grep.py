@@ -102,6 +102,10 @@ async def test_returns_empty_on_no_matches(grep, tmp_path):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    not shutil.which("rg"),
+    reason="latin-1 decode fallback needs the ripgrep backend; GNU grep -I skips the file",
+)
 async def test_preserves_accents_when_matching_latin1_encoded_file(
     grep, tmp_path, monkeypatch
 ):
