@@ -19,6 +19,7 @@ Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne so
 
 - Quatre erreurs de lint `undefined-name` sur les annotations `trace.Span` dans `AgentLoop` (alias de type `Span` ajouté dans `vibe.core.tracing`).
 - Erreurs de typage pyright préexistantes : entrées 1-tuple dans le mapping d'import différé `vibe.core.config`, accès `connector_registry` inexistant dans l'app-server.
+- Imports `opentelemetry` résiduels (télémétrie supprimée) remplacés par l'alias `Span` de `vibe.core.tracing` dans `agent_loop_hooks` et le backend générique. `pyright vibe` est désormais à 0 erreur.
 
 ## [1.2.1] - 2026-10-06
 

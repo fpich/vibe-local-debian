@@ -54,11 +54,10 @@ from vibe.observability.logging import logger
 from vibe.utils.tool_presentation import ToolResultPresentation
 
 if TYPE_CHECKING:
-    from opentelemetry import trace
-
     from vibe.core.agent_loop import ToolDecision
     from vibe.core.hooks.manager import HooksManager
     from vibe.core.session.session_logger import SessionLogger
+    from vibe.core.tracing import Span
     from vibe.core.types import AgentStats, LLMMessage, MessageList
 
 
@@ -78,7 +77,7 @@ class PostToolFinalization:
     tool_status: ToolStatus
     response_status: Literal["success", "failure", "skipped"]
     decision: ToolDecision | None
-    span: trace.Span
+    span: Span
     tool_output: dict[str, Any] | None = None
     tool_presentation: ToolResultPresentation | None = None
     tool_error: str | None = None
@@ -109,7 +108,7 @@ class AgentLoopHooksMixin:
         decision: ToolDecision | None = None,
         result: dict[str, Any] | None = None,
         persisted_result: PersistedToolResult | None = None,
-        span: trace.Span | None = None,
+        span: Span | None = None,
     ) -> None: ...
 
     def _serialize_tool_input(self, tool_call: ResolvedToolCall) -> dict[str, Any]:
@@ -256,11 +255,7 @@ class AgentLoopHooksMixin:
     # ------------------------------------------------------------------
 
     async def _run_pre_tool_pipeline(
-        self,
-        tool_call: ResolvedToolCall,
-        tool_input: dict[str, Any],
-        *,
-        span: trace.Span,
+        self, tool_call: ResolvedToolCall, tool_input: dict[str, Any], *, span: Span
     ) -> tuple[list[HookEvent], _PreToolResolution]:
         """Validate each rewrite as it arrives; first invalid one aborts the chain.
 
@@ -345,7 +340,7 @@ class AgentLoopHooksMixin:
                     return
 
     def _handle_pre_tool_denial(
-        self, tool_call: ResolvedToolCall, denial: HookToolDenial, *, span: trace.Span
+        self, tool_call: ResolvedToolCall, denial: HookToolDenial, *, span: Span
     ) -> ToolResultEvent:
         self.stats.tool_calls_hook_denied += 1
         denial_text = (
@@ -367,7 +362,7 @@ class AgentLoopHooksMixin:
     # ------------------------------------------------------------------
 
     async def _handle_tool_skip(
-        self, tool_call: ResolvedToolCall, decision: ToolDecision, *, span: trace.Span
+        self, tool_call: ResolvedToolCall, decision: ToolDecision, *, span: Span
     ) -> AsyncGenerator[ToolResultEvent | HookEvent]:
         self.stats.tool_calls_rejected += 1
         skip_reason = decision.feedback or str(
@@ -404,7 +399,7 @@ class AgentLoopHooksMixin:
         decision: ToolDecision | None,
         cancel_text: str,
         *,
-        span: trace.Span,
+        span: Span,
         tool_started: bool,
     ) -> AsyncGenerator[HookEvent]:
         """Shield post-tool hooks from cancellation so audit/redaction hooks

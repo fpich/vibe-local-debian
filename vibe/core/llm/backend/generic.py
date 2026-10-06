@@ -53,9 +53,8 @@ from vibe.utils.api_keys import resolve_api_key_with_origin
 from vibe.utils.http import VibeAsyncHTTPClient, build_ssl_context
 
 if TYPE_CHECKING:
-    from opentelemetry import trace
-
     from vibe.core.config import ModelConfig, ProviderConfig
+    from vibe.core.tracing import Span
     from vibe.utils.api_keys import ApiKeyOrigin
 
 
@@ -581,7 +580,7 @@ class GenericBackend:
         max_tokens: int | None,
         metadata: dict[str, str] | None,
         url: str,
-    ) -> AbstractAsyncContextManager[trace.Span | None]:
+    ) -> AbstractAsyncContextManager[Span | None]:
         if not self._enable_otel:
             return nullcontext(None)
 
