@@ -19,6 +19,7 @@ Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne so
 
 ### Performance
 
+- Compaction automatique abaissée de 90k à 80k tokens (marge accrue avant débordement de contexte, sur les deux workers).
 - `cache_prompt = true` envoyé par défaut aux serveurs OpenAI-compatibles : llama.cpp réutilise son cache de préfixe entre les tours (prompt processing bien plus rapide). Opt-out par provider via `cache_prompt = false`.
 
 ### Fixed

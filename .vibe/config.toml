@@ -60,7 +60,7 @@ temperature = 1.0
 thinking = "high"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 90000
+auto_compact_threshold = 80000
 
 # ── Worker 2 : Qwen3.5 (127.0.0.1:8081) ────────────────────────────────
 # Paramètres serveur llama.cpp : top_p 0.8, top_k 20, min_p 0,
@@ -74,7 +74,7 @@ temperature = 0.7
 thinking = "off"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 90000
+auto_compact_threshold = 80000
 
 
 # ── Titres de session ─────────────────────────────────────────────────────

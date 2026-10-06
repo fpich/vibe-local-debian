@@ -13,7 +13,7 @@ Maintenir un agent de code CLI local-first pour Debian 13, Python 3.12/3.13, ave
 - Le profil par défaut expose seulement `bash`, `read_file`, `write_file`, `edit`, `grep`, `ask_user_question`, `todo`.
 - `allowed_models` doit rester fail-closed.
 - Les permissions et la frontière du workspace sont des functions de sécurité : ne pas les contourner pour simplifier un flux.
-- La compaction locale par défaut est à **90k tokens** dans `.vibe/config.toml`.
+- La compaction locale par défaut est à **80k tokens** dans `.vibe/config.toml`.
 - Aucun secret ou clé Mistral n'est requis.
 - Un serveur LLM distant sur le LAN est supporté via `api_base` ; ne jamais coder en dur une IP privée utilisateur.
 

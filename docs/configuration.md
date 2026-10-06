@@ -67,7 +67,7 @@ Ajouter un outil élargit explicitement les capacités du modèle. Ne pas réint
 Les deux modèles fournis utilisent :
 
 ```toml
-auto_compact_threshold = 90000
+auto_compact_threshold = 80000
 ```
 
 Le seuil doit rester inférieur à la fenêtre réellement disponible sur le serveur afin de laisser de la marge pour la réponse, les tools et le résumé.

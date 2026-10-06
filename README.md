@@ -113,7 +113,7 @@ La config du dépôt expose deux aliases côté client :
 
 Chaque serveur expose un nom distinct (`worker1`, `worker2`). `allowed_models = ["worker*"]` est appliqué en mode **fail-closed** : si aucun modèle autorisé n'est disponible, le client ne retombe pas sur une liste cloud.
 
-La compaction automatique est configurée à **90 000 tokens** pour les deux workers.
+La compaction automatique est configurée à **80 000 tokens** pour les deux workers.
 
 ## Utilisation
 
