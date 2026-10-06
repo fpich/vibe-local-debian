@@ -5,7 +5,8 @@ run: ## Run the local Python/Textual CLI
 
 test: ## Run the maintained local-fork test suite
 	uv run pytest
-test-legacy: ## Run legacy suites not yet reintegrated (known-failing on POSIX)
+
+test-legacy: ## Run the reintegrated suites for shell/paths/git/tools surfaces
 	uv run pytest tests/tools tests/core/git tests/core/paths tests/core/tools
 
 lint: ## Lint runtime and maintained tests
@@ -16,6 +17,7 @@ format: ## Format runtime and maintained tests
 
 compile: ## Compile Python sources
 	python -m compileall -q vibe
+
 typecheck: ## Type-check the runtime
 	uv run pyright vibe
 
@@ -24,4 +26,5 @@ build: ## Build pure-Python wheel
 
 format-check: ## Verify formatting of runtime and maintained tests
 	uv run ruff format --check vibe tests/local
+
 check: compile lint typecheck format-check test

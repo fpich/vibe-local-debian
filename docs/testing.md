@@ -25,6 +25,8 @@ Les suites réintégrées (`tests/tools`, `tests/core/git`, `tests/core/paths`, 
 make test-legacy
 ```
 
+La CI exécute les deux parcours à chaque push : `uv run pytest` puis les quatre suites réintégrées (job `python`, étape « Test shell/paths/git/tools suites »).
+
 Les tests maintenus couvrent principalement :
 
 - invariants local-only ;
@@ -95,6 +97,7 @@ Le wheel attendu est pure Python (`py3-none-any`). Il ne doit contenir ni `harne
 
 - [ ] version cohérente dans `pyproject.toml`, `vibe/__init__.py` et `uv.lock` ;
 - [ ] `uv run pytest` vert ;
+- [ ] `make test-legacy` vert (suites shell/paths/git/tools) ;
 - [ ] compilation Python verte ;
 - [ ] lint/type-check vérifiés ;
 - [ ] wheel construit ;

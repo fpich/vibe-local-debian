@@ -51,5 +51,8 @@ jobs:
       - name: Test stable fork contracts and e2e suites
         run: uv run pytest
 
+      - name: Test shell/paths/git/tools suites
+        run: uv run pytest tests/tools tests/core/git tests/core/paths tests/core/tools
+
       - name: Build pure-Python wheel
         run: uv build --wheel

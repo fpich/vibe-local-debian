@@ -2,6 +2,21 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [1.2.3] - 2026-10-06
+
+### Security
+- Suppression de `scripts/install.sh` (obsolète : référençait le package public `mistral-vibe` et un mode ACP supprimé). L'installateur de référence reste `./install.sh`, qui installe explicitement le checkout local.
+- Épinglage des trois GitHub Actions de la CI (`checkout`, `setup-uv`, `setup-python`) par SHA complet, conformément à la règle supply-chain du dépôt.
+- `SECURITY.md` : nouvelle section « Confiance du workspace et code exécutable » documentant que marquer un dépôt fiable rend actifs les outils `.vibe/tools/*.py` importés dynamiquement.
+
+### Changed
+- `requires-python` borné à `>=3.12,<3.14` pour refléter le support documenté 3.12/3.13 ; `uv.lock` rafraîchi (branches de résolution ≥3.14 supprimées).
+- README : branche stable référencée mise à jour 1.2.1 → 1.2.2.
+
+### Added
+- Réintégration des quatre suites de tests legacy sur POSIX : `tests/tools`, `tests/core/git`, `tests/core/paths`, `tests/core/tools` (2 265 tests verts). La CI les exécute à chaque push.
+- Helpers de tests partagés restaurés dans `tests/conftest.py` (adaptés au fork : plus de gateways account/identity, plus de connector catalog).
+
 ## [1.2.2] - 2026-10-06
 
 ### Changed
