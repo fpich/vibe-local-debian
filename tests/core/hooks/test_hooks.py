@@ -1826,3 +1826,33 @@ class TestHookOutputCap:
         result = await HookExecutor().run(hook, sample_invocation)
         assert result.exit_code == 0
         assert len(result.stderr) <= _MAX_OUTPUT_BYTES
+
+
+class TestHookTimeoutBound:
+    def test_timeout_above_max_rejected(self) -> None:
+        from pydantic import ValidationError
+        import pytest
+
+        from vibe.core.hooks.models import HookConfig, HookType
+
+        with pytest.raises(ValidationError, match="timeout must be between"):
+            HookConfig(
+                name="h", type=HookType.POST_AGENT, command="true", timeout=601.0
+            )
+
+    def test_timeout_at_max_accepted(self) -> None:
+        from vibe.core.hooks.models import HookConfig, HookType
+
+        hook = HookConfig(
+            name="h", type=HookType.POST_AGENT, command="true", timeout=600.0
+        )
+        assert hook.timeout == 600.0
+
+    def test_timeout_zero_rejected(self) -> None:
+        from pydantic import ValidationError
+        import pytest
+
+        from vibe.core.hooks.models import HookConfig, HookType
+
+        with pytest.raises(ValidationError):
+            HookConfig(name="h", type=HookType.POST_AGENT, command="true", timeout=0.0)

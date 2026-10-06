@@ -6,6 +6,7 @@ from pathlib import Path
 from vibe.core.hooks.config import HookConfig
 from vibe.core.hooks.models import HookExecutionResult, HookInvocation
 from vibe.core.utils import kill_async_subprocess
+from vibe.core.utils.shell import shell_environment
 from vibe.utils.io import decode_console_safe
 
 _MAX_OUTPUT_BYTES = 1024 * 1024
@@ -48,6 +49,7 @@ class HookExecutor:
                 stderr=asyncio.subprocess.PIPE,
                 start_new_session=True,
                 cwd=self._cwd,
+                env=shell_environment(),
             )
         except OSError as e:
             return HookExecutionResult(

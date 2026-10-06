@@ -16,7 +16,7 @@ def uses_posix_shell() -> bool:
 async def spawn_shell_command(
     command: str, *, cwd: Path | None = None
 ) -> asyncio.subprocess.Process:
-    env = _shell_environment()
+    env = shell_environment()
     cwd = cwd or Path.cwd()
     if is_windows():
         shell = resolve_windows_shell()
@@ -55,10 +55,15 @@ async def spawn_shell_command(
     )
 
 
-def _shell_environment() -> dict[str, str]:
+def shell_environment() -> dict[str, str]:
     env = {**os.environ, "CI": "true", "NONINTERACTIVE": "1", "NO_TTY": "1"}
     if is_windows():
         return {**env, "GIT_PAGER": "more", "PAGER": "more"}
+    # Shell startup hooks inherited from the environment would run arbitrary
+    # code in every spawned command shell without passing through the shell
+    # policy; they have no legitimate role for a non-interactive shell.
+    for var in ("ENV", "BASH_ENV", "PS1", "PROMPT_COMMAND", "ZDOTDIR"):
+        env.pop(var, None)
     # LC_ALL overrides every LC_* category, so a user-set LC_ALL=C (common in
     # CI/containers) would defeat LC_CTYPE below and yield non-UTF-8 output.
     env.pop("LC_ALL", None)
@@ -73,4 +78,4 @@ def _shell_environment() -> dict[str, str]:
     }
 
 
-__all__ = ["spawn_shell_command", "uses_posix_shell"]
+__all__ = ["shell_environment", "spawn_shell_command", "uses_posix_shell"]

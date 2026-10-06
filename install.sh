@@ -98,9 +98,10 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 uv tool install --force "$SCRIPT_DIR"
 
 echo "==> Configuration globale (~/.vibe/config.toml)"
-mkdir -p "$HOME/.vibe"
+install -d -m 700 "$HOME/.vibe"
 if [[ -f "$SCRIPT_DIR/.vibe/config.toml" && ! -f "$HOME/.vibe/config.toml" ]]; then
   cp "$SCRIPT_DIR/.vibe/config.toml" "$HOME/.vibe/config.toml"
+  chmod 600 "$HOME/.vibe/config.toml"
   echo "    Config copiée."
 else
   echo "    Config globale déjà présente ou config de projet absente; inchangée."

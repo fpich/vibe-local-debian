@@ -2,6 +2,15 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [Unreleased]
+
+### Security
+
+- Durcissement de l'environnement passé aux sous-processus shell (`vibe/core/utils/shell.py`) : les variables `ENV`, `BASH_ENV`, `PS1`, `PROMPT_COMMAND` et `ZDOTDIR` sont retirées de l'environnement du bash tool — elles permettent l'exécution de code arbitraire au démarrage d'un shell non interactif sans passer par la policy shell.
+- Les hooks exécutent désormais leurs commandes avec le même environnement durci que le bash tool (`start_new_session=True` + env nettoyé) au lieu d'hériter de tout l'environnement de la TUI.
+- `HookConfig.timeout` est borné : un hook ne peut plus déclarer un timeout supérieur à 600 s (défaut 60 s inchangé).
+- `install.sh` : `~/.vibe` créé en mode 0700 et `config.toml` copié en mode 0600, au lieu de suivre l'umask.
+
 ## [1.2.3] - 2026-10-06
 
 ### Security

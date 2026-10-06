@@ -47,6 +47,7 @@ ToolStatus = Literal["success", "failure", "cancelled"]
 
 
 _DEFAULT_HOOK_TIMEOUT = 60.0
+_MAX_HOOK_TIMEOUT = 600.0
 
 
 # --- Declarative hook config (TOML on disk) ---
@@ -73,6 +74,15 @@ class HookConfig(BaseModel):
     def match_not_blank(cls, v: str | None) -> str | None:
         if v is not None and not v.strip():
             raise ValueError("match must not be empty")
+        return v
+
+    @field_validator("timeout")
+    @classmethod
+    def timeout_bounded(cls, v: float | None) -> float | None:
+        if v is not None and not 0 < v <= _MAX_HOOK_TIMEOUT:
+            raise ValueError(
+                f"timeout must be between 0 and {_MAX_HOOK_TIMEOUT:.0f} seconds"
+            )
         return v
 
     @model_validator(mode="after")
