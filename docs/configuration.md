@@ -16,6 +16,8 @@ Chaque worker est un provider générique OpenAI-compatible :
 
 ```toml
 [[providers]]
+# cache_prompt = true (défaut) : llama.cpp réutilise son cache de préfixe
+# entre les tours. Passer à false si votre serveur ne supporte pas ce champ.
 name = "llamacpp-worker1"
 api_base = "http://127.0.0.1:8080/v1"
 api_key_env_var = ""

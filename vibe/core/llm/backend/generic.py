@@ -147,6 +147,8 @@ class OpenAIAdapter(APIAdapter):
             tool_choice=tool_choice,
             thinking=thinking,
         )
+        if getattr(provider, "cache_prompt", True):
+            payload["cache_prompt"] = True
 
         stream_options: dict[str, Any] = {"include_usage": True}
         if provider.name == "mistral":

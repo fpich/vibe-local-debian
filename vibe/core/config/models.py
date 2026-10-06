@@ -101,6 +101,10 @@ class ProviderConfig(BaseModel):
     # stream (and retried). Set to False for OpenAI-compatible endpoints that
     # do not emit a finish reason, to avoid spurious incomplete-stream errors.
     emits_finish_reason: bool = True
+    # Ask the server to reuse its prompt cache across requests. llama.cpp
+    # prefix-caches when this is true; OpenAI-compatible servers that do not
+    # know the field ignore it.
+    cache_prompt: bool = True
     project_id: str = ""
     region: str = ""
     extra_headers: dict[str, str] = Field(default_factory=dict)

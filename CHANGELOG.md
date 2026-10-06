@@ -17,6 +17,10 @@ Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne so
 - CI : vérification explicite du typage (`pyright vibe`) et du formatage (`ruff format --check`) à chaque push ; `make check` aligné (cibles `typecheck` et `format-check`).
 - Tests e2e réhabilités : `pexpect` ajouté aux dépendances dev, test d'onboarding adapté au produit local-only (démarrage direct de la TUI sans écran cloud).
 
+### Performance
+
+- `cache_prompt = true` envoyé par défaut aux serveurs OpenAI-compatibles : llama.cpp réutilise son cache de préfixe entre les tours (prompt processing bien plus rapide). Opt-out par provider via `cache_prompt = false`.
+
 ### Fixed
 
 - Quatre erreurs de lint `undefined-name` sur les annotations `trace.Span` dans `AgentLoop` (alias de type `Span` ajouté dans `vibe.core.tracing`).
