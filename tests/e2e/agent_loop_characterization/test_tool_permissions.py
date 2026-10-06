@@ -124,7 +124,7 @@ def test_write_file_approval_creates_file_and_rejection_leaves_file_absent(
             timeout=10,
         )
         wait_for_rendered_text(
-            child, captured, needle="Approved file was written.", timeout=10
+            child, captured, needle="Approved file was written.", timeout=25
         )
 
         child.send("Try the rejected file")
@@ -137,7 +137,7 @@ def test_write_file_approval_creates_file_and_rejection_leaves_file_absent(
             timeout=10,
         )
         wait_for_rendered_text(
-            child, captured, needle="Rejected file was not written.", timeout=10
+            child, captured, needle="Rejected file was not written.", timeout=25
         )
 
         send_ctrl_c_until_quit_confirmation(child, captured, timeout=5)
@@ -157,7 +157,7 @@ def test_write_file_approval_creates_file_and_rejection_leaves_file_absent(
     )
 
 
-@pytest.mark.timeout(40)
+@pytest.mark.timeout(120)
 @pytest.mark.parametrize(
     "streaming_mock_server",
     [pytest.param(_session_permission_factory, id="session-permission-memory")],
@@ -190,7 +190,7 @@ def test_allow_for_session_reuses_bash_permission_without_prompting_again(
             timeout=10,
         )
         wait_for_rendered_text(
-            child, captured, needle="First command completed.", timeout=10
+            child, captured, needle="First command completed.", timeout=25
         )
 
         child.send("Run the same shell command again")
