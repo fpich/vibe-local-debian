@@ -12,7 +12,6 @@ class CommandContext:
     """Runtime command context for the local-only CLI."""
 
 
-
 CommandAvailability = Callable[[CommandContext], bool]
 
 

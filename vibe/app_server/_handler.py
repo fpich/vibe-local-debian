@@ -297,9 +297,6 @@ class CoreRequestHandler:
                 raise method_not_found(method)
         return result
 
-
-
-
     async def _dispatch_session(
         self, method: str, raw_params: dict[str, Any]
     ) -> DispatchResult:

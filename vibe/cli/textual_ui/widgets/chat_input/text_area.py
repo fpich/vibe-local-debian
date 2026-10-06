@@ -149,11 +149,7 @@ class ChatTextArea(TextArea):
             self.notify_when_empty = notify_when_empty
             super().__init__()
 
-    def __init__(
-        self,
-        command_registry: CommandRegistry,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, command_registry: CommandRegistry, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._command_registry = command_registry
         self.register_theme(self._CHAT_THEME)
@@ -519,8 +515,6 @@ class ChatTextArea(TextArea):
         pass
 
     feedback_active: bool = False
-
-
 
     def time_since_last_keystroke(self) -> float:
         return time.monotonic() - self._last_keystroke_time

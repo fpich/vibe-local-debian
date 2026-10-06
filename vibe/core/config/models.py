@@ -43,8 +43,6 @@ class ProjectContextConfig(BaseSettings):
     timeout_seconds: float = 2.0
 
 
-
-
 class SessionLoggingConfig(BaseSettings):
     # Matches its sibling groups. Under per-field merging the union of keys
     # from every layer reaches the validator, so forbidding extras would turn
@@ -106,14 +104,6 @@ class ProviderConfig(BaseModel):
     project_id: str = ""
     region: str = ""
     extra_headers: dict[str, str] = Field(default_factory=dict)
-
-
-
-
-
-
-
-
 
 
 def normalize_mcp_server_name(value: str | None) -> str:

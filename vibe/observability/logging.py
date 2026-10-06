@@ -14,6 +14,7 @@ from vibe.config_values import DEFAULT_LOG_LEVEL
 
 logger = logging.getLogger("vibe")
 
+
 def log_model_call_success(
     alias: str,
     duration_ms: int,

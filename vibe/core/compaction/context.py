@@ -93,8 +93,6 @@ def _escape_reserved_previous_user_message_tags(content: str) -> str:
     return content
 
 
-
-
 def parse_previous_user_messages(content: str) -> list[str]:
     block_start = content.find(_PREVIOUS_USER_MESSAGES_OPEN)
     if block_start < 0:

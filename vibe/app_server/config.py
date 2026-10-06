@@ -15,16 +15,6 @@ class ModelConfigView(ProtocolModel):
     display_name: str
 
 
-
-
-
-
-
-
-
-
-
-
 class ProxySettingsView(ProtocolModel):
     values: dict[str, str | None]
     descriptions: dict[str, str]

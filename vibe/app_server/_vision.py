@@ -185,6 +185,7 @@ def _otel_enabled(config: VibeConfigSchema) -> bool:
     del config
     return False
 
+
 def _reject_beyond_limit(count: int) -> None:
     # The CLI and ACP both cap a message here, but the app-server protocol
     # accepts an unbounded block list: without this, one turn/start can order

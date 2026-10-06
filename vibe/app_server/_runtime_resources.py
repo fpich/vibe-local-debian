@@ -235,10 +235,6 @@ class ConfigResource:
         )
 
 
-
-
-
-
 class AgentResource:
     def __init__(
         self, connection: AppServerResourceConnection, state: ClientSessionState

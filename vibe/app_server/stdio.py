@@ -15,19 +15,14 @@ from vibe.observability.logging import init_file_logging
 
 
 async def serve_stdio(
-    *,
-    reader: BinaryLineReader | None = None,
-    writer: BinaryLineWriter | None = None,
+    *, reader: BinaryLineReader | None = None, writer: BinaryLineWriter | None = None
 ) -> None:
     transport = (
         StdioJsonRpcTransport.from_standard_streams()
         if reader is None or writer is None
         else StdioJsonRpcTransport(reader, writer)
     )
-    harness = await create_harness_server(
-        transport,
-        transport_kind="stdio",
-    )
+    harness = await create_harness_server(transport, transport_kind="stdio")
     await harness.serve()
 
 
@@ -52,10 +47,7 @@ def main() -> None:
     init_file_logging(LOG_FILE.path)
     load_dotenv_values()
     try:
-        asyncio.run(
-            serve_stdio(
-            )
-        )
+        asyncio.run(serve_stdio())
     finally:
         _neutralize_stdout()
 

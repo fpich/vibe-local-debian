@@ -9,8 +9,7 @@ from vibe.core.config.types import LayerConfigSnapshot
 from vibe.observability.logging import logger
 
 # Fields an agent profile must never override because they may route credentials.
-PROTECTED_FIELDS = frozenset({
-})
+PROTECTED_FIELDS = frozenset({})
 
 
 class AgentProfileLayer(ConfigLayer[RawConfig]):

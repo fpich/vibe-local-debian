@@ -412,38 +412,6 @@ class DebugLogPage(ProtocolModel):
     cursor: int | None = None
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class AgentSummary(ProtocolModel):
     name: str
     display_name: str

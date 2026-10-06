@@ -222,8 +222,6 @@ class ResourceRequestHandler:
     def next_loop_due_in(self) -> float:
         return self._loops.next_due_in()
 
-
-
     def due_loop(self) -> CoreScheduledLoop | None:
         return self._loops.due()
 
@@ -258,8 +256,6 @@ class ResourceRequestHandler:
 
     def _clear_mcp_discovery_errors(self) -> None:
         self._mcp_discovery_errors.clear()
-
-
 
     async def _dispatch_config(
         self, method: str, raw_params: dict[str, Any]
@@ -304,7 +300,6 @@ class ResourceRequestHandler:
             case _:
                 raise method_not_found(method)
         return DispatchResult(response, runtime_updated=runtime_updated)
-
 
     async def _dispatch_agents(
         self, method: str, raw_params: dict[str, Any]
@@ -408,9 +403,6 @@ class ResourceRequestHandler:
         except LoopError as exc:
             raise RequestFailure(ProtocolErrorCode.INVALID_PARAMS, str(exc)) from exc
         return DispatchResult(response)
-
-
-
 
     def _config_read(self, params: ConfigReadParams) -> ConfigReadResponse:
         if params.session_id is not None:
@@ -640,7 +632,7 @@ class ResourceRequestHandler:
         self, params: ConnectorAuthReadParams
     ) -> ConnectorAuthReadResponse:
         self._require_session(params.session_id)
-        registry = self._agent_loop.connector_registry
+        registry = getattr(self._agent_loop, "connector_registry", None)
         if registry is None:
             return ConnectorAuthReadResponse()
         return ConnectorAuthReadResponse(url=await registry.get_auth_url(params.name))
@@ -650,7 +642,7 @@ class ResourceRequestHandler:
     ) -> ConnectorRefreshResponse:
         self._execution.require_idle()
         self._require_session(params.session_id)
-        registry = self._agent_loop.connector_registry
+        registry = getattr(self._agent_loop, "connector_registry", None)
         if registry is None:
             raise RequestFailure(
                 ProtocolErrorCode.NOT_FOUND, "Connectors are not available"

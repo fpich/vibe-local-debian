@@ -10,6 +10,20 @@ uv run pytest
 
 Elle est volontairement plus petite que l'ancienne suite upstream : les tests d'ACP, cloud auth, MCP/connecteurs, Rust, voice, telemetry et autres surfaces supprimées ne sont plus collectés.
 
+En plus de `tests/local`, la suite par défaut collecte les suites legacy réintégrées car elles passent intégralement :
+
+- `tests/backend` — adaptation OpenAI-compatible ;
+- `tests/core/agent_loop` — intégrité du runtime `AgentLoop` ;
+- `tests/core/autocompletion` — autocomplétion ;
+- `tests/core/utils` — utilitaires cœur ;
+- `tests/core/vision` — gestion des images.
+
+Les suites legacy connues comme échouant sur POSIX (`tests/tools`, `tests/core/git`, `tests/core/paths`, `tests/core/tools`) ne sont pas dans le chemin par défaut ; elles peuvent être exécutées explicitement avec :
+
+```bash
+make test-legacy
+```
+
 Les tests maintenus couvrent principalement :
 
 - invariants local-only ;

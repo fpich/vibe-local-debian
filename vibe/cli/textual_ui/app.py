@@ -244,14 +244,6 @@ if TYPE_CHECKING:
     from vibe.cli.textual_ui.screens.config import ConfigWriteResult
 
 
-
-
-
-
-
-
-
-
 def _public_entry(event: AppServerEvent) -> PublicHistoryEntry | None:
     match event:
         case HistoryEntryAdded(entry=entry) | HistoryEntryUpdated(entry=entry):
@@ -265,8 +257,6 @@ def is_progress_event(event: AppServerEvent) -> bool:
     return isinstance(
         entry, (PublicMessageEntry, PublicReasoningEntry, PublicEffectEntry)
     )
-
-
 
 
 class BottomApp(StrEnum):
@@ -475,14 +465,6 @@ def _split_app_server_source(
     if isinstance(source, AppServerSession):
         return source, None
     return None, source
-
-
-
-
-
-
-
-
 
 
 def _indicator_agent_name(profile: AgentSummary, bypass_tool_permissions: bool) -> str:
@@ -859,7 +841,6 @@ class VibeApp(App):  # noqa: PLR0904
             turn.queue_item_id == queue_item_id
             for turn in self.app_server.state.turns or []
         )
-
 
     async def _run_settings_update(
         self, description: str, update: Callable[[], Awaitable[None]]
@@ -1413,7 +1394,6 @@ class VibeApp(App):  # noqa: PLR0904
             return
         self._post_init_notices_shown = True
 
-
     def _is_cold_start(self) -> bool | None:
         """True if this process paid first-run startup cost (cold), False if it
         resumed a warm cache (warm), None when the signal is unavailable.
@@ -1427,10 +1407,6 @@ class VibeApp(App):  # noqa: PLR0904
             return pyc.stat().st_mtime >= PROCESS_START_WALLCLOCK
         except OSError:
             return None
-
-
-
-
 
     def _process_initial_prompt(self) -> None:
         if self._initial_prompt:
@@ -1772,11 +1748,6 @@ class VibeApp(App):  # noqa: PLR0904
         if self._pending_local_question and not self._pending_local_question.done():
             self._pending_local_question.set_result(result)
 
-
-
-
-
-
     async def _remove_loading_widget(self) -> None:
         if self._loading_widget and self._loading_widget.parent:
             await self._loading_widget.remove()
@@ -1878,7 +1849,6 @@ class VibeApp(App):  # noqa: PLR0904
             )
         )
 
-
     async def _remove_config_field(self, field: str) -> None:
         response = await self.app_server.resources.config.write(
             [ConfigWriteOpWire(op="remove", path=f"/{field}")],
@@ -1934,7 +1904,6 @@ class VibeApp(App):  # noqa: PLR0904
         self._subagent_loading_widget = loading
         await self._loading_area.mount(loading)
 
-
     def _apply_thinking_visibility(self) -> None:
         show = self.config.show_thinking_nodes
         for node in self._messages_area.query(ReasoningMessage):
@@ -1947,7 +1916,6 @@ class VibeApp(App):  # noqa: PLR0904
         # doesn't leave a stray blank line.
         for group in self._messages_area.query(ToolGroup):
             group.sync_visibility()
-
 
     async def on_model_picker_app_model_selected(
         self, message: ModelPickerApp.ModelSelected
@@ -1986,14 +1954,6 @@ class VibeApp(App):  # noqa: PLR0904
         self, _event: ModelPickerApp.Cancelled
     ) -> None:
         await self._switch_to_input_app()
-
-
-
-
-
-
-
-
 
     async def on_thinking_picker_app_thinking_selected(
         self, message: ThinkingPickerApp.ThinkingSelected
@@ -2099,13 +2059,6 @@ class VibeApp(App):  # noqa: PLR0904
         for widget in self.query(EditApprovalWidget):
             widget.request_diff_render(ansi=ansi, dark=dark)
 
-
-
-
-
-
-
-
     async def on_proxy_setup_app_proxy_setup_closed(
         self, message: ProxySetupApp.ProxySetupClosed
     ) -> None:
@@ -2166,8 +2119,6 @@ class VibeApp(App):  # noqa: PLR0904
         if skill is None or not skill.user_invocable:
             return None
         return Skill(command=user_input, name=skill.name)
-
-
 
     async def _handle_bash_command(self, command: str) -> None:
         try:
@@ -2640,7 +2591,6 @@ class VibeApp(App):  # noqa: PLR0904
             )
             self._on_busy_state_changed(True)
 
-
     async def _handle_turn(
         self,
         prompt: str,
@@ -2665,7 +2615,9 @@ class VibeApp(App):  # noqa: PLR0904
                 images = None
                 mentions = None
             else:
-                prepared = prepared_prompt or await self._prepare_prompt_or_abort(prompt)
+                prepared = prepared_prompt or await self._prepare_prompt_or_abort(
+                    prompt
+                )
                 if prepared is None:
                     return
                 prompt_text = prepared.prompt_text
@@ -2842,15 +2794,6 @@ class VibeApp(App):  # noqa: PLR0904
         )
         return f"{lead}\n\n{detail}"
 
-
-
-
-
-
-
-
-
-
     async def _ask_push_approval(self, count: int, branch_not_pushed: bool) -> bool:
         if branch_not_pushed:
             question = "Your branch doesn't exist on remote. Push to continue?"
@@ -3001,18 +2944,6 @@ class VibeApp(App):  # noqa: PLR0904
             self, content, success_message="Last agent message copied to clipboard"
         )
 
-
-
-
-
-
-
-
-
-
-
-
-
     async def _show_status(self, **kwargs: Any) -> None:
         stats = self.app_server.resources.runtime.stats
         session_cached = (
@@ -3035,7 +2966,6 @@ class VibeApp(App):  # noqa: PLR0904
 - **Cost**: ${stats.session_cost:.4f}
 """
         await self._mount_and_scroll(UserCommandMessage(status_text))
-
 
     async def _show_config(self, **kwargs: Any) -> None:
         """Open the full-screen, searchable settings browser."""
@@ -3101,13 +3031,10 @@ class VibeApp(App):  # noqa: PLR0904
             return
         await self._switch_to_theme_picker_app()
 
-
-
     async def _show_proxy_setup(self, **kwargs: Any) -> None:
         if self._current_bottom_app == BottomApp.ProxySetup:
             return
         await self._switch_to_proxy_setup_app()
-
 
     async def _rename_session(self, cmd_args: str = "", **kwargs: Any) -> None:
         title = cmd_args.strip()
@@ -3735,8 +3662,6 @@ class VibeApp(App):  # noqa: PLR0904
         finally:
             self.exit(result=self._get_session_exit_summary())
 
-
-
     async def _switch_from_input(self, widget: Widget, scroll: bool = False) -> None:
         bottom_container = self.query_one("#bottom-app-container")
         chat = self._chat_widget
@@ -3792,8 +3717,6 @@ class VibeApp(App):  # noqa: PLR0904
         self.call_after_refresh(widget.focus)
         if should_anchor or scroll:
             self.call_after_refresh(chat.anchor)
-
-
 
     async def _is_active_model_enforced(self) -> bool:
         from vibe.cli.textual_ui.screens.config._common import ADMIN_LAYER
@@ -3930,7 +3853,6 @@ class VibeApp(App):  # noqa: PLR0904
         except Exception:
             pass
 
-
     def _handle_approval_app_escape(self) -> None:
         try:
             approval_app = self.query_one(ApprovalApp)
@@ -3990,8 +3912,6 @@ class VibeApp(App):  # noqa: PLR0904
         except Exception:
             pass
         self._last_escape_time = None
-
-
 
     # --- Rewind mode ---
 
@@ -4587,7 +4507,6 @@ class VibeApp(App):  # noqa: PLR0904
         except Exception:
             pass
 
-
     def _refresh_banner(self) -> None:
         if self._banner:
             self._banner.set_state(
@@ -4817,8 +4736,6 @@ class VibeApp(App):  # noqa: PLR0904
                 "Failed to check for untrusted config folders", exc_info=True
             )
 
-
-
     async def _show_greeting_message(self) -> None:
         return
 
@@ -4852,9 +4769,6 @@ class VibeApp(App):  # noqa: PLR0904
         self._greeting_message = None
         if greeting.parent:
             greeting.remove()
-
-
-
 
     async def _mount_and_scroll(
         self,
@@ -4921,8 +4835,6 @@ class VibeApp(App):  # noqa: PLR0904
             remaining=self._history_backfill_remaining,
         )
 
-
-
     def _clipboard_notice_message(self, copy_result: ClipboardCopyResult) -> str:
         if copy_result.verified:
             return "Copied to clipboard"
@@ -4985,7 +4897,6 @@ class VibeApp(App):  # noqa: PLR0904
         # Textual doesn't repaint after resuming from Ctrl+Z (SIGTSTP);
         # force a full layout refresh so the UI isn't garbled.
         self.refresh(layout=True)
-
 
     def _handle_exception(self, error: Exception) -> None:
         logger.error("Unhandled Textual error", exc_info=error)

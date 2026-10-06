@@ -119,6 +119,7 @@ DEFAULT_MODELS = [DEFAULT_ACTIVE_MODEL_CONFIG]
 # alias that happens to be the current default, which is a deliberate choice.
 UNPINNED_ACTIVE_MODEL = ""
 
+
 def get_persisted_config() -> dict[str, Any]:
     file = get_harness_files_manager().config_file
     if file is None:
@@ -356,7 +357,6 @@ class VibeConfigSchema(ConfigSchema):
         ),
     )
 
-
     # Top-level scalars
     theme: Annotated[str, WithReplaceMerge()] = DEFAULT_THEME
     applied_migrations: Annotated[list[str], WithConcatMerge()] = Field(
@@ -422,6 +422,7 @@ class VibeConfigSchema(ConfigSchema):
     session_logging: Annotated[SessionLoggingConfig, WithShallowMerge()] = Field(
         default_factory=SessionLoggingConfig
     )
+
     def smart_approve_offered(self) -> bool:
         """Smart approval is a deterministic local agent mode, not an experiment."""
         return True

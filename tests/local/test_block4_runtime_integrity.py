@@ -57,7 +57,11 @@ def test_legacy_session_controller_keeps_open_attach_helpers() -> None:
         VIBE_ROOT / "app_server/_legacy_session_runtime.py",
         "LegacySessionRuntimeController",
     )
-    assert {"_open_runtime", "_attach_opened_runtime", "_report_created_worktree"} <= methods
+    assert {
+        "_open_runtime",
+        "_attach_opened_runtime",
+        "_report_created_worktree",
+    } <= methods
 
 
 def test_no_duplicate_decorators_remain() -> None:
@@ -65,11 +69,17 @@ def test_no_duplicate_decorators_remain() -> None:
     for path in VIBE_ROOT.rglob("*.py"):
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):
-            if not isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            if not isinstance(
+                node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+            ):
                 continue
-            decorators = [ast.dump(item, include_attributes=False) for item in node.decorator_list]
+            decorators = [
+                ast.dump(item, include_attributes=False) for item in node.decorator_list
+            ]
             if len(decorators) != len(set(decorators)):
-                duplicates.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno}:{node.name}")
+                duplicates.append(
+                    f"{path.relative_to(REPO_ROOT)}:{node.lineno}:{node.name}"
+                )
     assert duplicates == []
 
 
@@ -86,7 +96,9 @@ def test_no_undefined_global_names_in_runtime_sources() -> None:
     }
     failures: list[str] = []
 
-    def inspect_table(table: symtable.SymbolTable, module_defs: set[str], path: Path) -> None:
+    def inspect_table(
+        table: symtable.SymbolTable, module_defs: set[str], path: Path
+    ) -> None:
         for symbol in table.get_symbols():
             name = symbol.get_name()
             if (

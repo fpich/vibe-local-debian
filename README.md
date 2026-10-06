@@ -89,14 +89,14 @@ curl -s http://192.168.1.116:8080/v1/models
 curl -s http://192.168.1.116:8081/v1/models
 ```
 
-Chaque serveur doit exposer un modèle nommé `worker`, typiquement avec :
+Chaque serveur doit exposer son modèle (par exemple `worker1` côté client), typiquement avec :
 
 ```bash
 llama-server \
   -m /chemin/vers/modele.gguf \
   --host 0.0.0.0 \
   --port 8080 \
-  --alias worker \
+  --alias worker1 \
   --jinja
 ```
 
@@ -111,7 +111,7 @@ La config du dépôt expose deux aliases côté client :
 | `worker1` | KAT / analyse et refactoring | 8080 | `high` |
 | `worker2` | Qwen3.5 / tâches rapides | 8081 | `off` |
 
-Le serveur expose dans les deux cas le nom `worker`. `allowed_models = ["worker"]` est appliqué en mode **fail-closed** : si aucun modèle autorisé n'est disponible, le client ne retombe pas sur une liste cloud.
+Chaque serveur expose un nom distinct (`worker1`, `worker2`). `allowed_models = ["worker*"]` est appliqué en mode **fail-closed** : si aucun modèle autorisé n'est disponible, le client ne retombe pas sur une liste cloud.
 
 La compaction automatique est configurée à **90 000 tokens** pour les deux workers.
 

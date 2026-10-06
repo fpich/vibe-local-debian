@@ -47,7 +47,9 @@ def test_pyproject_is_python_only_and_drops_removed_runtime_dependencies() -> No
 
 def test_local_defaults_are_closed() -> None:
     source = (REPO_ROOT / "vibe/core/config/vibe_schema.py").read_text()
-    defaults = source[source.index("DEFAULT_PROVIDERS = [") : source.index("def get_persisted_config")]
+    defaults = source[
+        source.index("DEFAULT_PROVIDERS = [") : source.index("def get_persisted_config")
+    ]
     assert "api.mistral.ai" not in defaults
     assert 'name="llamacpp"' in defaults
     assert "Backend.GENERIC" in defaults
@@ -57,7 +59,13 @@ def test_local_defaults_are_closed() -> None:
 
 def test_cli_has_no_removed_feature_switches() -> None:
     entrypoint = (REPO_ROOT / "vibe/cli/entrypoint.py").read_text()
-    for switch in ("--experimental-harness", "--legacy-harness", "--smart-approve", "--setup", "--check-upgrade"):
+    for switch in (
+        "--experimental-harness",
+        "--legacy-harness",
+        "--smart-approve",
+        "--setup",
+        "--check-upgrade",
+    ):
         assert switch not in entrypoint
     assert 'sys.argv[1:2] == ["mcp"]' not in entrypoint
 

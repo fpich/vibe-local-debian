@@ -308,7 +308,6 @@ class HostRequestHandler:
             harness_selection_source=self._harness_selection_source,
         )
 
-
     async def _dispatch_workspace(
         self, method: str, raw_params: dict[str, Any]
     ) -> ProtocolModel:

@@ -181,7 +181,11 @@ class SkillsController:
     async def _catalog(self, params: SkillsCatalogParams) -> SkillsCatalogResponse:
         self._host.require_session(params.session_id)
         return SkillsCatalogResponse(
-            skills=[], updates={}, loaded=True, project_available=False, authenticated=False
+            skills=[],
+            updates={},
+            loaded=True,
+            project_available=False,
+            authenticated=False,
         )
 
     async def _versions(self, params: SkillsVersionsParams) -> SkillsVersionsResponse:
@@ -200,11 +204,15 @@ class SkillsController:
         self._host.require_session(params.session_id)
         raise method_not_found("skills/import")
 
-    async def _set_version(self, params: SkillsSetVersionParams) -> RuntimeMutationResponse:
+    async def _set_version(
+        self, params: SkillsSetVersionParams
+    ) -> RuntimeMutationResponse:
         self._host.require_session(params.session_id)
         raise method_not_found("skills/setVersion")
 
-    async def _set_latest(self, params: SkillsSetLatestParams) -> RuntimeMutationResponse:
+    async def _set_latest(
+        self, params: SkillsSetLatestParams
+    ) -> RuntimeMutationResponse:
         self._host.require_session(params.session_id)
         raise method_not_found("skills/setLatest")
 
@@ -241,7 +249,9 @@ class SkillsController:
             ) from failures[0]
         return await self._refreshed()
 
-    async def _convert_local(self, params: SkillsConvertLocalParams) -> SkillsConvertResponse:
+    async def _convert_local(
+        self, params: SkillsConvertLocalParams
+    ) -> SkillsConvertResponse:
         self._host.require_session(params.session_id)
         raise method_not_found("skills/convertLocal")
 

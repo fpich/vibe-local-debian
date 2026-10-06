@@ -144,20 +144,8 @@ def _agent_profile_prompt(
         )
 
 
-
-
-
-
-
-
-
-
 if TYPE_CHECKING:
     from vibe.app_server.server import AppServer
-
-
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -373,8 +361,6 @@ class _RootRuntimeBlueprint:
 # the last one out removes the tree: a stop is not the end of the process, and ACP
 # keeps opening sessions on it. A later session gets a fresh root, which
 # ``configure_storage`` accepts because nothing is bound by then.
-
-
 
 
 def _reopen_and_retry(
@@ -652,10 +638,7 @@ class AgentRuntimeFactory:
 
 
 class HarnessProcess:
-    def __init__(
-        self,
-        harness_files: HarnessFilesManager | None = None,
-    ) -> None:
+    def __init__(self, harness_files: HarnessFilesManager | None = None) -> None:
         self.runtime_factory = AgentRuntimeFactory()
         self.cache_store = FileSystemCacheStore()
         self.harness_files = harness_files or HarnessFilesManager(
@@ -724,7 +707,6 @@ class HarnessProcess:
         return build_runtime_snapshot(
             options, session_config.config_orchestrator, session_config.harness_files
         )
-
 
     async def _build_session_config(self, options: SessionOptions) -> _SessionConfig:
         cwd = Path(options.cwd or Path.cwd()).expanduser().resolve()
@@ -822,10 +804,6 @@ class HarnessProcess:
             raise RuntimeAuthenticationError(exc.provider_name) from exc
         except (ValidationError, ValueError) as exc:
             raise RuntimeConfigurationError(str(exc)) from exc
-
-
-
-
 
     async def _claim_staged_root(self, session_id: str) -> AgentLoop | None:
         async with self._staged_roots_lock:

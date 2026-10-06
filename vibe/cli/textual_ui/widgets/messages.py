@@ -264,8 +264,6 @@ class SlashCommandMessage(UserMessage):
         self.add_class("slash-command-message")
 
 
-
-
 class StreamingMessageBase(Static):
     def __init__(self, content: str) -> None:
         super().__init__()

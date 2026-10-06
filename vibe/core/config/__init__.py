@@ -237,12 +237,6 @@ _MAPPING: dict[str, tuple[str, str]] = {
     ),
     "DEFAULT_MODELS": ("vibe.core.config.vibe_schema", "DEFAULT_MODELS"),
     "DEFAULT_PROVIDERS": ("vibe.core.config.vibe_schema", "DEFAULT_PROVIDERS"),
-    "DEFAULT_TRANSCRIBE_MODELS": (
-        "vibe.core.config.vibe_schema",
-        ),
-    "DEFAULT_TRANSCRIBE_PROVIDERS": (
-        "vibe.core.config.vibe_schema",
-        ),
     "VibeConfigSchema": ("vibe.core.config.vibe_schema", "VibeConfigSchema"),
     "create_default_config": ("vibe.core.config.vibe_schema", "create_default_config"),
     "get_persisted_config": ("vibe.core.config.vibe_schema", "get_persisted_config"),

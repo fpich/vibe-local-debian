@@ -63,7 +63,9 @@ class ProgrammaticOutput:
         if self._format is OutputFormat.STREAMING:
             return None
         if self._format is OutputFormat.JSON:
-            payload = [entry.model_dump(mode="json", by_alias=True) for entry in history]
+            payload = [
+                entry.model_dump(mode="json", by_alias=True) for entry in history
+            ]
             json.dump(payload, self._stream, indent=2, ensure_ascii=False)
             self._stream.write("\n")
             self._stream.flush()

@@ -803,7 +803,6 @@ class QueueController:
             widget.set_show_separator(index == last)
             widget.history_entry_id = rewind_id if index == 0 else None
 
-
     @staticmethod
     def _server_text_of(prompt: _QueuedPrompt) -> str:
         prepared = prompt.prepared_prompt

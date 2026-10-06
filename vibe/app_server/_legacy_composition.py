@@ -28,6 +28,7 @@ def create_legacy_app_server(
         HarnessFilesManager(sources=("user", "project"))
     )
     runtime_factory = runtime_factory or AgentRuntimeFactory()
+
     def create_session_backend_host(
         services: SessionBackendServices,
     ) -> SessionBackendHost:

@@ -29,7 +29,7 @@ def _create_generic_backend(**kwargs: Any) -> BackendLike:
 # level: the backends pull in heavy dependencies that would otherwise slow CLI
 # startup.
 BACKEND_FACTORY: dict[Backend, Callable[..., BackendLike]] = {
-    Backend.GENERIC: _create_generic_backend,
+    Backend.GENERIC: _create_generic_backend
 }
 
 

@@ -632,14 +632,6 @@ class SessionReadyWaitResponse(ProtocolModel):
     init_duration_ms: int | None = None
 
 
-
-
-
-
-
-
-
-
 class SessionRewindReadParams(ProtocolModel):
     session_id: str
     entry_id: str
@@ -1107,44 +1099,6 @@ class DiagnosticsLogsReadResponse(ProtocolModel):
     logs: DebugLogPage
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class ConnectorCatalogToolView(ProtocolModel):
     name: str
     description: str | None = None
@@ -1580,56 +1534,6 @@ class WorkspaceUntrustedConfigResponse(ProtocolModel):
     settings_path: str = ""
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class LoopsListParams(ProtocolModel):
     session_id: str
 
@@ -1663,18 +1567,6 @@ class LoopsClearParams(ProtocolModel):
 
 class LoopsClearResponse(ProtocolModel):
     count: int
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class _TurnQueueInputParams(ProtocolModel):

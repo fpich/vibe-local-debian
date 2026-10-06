@@ -41,9 +41,12 @@ def test_installer_verifies_pinned_uv_installer() -> None:
     source = (REPO_ROOT / "install.sh").read_text()
 
     assert 'UV_INSTALLER_VERSION="0.11.26"' in source
-    assert 'UV_INSTALLER_SHA256="92fa9085d24c214bb4445cc1da8c15ca9cca8cffb34726240fa08c5302e94ccc"' in source
-    assert 'https://astral.sh/uv/${UV_INSTALLER_VERSION}/install.sh' in source
-    assert 'actual_sha256' in source
+    assert (
+        'UV_INSTALLER_SHA256="92fa9085d24c214bb4445cc1da8c15ca9cca8cffb34726240fa08c5302e94ccc"'
+        in source
+    )
+    assert "https://astral.sh/uv/${UV_INSTALLER_VERSION}/install.sh" in source
+    assert "actual_sha256" in source
     assert "| bash" not in source
 
 

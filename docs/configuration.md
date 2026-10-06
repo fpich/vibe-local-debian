@@ -33,11 +33,11 @@ api_base = "http://192.168.1.116:8080/v1"
 
 ## Modèles
 
-Le serveur llama.cpp expose le nom `worker`. Le client distingue les deux serveurs avec les aliases `worker1` et `worker2`.
+Chaque serveur llama.cpp expose un nom distinct : `worker1` (port 8080) et `worker2` (port 8081). L'alias client correspond au nom du modèle.
 
 ```toml
 active_model = "worker1"
-allowed_models = ["worker"]
+allowed_models = ["worker*"]
 ```
 
 La logique `allowed_models` est fail-closed : une allowlist sans correspondence ne réactive pas des modèles non autorisés.
@@ -93,4 +93,4 @@ curl -s http://127.0.0.1:8080/v1/models
 curl -s http://127.0.0.1:8081/v1/models
 ```
 
-Les réponses doivent contenir le modèle `worker`.
+Les réponses doivent contenir les modèles `worker1` et `worker2` respectivement.

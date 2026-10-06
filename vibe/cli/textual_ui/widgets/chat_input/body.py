@@ -108,15 +108,13 @@ class ChatInputBody(Widget):
             yield self.prompt_widget
 
             self.input_widget = ChatTextArea(
-                id="input",
-                command_registry=self._command_registry,
+                id="input", command_registry=self._command_registry
             )
             yield self.input_widget
 
     def on_mount(self) -> None:
         if self.input_widget:
             self.input_widget.focus()
-
 
     def _parse_mode_and_text(self, text: str) -> tuple[InputMode, str]:
         if text.startswith("!"):

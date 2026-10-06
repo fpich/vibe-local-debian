@@ -26,8 +26,6 @@ if TYPE_CHECKING:
     from vibe.app_server.local import LocalSessionIntent
 
 
-
-
 def get_prompt_from_stdin() -> str | None:
     if sys.stdin.isatty():
         return None
@@ -69,8 +67,6 @@ def load_config_orchestrator_or_exit() -> ConfigOrchestrator[VibeConfigSchema]:
     except ValueError as e:
         rprint(f"[yellow]{escape(str(e))}[/]")
         sys.exit(1)
-
-
 
 
 def _agent_selection(args: argparse.Namespace) -> tuple[str | None, bool]:
@@ -175,10 +171,7 @@ def _run_programmatic_mode(args: argparse.Namespace, stdin_prompt: str | None) -
 
 
 def _run_interactive_mode(
-    args: argparse.Namespace,
-    stdin_prompt: str | None,
-    *,
-    autocopy_to_clipboard: bool,
+    args: argparse.Namespace, stdin_prompt: str | None, *, autocopy_to_clipboard: bool
 ) -> None:
     from vibe.app_server.local import (
         ClientDescriptor,
@@ -252,12 +245,6 @@ def _run_interactive_mode(
     print_session_resume_message(summary)
 
 
-
-
-
-
-
-
 def run_cli(args: argparse.Namespace) -> None:
     load_dotenv_values()
     bootstrap_vibe_home()
@@ -271,7 +258,7 @@ def run_cli(args: argparse.Namespace) -> None:
             _run_interactive_mode(
                 args=args,
                 stdin_prompt=stdin_prompt,
-                    autocopy_to_clipboard=config.autocopy_to_clipboard,
+                autocopy_to_clipboard=config.autocopy_to_clipboard,
             )
         else:
             _run_programmatic_mode(args=args, stdin_prompt=stdin_prompt)

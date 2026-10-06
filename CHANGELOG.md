@@ -2,6 +2,24 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [Unreleased]
+
+### Changed
+
+- Formatage global du code avec `ruff format` (aucun changement de comportement).
+- Documentation mise à jour pour refléter la nouvelle convention de nommage des modèles (`worker1`/`worker2`, `allowed_models = ["worker*"]`) et les suites de tests réintégrées.
+
+### Added
+
+- Index unique des surfaces supprimées dans `docs/archive/README.md`.
+- Tests de régression sur le template de configuration livré et sur la sécurité réseau de l'outil bash.
+- Suite de tests par défaut élargie : `tests/backend`, `tests/core/agent_loop`, `tests/core/autocompletion`, `tests/core/utils`, `tests/core/vision` ; cible `make test-legacy` pour les suites legacy connues comme échouant sur POSIX.
+
+### Fixed
+
+- Quatre erreurs de lint `undefined-name` sur les annotations `trace.Span` dans `AgentLoop` (alias de type `Span` ajouté dans `vibe.core.tracing`).
+- Erreurs de typage pyright préexistantes : entrées 1-tuple dans le mapping d'import différé `vibe.core.config`, accès `connector_registry` inexistant dans l'app-server.
+
 ## [1.2.1] - 2026-10-06
 
 Release de stabilisation après le nettoyage 1.2.0.

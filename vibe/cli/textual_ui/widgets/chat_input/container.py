@@ -331,7 +331,6 @@ class ChatInputContainer(Vertical):  # noqa: PLR0904 - cohesive input surface AP
     def replace_command_registry(self, registry: CommandRegistry) -> None:
         self._command_registry = registry
 
-
     def set_agent_name(self, name: str) -> None:
         self._agent_name = name
         self._apply_input_box_chrome()
