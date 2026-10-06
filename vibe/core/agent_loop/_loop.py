@@ -114,7 +114,7 @@ from vibe.core.tools.permissions import (
     RequiredPermission,
 )
 from vibe.core.tools.ui import ToolUIDataAdapter
-from vibe.core.tracing import agent_span, set_tool_result, tool_span
+from vibe.core.tracing import Span, agent_span, set_tool_result, tool_span
 from vibe.core.types import (
     AgentProfileChangedEvent,
     AgentStats,
@@ -318,10 +318,6 @@ class ImagesNotSupportedError(AgentLoopError):
     def __init__(self, model: str) -> None:
         self.model = model
         super().__init__(model)
-
-
-
-
 
 
 def _refusal_error(provider: str, model: str, chunk: LLMChunk) -> RefusalError:
@@ -648,7 +644,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         thread = self._deferred_init_thread
         return thread is not None and not thread.is_alive()
 
-
     def _complete_init(self) -> None:
         """Finish local tool discovery and build the initial system prompt."""
         try:
@@ -672,29 +667,23 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             if err := self._init_error:
                 raise copy.copy(err).with_traceback(err.__traceback__)
 
-
-
     @property
     def agent_profile(self) -> AgentProfile:
         return self.agent_manager.active_profile
-
 
     @property
     def config_orchestrator(self) -> ConfigOrchestrator[VibeConfigSchema]:
         return self._config_orchestrator
 
-
     @property
     def config(self) -> VibeConfigSchema:
         return self.agent_manager.config
-
 
     @property
     def bypass_tool_permissions(self) -> bool:
         return (
             self._force_bypass_tool_permissions or self.config.bypass_tool_permissions
         )
-
 
     @property
     def runtime_policy(self) -> AgentRuntimePolicy:
@@ -713,7 +702,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             local_managed_shell_runtime_enabled=self._local_managed_shell_runtime_enabled,
             auto_title_enabled=self._auto_title_enabled,
         )
-
 
     async def record_child_session(
         self, child: AgentLoop, tool_call_id: str
@@ -757,7 +745,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             raise
         return link
 
-
     async def replace_child_session(
         self, old_session_id: str, child: AgentLoop, tool_call_id: str
     ) -> ChildSessionLink:
@@ -796,7 +783,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             raise
         return replacement
 
-
     async def forget_child_session(
         self, child_session_id: str, tool_call_id: str
     ) -> None:
@@ -821,10 +807,8 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             metadata.child_sessions.insert(index, link)
             raise
 
-
     async def persist_empty_session(self) -> None:
         await self._save_messages(allow_empty=True)
-
 
     def _drain_pending_injections(self) -> bool:
         if not self._pending_injected_messages:
@@ -834,20 +818,16 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         self._pending_injected_messages.clear()
         return True
 
-
     def resolve_approval_request(
         self, request_id: str, response: ApprovalResponse, feedback: str | None = None
     ) -> None:
         self._request_broker.resolve_approval(request_id, response, feedback)
 
-
     def resolve_user_input_request(self, request_id: str, result: BaseModel) -> None:
         self._request_broker.resolve_user_input(request_id, result)
 
-
     def reject_request(self, request_id: str, error: BaseException) -> None:
         self._request_broker.reject(request_id, error)
-
 
     async def set_tool_permission(
         self, tool_name: str, permission: ToolPermission, save_permanently: bool = False
@@ -858,7 +838,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             )
 
         self._permission_store.set_tool_permission(tool_name, permission)
-
 
     async def approve_always(
         self,
@@ -894,11 +873,9 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
                 tool_name, ToolPermission.ALWAYS, save_permanently=save_permanently
             )
 
-
     @property
     def init_duration_ms(self) -> int | None:
         return self._last_init_duration_ms
-
 
     def _render_system_prompt(
         self,
@@ -917,10 +894,8 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             tool_manager=tool_manager or self.tool_manager,
         )
 
-
     def _build_system_prompt(self) -> str:
         return self._render_system_prompt(self.skill_manager)
-
 
     def _available_tools_snapshot(self) -> list[AvailableTool]:
         """Memoized ``get_available_tools`` keyed on the serialized descriptors.
@@ -938,22 +913,18 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         self._tools_snapshot_hash = new_hash
         return snapshot
 
-
     def _request_tools(self) -> list[AvailableTool]:
         """Return the stable local tool snapshot exposed to the model."""
         self._tools_epoch_requests += 1
         return self._available_tools_snapshot()
 
-
     def _record_tool_usage(self, tool_name: str) -> None:
         self._tools_usage[tool_name] = self._tools_usage.get(tool_name, 0) + 1
-
 
     def _reset_tool_usage(self) -> None:
         """Start a new context epoch: remote tools become discoverable again."""
         self._tools_usage.clear()
         self._tools_epoch_requests = 0
-
 
     @requires_init
     async def refresh_system_prompt(self) -> None:
@@ -961,11 +932,9 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         prompt = await asyncio.to_thread(self._build_system_prompt)
         self.messages.update_system_prompt(prompt)
 
-
     @property
     def _turn(self) -> _ActiveTurn:
         return self._active_turn or _NO_TURN
-
 
     def _take_session(self, operation: str) -> None:
         """Claim the session for *operation*, refusing if something else holds it.
@@ -980,19 +949,15 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             )
         self._holders.append(operation)
 
-
     def _release_session(self, operation: str) -> None:
         self._holders.remove(operation)
-
 
     async def notice_retry(self, reason: RetryReason) -> None:
         if (sink := self._turn.retry_sink) is not None:
             await sink(reason)
 
-
     def backend_factory(self, config: VibeConfigSchema | None = None) -> BackendLike:
         return self._injected_backend or self._select_backend(config)
-
 
     def _schedule_backend_close(self, backend: BackendLike) -> None:
         """Close a replaced backend's pool, now if idle or deferred to next turn.
@@ -1013,7 +978,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             _close_backend_in_background(backend)
         else:
             self._backends_to_close.append(backend)
-
 
     async def refresh_config(self) -> None:
         """Reload local configuration without any remote registry side effects."""
@@ -1187,15 +1151,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         finally:
             self._active_turn = None
 
-
-
-
-
-
-
-
-
-
     def _last_user_message(self) -> LLMMessage | None:
         return AgentLoop._last_user_message_from(select_model_context(self.messages))
 
@@ -1289,8 +1244,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             old_session_id=old_session_id,
             new_session_id=self.session_id,
         )
-
-
 
     def _should_self_heal(self) -> bool:
         # Recover from an overflow at most once per turn; strict mode surfaces it.
@@ -2039,7 +1992,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
                 yield event
 
     async def _execute_tool_call(
-        self, span: trace.Span, tool_call: ResolvedToolCall
+        self, span: Span, tool_call: ResolvedToolCall
     ) -> AsyncGenerator[ToolResultEvent | ToolStreamEvent | HookEvent]:
         try:
             tool_instance = self.tool_manager.get(tool_call.tool_name)
@@ -2197,7 +2150,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         tool_input: dict[str, Any],
         decision: ToolDecision,
         *,
-        span: trace.Span,
+        span: Span,
     ) -> AsyncGenerator[ToolResultEvent | ToolStreamEvent | HookEvent]:
         self.stats.tool_calls_agreed += 1
         self._record_tool_usage(tool_call.tool_name)
@@ -2384,7 +2337,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         decision: ToolDecision | None = None,
         result: dict[str, Any] | None = None,
         persisted_result: PersistedToolResult | None = None,
-        span: trace.Span | None = None,
+        span: Span | None = None,
     ) -> None:
         message = LLMMessage.model_validate(
             self.format_handler.create_tool_response_message(tool_call, text)
@@ -2404,7 +2357,7 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         error_msg: str,
         decision: ToolDecision | None = None,
         cancelled: bool = False,
-        span: trace.Span | None = None,
+        span: Span | None = None,
     ) -> ToolResultEvent:
         """Create a ToolResultEvent for a failed tool and record the failure."""
         self._handle_tool_response(tool_call, error_msg, "failure", decision, span=span)
@@ -2508,7 +2461,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
                     "Usage data missing in non-streaming completion response"
                 )
             self._update_stats(usage=result.usage, time_seconds=end_time - start_time)
-
 
             processed_message = self.format_handler.process_api_response_message(
                 result.message
@@ -2836,7 +2788,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         self._reset_session_scoped_state()
         cleanup_scratchpad(previous_scratchpad)
 
-
     def _apply_active_model_pricing(self) -> None:
         try:
             active_model = self.config.get_active_model()
@@ -2847,7 +2798,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             active_model.output_price,
             active_model.cached_input_price,
         )
-
 
     def _reset_session_scoped_state(self) -> None:
         # Clear any duration the picker recorded so it doesn't leak into the

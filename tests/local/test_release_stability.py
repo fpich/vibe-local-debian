@@ -66,7 +66,7 @@ def test_archived_upstream_docs_are_not_in_active_index() -> None:
 def test_default_config_uses_only_generic_local_providers() -> None:
     config = tomllib.loads((REPO_ROOT / ".vibe/config.toml").read_text())
     assert config["active_model"] in {"worker1", "worker2"}
-    assert config["allowed_models"] == ["worker"]
+    assert config["allowed_models"] == ["worker*"]
     for provider in config["providers"]:
         assert provider["backend"] == "generic"
         assert provider["api_style"] == "openai"

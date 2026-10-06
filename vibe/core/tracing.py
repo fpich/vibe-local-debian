@@ -4,6 +4,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
+type Span = Any
+
 
 def build_otel_span_exporter_config(*_args: Any, **_kwargs: Any) -> None:
     """Tracing is disabled in the local-only build."""
@@ -44,7 +46,9 @@ def set_model_call_usage(
     return None
 
 
-def set_model_call_response_metadata(_span: Any, _response_data: dict[str, Any]) -> None:
+def set_model_call_response_metadata(
+    _span: Any, _response_data: dict[str, Any]
+) -> None:
     return None
 
 

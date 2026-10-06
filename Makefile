@@ -5,6 +5,8 @@ run: ## Run the local Python/Textual CLI
 
 test: ## Run the maintained local-fork test suite
 	uv run pytest
+test-legacy: ## Run legacy suites not yet reintegrated (known-failing on POSIX)
+	uv run pytest tests/tools tests/core/git tests/core/paths tests/core/tools
 
 lint: ## Lint runtime and maintained tests
 	uv run ruff check vibe tests/local

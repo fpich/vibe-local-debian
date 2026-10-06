@@ -11,4 +11,4 @@ La documentation active du fork est volontairement courte et centrée sure le pr
 
 ## Documentation upstream archivée
 
-Les ADRs et guides hérités de Mistral Vibe ont été déplacés vers `docs/archive/upstream/`. Ils sont conservés uniquement pour comprendre l'origine de certain choix de code. Ils ne sont **pas normatifs** pour ce fork et peuvent décrire ACP, Rust, Unified Harness, MCP, narration ou d'autres functions supprimées.
+Les ADRs et guides hérités de Mistral Vibe ont été déplacés vers `docs/archive/` (voir [l'index unique des surfaces supprimées](archive/README.md)). Ils sont conservés uniquement pour comprendre l'origine de certain choix de code. Ils ne sont **pas normatifs** pour ce fork et peuvent décrire ACP, Rust, Unified Harness, MCP, narration ou d'autres functions supprimées.

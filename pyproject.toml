@@ -200,5 +200,12 @@ max-nested-blocks = 5
 ignore_decorators = ["@*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests/local"]
+testpaths = [
+  "tests/local",
+  "tests/backend",
+  "tests/core/agent_loop",
+  "tests/core/autocompletion",
+  "tests/core/utils",
+  "tests/core/vision",
+]
 addopts = "-q"

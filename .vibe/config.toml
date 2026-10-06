@@ -8,7 +8,7 @@
 active_model = "worker1"
 # Seuls les modèles llama.cpp locaux sont sélectionnables (exclut les
 # modèles cloud par défaut mistral/devstral du sélecteur /config).
-allowed_models = ["worker"]
+allowed_models = ["worker*"]
 
 
 # ── Outils exposés à l’agent ───────────────────────────────────────────────
@@ -52,7 +52,7 @@ emits_finish_reason = true
 # presence_penalty 1.5, repetition_penalty 1.0.
 # thinking ON, preserve_thinking ON (agent / multi-turn).
 [[models]]
-name = "worker"
+name = "worker1"
 provider = "llamacpp-worker1"
 alias = "worker1"
 display_name = "worker1 (KAT, local)"
@@ -66,7 +66,7 @@ auto_compact_threshold = 90000
 # Paramètres serveur llama.cpp : top_p 0.8, top_k 20, min_p 0,
 # presence_penalty 1.5, repetition_penalty 1.0. thinking OFF.
 [[models]]
-name = "worker"
+name = "worker2"
 provider = "llamacpp-worker2"
 alias = "worker2"
 display_name = "worker2 (Qwen3.5, local)"
