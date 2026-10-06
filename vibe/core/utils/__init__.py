@@ -40,14 +40,10 @@ if TYPE_CHECKING:
     from vibe.core.utils.time import utc_now
     from vibe.utils.paths import is_dangerous_directory
     from vibe.utils.platform import (
-        WindowsShell,
-        WindowsShellKind,
         get_platform_display_name,
         get_platform_id,
         get_platform_version,
-        get_windows_bash_path,
         is_windows,
-        resolve_windows_shell,
     )
 
 __all__ = [
@@ -66,22 +62,18 @@ __all__ = [
     "RetryReason",
     "StreamHTTPError",
     "TaggedText",
-    "WindowsShell",
-    "WindowsShellKind",
     "async_generator_retry",
     "async_retry",
     "get_platform_display_name",
     "get_platform_id",
     "get_platform_version",
     "get_user_cancellation_message",
-    "get_windows_bash_path",
     "is_dangerous_directory",
     "is_user_cancellation_event",
     "is_windows",
     "iter_sse_lines",
     "kill_async_subprocess",
     "name_matches",
-    "resolve_windows_shell",
     "run_sync",
     "utc_now",
 ]
@@ -124,14 +116,10 @@ _MAPPING: dict[str, tuple[str, str]] = {
     ),
     "utc_now": ("vibe.core.utils.time", "utc_now"),
     "is_dangerous_directory": ("vibe.utils.paths", "is_dangerous_directory"),
-    "WindowsShell": ("vibe.utils.platform", "WindowsShell"),
-    "WindowsShellKind": ("vibe.utils.platform", "WindowsShellKind"),
     "get_platform_display_name": ("vibe.utils.platform", "get_platform_display_name"),
     "get_platform_id": ("vibe.utils.platform", "get_platform_id"),
     "get_platform_version": ("vibe.utils.platform", "get_platform_version"),
-    "get_windows_bash_path": ("vibe.utils.platform", "get_windows_bash_path"),
     "is_windows": ("vibe.utils.platform", "is_windows"),
-    "resolve_windows_shell": ("vibe.utils.platform", "resolve_windows_shell"),
 }
 
 

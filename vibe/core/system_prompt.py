@@ -16,12 +16,7 @@ from vibe.core.config.harness_files import (
 )
 from vibe.core.paths import VIBE_HOME
 from vibe.core.prompts import UtilityPrompt
-from vibe.core.utils import (
-    WindowsShellKind,
-    get_platform_display_name,
-    is_windows,
-    resolve_windows_shell,
-)
+from vibe.core.utils import get_platform_display_name
 from vibe.utils.paths import is_dangerous_directory
 from vibe.utils.platform import resolve_git_executable
 
@@ -69,7 +64,7 @@ class ProjectContextProvider:
             capture_output=True,
             check=True,
             cwd=self.root_path,
-            stdin=subprocess.DEVNULL if is_windows() else None,
+            stdin=None,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -154,89 +149,15 @@ class ProjectContextProvider:
         )
 
 
-def _get_os_system_prompt(
-    *, use_git_bash_treatment: bool = False, use_powershell_treatment: bool = False
-) -> str:
+def _get_os_system_prompt() -> str:
     platform_name = get_platform_display_name()
-
-    if not is_windows():
-        shell = os.environ.get("SHELL", "sh")
-        return f"The operating system is {platform_name} with shell `{shell}`"
-
-    if use_git_bash_treatment:
-        return (
-            f"The operating system is {platform_name} with shell `Git Bash`"
-            "\n" + _get_windows_bash_system_prompt()
-        )
-
-    if use_powershell_treatment:
-        return (
-            f"The operating system is {platform_name} with shell `PowerShell`"
-            "\n" + _get_windows_powershell_system_prompt()
-        )
-
-    shell = resolve_windows_shell()
-    if shell.kind is WindowsShellKind.BASH and shell.executable is not None:
-        shell_display = f"bash ({shell.executable})"
-    else:
-        shell_display = shell.executable or "cmd.exe"
-
-    prompt = f"The operating system is {platform_name} with shell `{shell_display}`"
-    prompt += "\n" + _get_windows_system_prompt(shell.kind)
-    return prompt
+    shell = os.environ.get("SHELL", "sh")
+    return f"The operating system is {platform_name} with shell `{shell}`"
 
 
 def _format_current_date() -> str:
     today = date.today()
     return f"{today.isoformat()} ({today.strftime('%A')})"
-
-
-def _get_windows_bash_system_prompt() -> str:
-    return (
-        "### COMMAND COMPATIBILITY RULES (MUST FOLLOW):\n"
-        "- Commands run through bash (Git Bash), so Unix commands like `ls`, "
-        "`grep`, `cat`, `find` work - this is NOT cmd.exe or PowerShell\n"
-        "- Discard output with `2>/dev/null` - NEVER `2>nul` or `2>$null`\n"
-        "- `&&` and `||` are valid for command chaining\n"
-        "- Prefer forward slashes in paths; bash resolves Windows drives as "
-        "`/c/Users/...`\n"
-        "- Check command availability with: `command -v <command>`\n"
-        "### ALWAYS verify commands work on the detected platform before suggesting them"
-    )
-
-
-def _get_windows_cmd_system_prompt() -> str:
-    return (
-        "### COMMAND COMPATIBILITY RULES (MUST FOLLOW):\n"
-        "- The shell is cmd.exe, NOT bash or PowerShell\n"
-        "- DO NOT use Unix commands like `ls`, `grep`, `cat` - they won't work; "
-        "use `dir`, `findstr`, `type`\n"
-        "- Use backslashes (\\\\) for paths\n"
-        "- Discard output with `2>nul` - NEVER `2>/dev/null` or `2>$null`\n"
-        "- `&&` and `||` are valid for command chaining in cmd.exe\n"
-        "- Check command availability with: `where command`\n"
-        "- Script shebang: Not applicable on Windows\n"
-        "### ALWAYS verify commands work on the detected platform before suggesting them"
-    )
-
-
-def _get_windows_powershell_system_prompt() -> str:
-    return (
-        "### COMMAND COMPATIBILITY RULES (MUST FOLLOW):\n"
-        "- The shell is PowerShell, NOT bash or cmd.exe\n"
-        "- Use PowerShell syntax for variables, quoting, pipes, redirects, and conditionals\n"
-        "- Use backslashes (\\\\) for Windows paths unless a command explicitly accepts another form\n"
-        "- Discard output with `*> $null` or `2>$null` as appropriate - NEVER `2>/dev/null` or `2>nul`\n"
-        "- Check command availability with: `Get-Command <command>`\n"
-        "- Prefer `Get-ChildItem`, `Get-Content`, and `Select-String` over Unix-only shell commands when a dedicated Vibe tool is not available\n"
-        "### ALWAYS verify commands work on the detected platform before suggesting them"
-    )
-
-
-def _get_windows_system_prompt(shell_kind: WindowsShellKind) -> str:
-    if shell_kind is WindowsShellKind.BASH:
-        return _get_windows_bash_system_prompt()
-    return _get_windows_cmd_system_prompt()
 
 
 def _add_commit_signature() -> str:
@@ -332,17 +253,8 @@ def _get_headless_section() -> str:
 
 
 def _get_tool_aware_os_system_prompt(tool_manager: ToolManager | None) -> str:
-    if tool_manager is None:
-        return _get_os_system_prompt()
-
-    available_tools = tool_manager.available_tools
-    use_git_bash_treatment = "git_bash" in available_tools
-    return _get_os_system_prompt(
-        use_git_bash_treatment=use_git_bash_treatment,
-        use_powershell_treatment=(
-            "powershell" in available_tools and not use_git_bash_treatment
-        ),
-    )
+    _ = tool_manager
+    return _get_os_system_prompt()
 
 
 def get_agents_md_section(

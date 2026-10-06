@@ -25,7 +25,7 @@ from vibe.core.types import (
     SessionMetadata,
     WorktreeContext,
 )
-from vibe.core.utils import is_windows, utc_now
+from vibe.core.utils import utc_now
 from vibe.utils.io import read_safe, read_safe_async
 from vibe.utils.platform import resolve_git_executable
 from vibe.utils.session_id import shorten_session_id
@@ -143,7 +143,7 @@ class SessionLogger:  # noqa: PLR0904
             result = subprocess.run(
                 [git, "rev-parse", "HEAD", "--abbrev-ref", "HEAD"],
                 capture_output=True,
-                stdin=subprocess.DEVNULL if is_windows() else None,
+                stdin=None,
                 text=True,
                 encoding="utf-8",
                 errors="replace",

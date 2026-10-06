@@ -16,7 +16,6 @@ import stat
 from threading import Lock, Thread
 
 from vibe.core.config import SessionLoggingConfig
-from vibe.core.utils import is_windows
 from vibe.observability.logging import logger
 
 _GROUP_OTHER = 0o077
@@ -63,11 +62,8 @@ def restrict_session_log_permissions(session_config: SessionLoggingConfig) -> in
     because the store creates them owner-only, so their interior modes cannot
     grant access and skipping the interiors keeps the walk cheap.
 
-    Returns the number of paths tightened. On Windows mode bits do not govern
-    access, so the sweep is a no-op there.
+    Returns the number of paths tightened.
     """
-    if is_windows():
-        return 0
     root = Path(session_config.save_dir)
     if not root.is_dir():
         # The sweep remediates existing logs; it never creates the log root.

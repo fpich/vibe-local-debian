@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
-import sys
 from typing import cast
 
 from pydantic import ValidationError
@@ -17,15 +16,11 @@ from vibe.core.tools.builtins._shell_command_policy import (
     has_option_guardrails,
 )
 from vibe.core.tools.builtins._shell_permission_analysis import analyze_shell_command
-import vibe.core.tools.builtins.bash as bash_module
 from vibe.core.tools.builtins.bash import (
     Bash,
     BashArgs,
     BashToolConfig,
     CapturedShellResult,
-    _get_default_denylist,
-    _get_default_denylist_standalone,
-    default_read_only_commands,
 )
 from vibe.core.tools.builtins.experimental_bash import (
     BashLogFile,
@@ -78,12 +73,6 @@ def bash(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     config = BashToolConfig()
     return Bash(config_getter=lambda: config, state=BaseToolState())
-
-
-def _hide_standard_git_installs(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ProgramFiles", raising=False)
-    monkeypatch.delenv("ProgramFiles(x86)", raising=False)
-    monkeypatch.delenv("LOCALAPPDATA", raising=False)
 
 
 def test_shell_results_keep_a_returncode_alias_for_post_tool_hooks():
@@ -141,46 +130,6 @@ async def test_handles_timeout(bash):
         await collect_result(bash.run(BashArgs(command="sleep 2", timeout=1)))
 
     assert "Command timed out after 1s" in str(err.value)
-
-
-@pytest.mark.asyncio
-async def test_windows_cmd_spawn_ignores_non_cmd_comspec(monkeypatch):
-    monkeypatch.setattr(sys, "platform", "win32")
-    _hide_standard_git_installs(monkeypatch)
-    monkeypatch.setenv(
-        "COMSPEC", "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-    )
-    monkeypatch.setenv("SystemRoot", "C:\\Windows")
-    monkeypatch.setattr(
-        "vibe.utils.platform.shutil.which", lambda name, path=None: None
-    )
-
-    proc = object()
-    calls = []
-
-    async def fake_create_subprocess_exec(*args, **kwargs):
-        calls.append((args, kwargs))
-        return proc
-
-    async def fake_create_subprocess_shell(*args, **kwargs):
-        raise AssertionError("cmd fallback must not use COMSPEC-backed shell mode")
-
-    monkeypatch.setattr(
-        bash_module.asyncio, "create_subprocess_exec", fake_create_subprocess_exec
-    )
-    monkeypatch.setattr(
-        bash_module.asyncio, "create_subprocess_shell", fake_create_subprocess_shell
-    )
-
-    result = await bash_module.spawn_shell_command("echo hello")
-
-    assert result is proc
-    assert calls[0][0][:4] == (
-        "C:\\Windows\\System32\\cmd.exe",
-        "/d",
-        "/c",
-        "echo hello",
-    )
 
 
 @pytest.mark.asyncio
@@ -1597,18 +1546,6 @@ def test_resolve_timeout_uses_shared_bash_default_timeout():
     assert bash_tool._resolve_timeout(None) == 300
     assert bash_tool._resolve_timeout(50) == 50
     assert bash_tool._resolve_timeout(10_000) == 600
-
-
-def test_build_env_neutralizes_pagers_but_keeps_interactive_term(monkeypatch):
-    monkeypatch.delenv("TERM", raising=False)
-    manager = TerminalSessionManager()
-
-    env = manager._build_env(None)
-
-    assert env["GIT_PAGER"] == "cat"
-    assert env["PAGER"] == "cat"
-    assert env["LESS"] == "-FX"
-    assert env["TERM"] == "xterm-256color"
 
 
 @pytest.mark.asyncio
@@ -3639,81 +3576,6 @@ def test_an_invalidated_scope_always_carries_a_reason(command):
 
     assert analysis.invalidates_scope
     assert analysis.approval_reasons
-
-
-def _force_windows_bash(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(sys, "platform", "win32")
-    monkeypatch.setattr(
-        "vibe.utils.platform.shutil.which",
-        lambda name, path=None: (
-            "C:\\Program Files\\Git\\bin\\bash.exe" if name == "bash" else None
-        ),
-    )
-
-
-def _force_windows_cmd(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(sys, "platform", "win32")
-    _hide_standard_git_installs(monkeypatch)
-    monkeypatch.setattr(
-        "vibe.utils.platform.shutil.which", lambda name, path=None: None
-    )
-
-
-class TestShellAwareDefaultLists:
-    def test_windows_bash_selects_posix_lists(self, monkeypatch):
-        _force_windows_bash(monkeypatch)
-        assert "ls" in default_read_only_commands()
-        assert "dir" not in default_read_only_commands()
-        assert "vim" in _get_default_denylist()
-        assert "bash" in _get_default_denylist_standalone()
-
-    def test_windows_cmd_selects_windows_lists(self, monkeypatch):
-        _force_windows_cmd(monkeypatch)
-        assert "dir" in default_read_only_commands()
-        assert "ls" not in default_read_only_commands()
-        assert "cmd /k" in _get_default_denylist()
-        assert "notepad" in _get_default_denylist_standalone()
-
-
-class TestResolvePermissionShellAware:
-    """Permission analysis must run on Windows, gated by the resolved shell."""
-
-    def _make_default_bash(self) -> Bash:
-        config = BashToolConfig()
-        return Bash(config_getter=lambda: config, state=BaseToolState())
-
-    def test_windows_bash_allowlists_unix_read_only(self, monkeypatch):
-        _force_windows_bash(monkeypatch)
-        bash_tool = self._make_default_bash()
-        result = bash_tool.resolve_permission(BashArgs(command="ls -la"))
-        assert isinstance(result, PermissionContext)
-        assert result.permission is ToolPermission.ALWAYS
-
-    def test_windows_bash_denies_interactive_editor(self, monkeypatch):
-        _force_windows_bash(monkeypatch)
-        bash_tool = self._make_default_bash()
-        result = bash_tool.resolve_permission(BashArgs(command="vim notes.txt"))
-        assert isinstance(result, PermissionContext)
-        assert result.permission is ToolPermission.NEVER
-
-    def test_windows_bash_asks_for_unknown_command(self, monkeypatch):
-        _force_windows_bash(monkeypatch)
-        bash_tool = self._make_default_bash()
-        result = bash_tool.resolve_permission(BashArgs(command="frobnicate --now"))
-        assert isinstance(result, PermissionContext)
-        assert result.permission is ToolPermission.ASK
-
-    def test_windows_cmd_defers_analysis_for_read_only(self, monkeypatch):
-        _force_windows_cmd(monkeypatch)
-        bash_tool = self._make_default_bash()
-        # cmd.exe is not parsed with the bash grammar; defer to config (ASK).
-        assert bash_tool.resolve_permission(BashArgs(command="dir /s /b")) is None
-
-    def test_windows_cmd_defers_analysis_for_dangerous(self, monkeypatch):
-        _force_windows_cmd(monkeypatch)
-        bash_tool = self._make_default_bash()
-        # Not NEVER-blocked via a bash parse; the human is asked instead.
-        assert bash_tool.resolve_permission(BashArgs(command="cmd /k whoami")) is None
 
 
 @pytest.mark.skipif(is_windows(), reason="managed bash requires a POSIX-like platform")

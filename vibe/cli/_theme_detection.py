@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 from functools import lru_cache
-import importlib
 import os
 import re
 import select
 import subprocess
 import sys
 import time
-from typing import Any
 
 from vibe.config_values import AUTO_THEME, FALLBACK_THEME
-from vibe.utils.platform import is_windows
 
 _OS_APPEARANCE_TIMEOUT_SECONDS = 1.0
 _OSC11_QUERY = b"\x1b]11;?\x07"
@@ -28,8 +25,6 @@ def detect_system_preferred_dark() -> bool | None:
     match sys.platform:
         case "darwin":
             return _detect_macos_dark()
-        case "win32":
-            return _detect_windows_dark()
         case "linux":
             return _detect_linux_dark()
         case _:
@@ -49,19 +44,6 @@ def _detect_macos_dark() -> bool | None:
     if result.returncode != 0:
         return False
     return "Dark" in result.stdout
-
-
-def _detect_windows_dark() -> bool | None:
-    try:
-        winreg: Any = importlib.import_module("winreg")
-        with winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-        ) as key:
-            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-        return value == 0
-    except (OSError, ImportError):
-        return None
 
 
 def _detect_linux_dark() -> bool | None:
@@ -86,8 +68,6 @@ def _detect_linux_dark() -> bool | None:
 
 
 def detect_terminal_dark() -> bool | None:
-    if is_windows():
-        return _detect_terminal_dark_windows()
     if _is_inside_multiplexer():
         return None
     return _detect_terminal_dark_posix()
@@ -146,52 +126,6 @@ def _read_osc11_response(fd: int) -> bytes:
             break
         response += chunk
     return response
-
-
-def _detect_terminal_dark_windows() -> bool | None:
-    try:
-        import ctypes
-        import ctypes.wintypes
-
-        msvcrt: Any = importlib.import_module("msvcrt")
-        ctypes_module: Any = ctypes
-        windll = ctypes_module.windll
-        kernel32 = windll.kernel32
-        kernel32.GetStdHandle.argtypes = [ctypes.wintypes.DWORD]
-        kernel32.GetStdHandle.restype = ctypes.wintypes.HANDLE
-        kernel32.WriteFile.argtypes = [
-            ctypes.wintypes.HANDLE,
-            ctypes.wintypes.LPCVOID,
-            ctypes.wintypes.DWORD,
-            ctypes.wintypes.LPDWORD,
-            ctypes.wintypes.LPVOID,
-        ]
-        kernel32.WriteFile.restype = ctypes.wintypes.BOOL
-
-        handle = kernel32.GetStdHandle(-12)
-        if handle in {None, 0, ctypes.c_void_p(-1).value}:
-            return None
-
-        query_buffer = ctypes.create_string_buffer(_OSC11_QUERY)
-        written = ctypes.wintypes.DWORD(0)
-        if not kernel32.WriteFile(
-            handle, query_buffer, len(_OSC11_QUERY), ctypes.byref(written), None
-        ):
-            return None
-
-        response = b""
-        deadline = time.monotonic() + _OSC11_TIMEOUT_SECONDS
-        while time.monotonic() < deadline and not _is_complete_osc11_response(response):
-            while msvcrt.kbhit():
-                response += msvcrt.getch()
-                if _is_complete_osc11_response(response):
-                    break
-            if not _is_complete_osc11_response(response):
-                time.sleep(0.01)
-    except (AttributeError, ImportError, OSError, ValueError):
-        return None
-
-    return _classify_osc11_response(response)
 
 
 def _is_complete_osc11_response(response: bytes) -> bool:

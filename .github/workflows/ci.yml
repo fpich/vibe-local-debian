@@ -31,6 +31,9 @@ jobs:
       - name: Sync dependencies
         run: uv sync --python "${{ matrix.python-version }}" --group dev
 
+      - name: Run pre-commit hooks on all files
+        run: uv run pre-commit run --all-files
+
       - name: Compile sources
         run: uv run python -m compileall -q vibe
 

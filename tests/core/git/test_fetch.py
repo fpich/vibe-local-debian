@@ -732,31 +732,6 @@ def test_project_and_relative_path_ssh_is_not_used(
     assert str(planted.resolve()) not in secure.env["GIT_SSH_COMMAND"]
 
 
-def test_windows_cwd_planted_ssh_is_not_used(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    project = tmp_path / "checkout"
-    trusted_bin = tmp_path / "trusted-bin"
-    repo = _repo_with_remote(project, "ssh://git@example.com/owner/repo.git")
-    planted = _write_executable(project / "ssh.exe")
-    _write_executable(project / "ssh.bat")
-    trusted = _write_executable(trusted_bin / "ssh.exe")
-    original_path = os.environ.get("PATH", "")
-    monkeypatch.setattr("vibe.utils.platform.is_windows", lambda: True)
-    monkeypatch.setattr(fetch_module, "is_windows", lambda: True)
-    monkeypatch.chdir(project)
-    monkeypatch.setenv("PATHEXT", os.pathsep.join((".EXE", ".BAT", ".CMD")))
-    monkeypatch.setenv("PATH", os.pathsep.join((str(trusted_bin), original_path)))
-
-    secure = prepare_secure_fetch(repo, "origin")
-
-    assert secure.env["GIT_SSH_COMMAND"] == subprocess.list2cmdline([
-        str(trusted.resolve())
-    ])
-    assert str(planted.resolve()) not in secure.env["GIT_SSH_COMMAND"]
-    assert "ssh.bat" not in secure.env["GIT_SSH_COMMAND"]
-
-
 def test_project_only_ssh_is_rejected(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

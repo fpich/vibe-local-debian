@@ -4,13 +4,9 @@ import asyncio
 import os
 from pathlib import Path
 
-from vibe.utils.platform import WindowsShellKind, is_windows, resolve_windows_shell
-
 
 def uses_posix_shell() -> bool:
-    if not is_windows():
-        return True
-    return resolve_windows_shell().kind is WindowsShellKind.BASH
+    return True
 
 
 async def spawn_shell_command(
@@ -18,31 +14,6 @@ async def spawn_shell_command(
 ) -> asyncio.subprocess.Process:
     env = shell_environment()
     cwd = cwd or Path.cwd()
-    if is_windows():
-        shell = resolve_windows_shell()
-        if shell.kind is WindowsShellKind.BASH and shell.executable is not None:
-            return await asyncio.create_subprocess_exec(
-                shell.executable,
-                "-c",
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                stdin=asyncio.subprocess.DEVNULL,
-                env=env,
-                cwd=cwd,
-            )
-        return await asyncio.create_subprocess_exec(
-            shell.executable or "cmd.exe",
-            "/d",
-            "/c",
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            stdin=asyncio.subprocess.DEVNULL,
-            env=env,
-            cwd=cwd,
-        )
-
     return await asyncio.create_subprocess_shell(
         command,
         stdout=asyncio.subprocess.PIPE,
@@ -57,8 +28,6 @@ async def spawn_shell_command(
 
 def shell_environment() -> dict[str, str]:
     env = {**os.environ, "CI": "true", "NONINTERACTIVE": "1", "NO_TTY": "1"}
-    if is_windows():
-        return {**env, "GIT_PAGER": "more", "PAGER": "more"}
     # Shell startup hooks inherited from the environment would run arbitrary
     # code in every spawned command shell without passing through the shell
     # policy; they have no legitimate role for a non-interactive shell.

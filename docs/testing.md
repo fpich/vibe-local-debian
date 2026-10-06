@@ -25,7 +25,16 @@ Les suites réintégrées (`tests/tools`, `tests/core/git`, `tests/core/paths`, 
 make test-legacy
 ```
 
-La CI exécute les deux parcours à chaque push : `uv run pytest` puis les quatre suites réintégrées (job `python`, étape « Test shell/paths/git/tools suites »).
+La CI exécute à chaque push, dans le job `python` : les hooks pre-commit sur tous les fichiers (étape « Run pre-commit hooks on all files »), puis `uv run pytest`, puis les quatre suites réintégrées (étape « Test shell/paths/git/tools suites »).
+
+La couverture de la suite maintenue se measure avec :
+
+```bash
+make test-coverage
+```
+
+Elle est indicative (~35 % global) : le fork n'a pas d'objectif de couverture
+chiffré, mais l'écart doit rester surveillé à chaque réintégration.
 
 Les tests maintenus couvrent principalement :
 
@@ -37,6 +46,33 @@ Les tests maintenus couvrent principalement :
 - intégrité du runtime `AgentLoop` ;
 - cohérence de release/documentation.
 
+## Suites dormantes (dette connue)
+
+Les suites suivantes restent présentes dans l'arborescence mais ne sont **pas
+collectables** : leur import échoue car elles référencent des symbols supprimés
+ou neutralisés du fork (cloud auth, MCP, ACP, voice, telemetry, snapshots TUI
+de surfaces retirées). Elles ne sont volontairement ni dans `uv run pytest`, ni
+dans `make test-legacy`, et sont exclues des hooks pre-commit (pyright, ruff).
+
+| Suite | Cause racine |
+| --- | --- |
+| `tests/agent_loop` | dépendances MCP supprimées |
+| `tests/app_server` | symbols `_account`/`_identity` et protocole ACP retirés |
+| `tests/banner` | `AudioProviderView` supprimé |
+| `tests/cli` | `AccountAction`, onboarding, `OtelRedactionMode` retirés |
+| `tests/core/compaction` | telemetry supprimée |
+| `tests/core/config` | surfaces transcribe/tts/otel retirées |
+| `tests/core/llm/test_backend_error.py` | symbols backend cloud supprimés |
+| `tests/core/test_identity.py` | cloud identity supprimée |
+| `tests/onboarding`, `tests/setup` | `vibe.setup.*` supprimé |
+| `tests/snapshots` | instantanés TUI de surfaces Windows/account |
+| `tests/test_tracing.py` | tracing OpenTelemetry supprimé |
+| `tests/stubs/*` | stubs des passerelles supprimées |
+
+La dette est assumée : ces fichiers seront supprimés ou réécrits quand les
+surfaces correspondantes seront réintroduites ou stabilisées. Ne pas les
+réactiver en l'état.
+
 ## Vérifications statiques
 
 ```bash
@@ -44,6 +80,7 @@ python -m compileall -q vibe
 uv run ruff check vibe tests/local
 uv run ruff format --check vibe tests/local
 uv run pyright vibe
+uv run pre-commit run --all-files
 ```
 
 Important : `compileall` seul ne suffit pas. Les erreurs de décorateurs exécutés à l'import (par exemple `@dataclass(slots=True)`) peuvent n'apparaître qu'au chargement réel du module.

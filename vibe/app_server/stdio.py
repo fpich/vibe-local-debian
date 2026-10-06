@@ -33,11 +33,7 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> None:
     from vibe.core.config import load_dotenv_values
-    from vibe.core.utils.windows_asyncio import (
-        silence_proactor_transport_teardown_warnings,
-    )
 
-    silence_proactor_transport_teardown_warnings()
     # The gate must run before the harness files manager and file logging:
     # their mkdir(parents=True) calls are otherwise the first to materialize
     # ~/.vibe, at permissive modes.

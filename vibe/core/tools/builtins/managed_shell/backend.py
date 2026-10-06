@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from vibe.core.utils import is_windows
-
 
 class ManagedShellBackendError(Exception):
     pass
@@ -63,91 +61,18 @@ class ManagedShellBackend(Protocol):
 
 
 def posix_managed_shell_supported() -> bool:
-    return not is_windows()
-
-
-def windows_managed_shell_supported() -> bool:
-    if not is_windows():
-        return False
-    try:
-        from vibe.core.tools.builtins.managed_shell._windows import pywinpty_available
-    except Exception:
-        return False
-    return pywinpty_available()
-
-
-def git_bash_managed_shell_supported() -> bool:
-    if not is_windows():
-        return False
-    try:
-        from vibe.core.tools.builtins.managed_shell._windows import (
-            git_bash_shell_available,
-            pywinpty_available,
-        )
-    except Exception:
-        return False
-    return pywinpty_available() and git_bash_shell_available()
-
-
-def powershell_managed_shell_supported() -> bool:
-    if not is_windows():
-        return False
-    try:
-        from vibe.core.tools.builtins.managed_shell._windows import (
-            pywinpty_available,
-            resolve_powershell_shell,
-        )
-    except Exception:
-        return False
-    if not pywinpty_available():
-        return False
-    try:
-        resolve_powershell_shell(None, None)
-    except ManagedShellBackendError:
-        return False
     return True
 
 
 def managed_shell_supported(shell_family: str | None = None) -> bool:
-    match shell_family:
-        case "posix":
-            return posix_managed_shell_supported()
-        case "git_bash":
-            return git_bash_managed_shell_supported()
-        case "powershell":
-            return powershell_managed_shell_supported()
-        case "windows":
-            return windows_managed_shell_supported()
-        case None:
-            return windows_managed_shell_supported() if is_windows() else True
-        case _:
-            return False
+    return shell_family in {None, "posix"}
 
 
 def create_managed_shell_backend(
     shell_family: str | None = None,
 ) -> ManagedShellBackend:
-    family = shell_family or ("windows" if is_windows() else "posix")
-    match family:
-        case "posix":
-            if is_windows():
-                raise ManagedShellBackendError(
-                    "managed POSIX shell requires a POSIX-like platform"
-                )
-            from vibe.core.tools.builtins.managed_shell._posix import (
-                PosixManagedShellBackend,
-            )
+    if shell_family not in {None, "posix"}:
+        raise ManagedShellBackendError(f"unknown managed shell family: {shell_family}")
+    from vibe.core.tools.builtins.managed_shell._posix import PosixManagedShellBackend
 
-            return PosixManagedShellBackend()
-        case "git_bash" | "powershell" | "windows":
-            if not is_windows():
-                raise ManagedShellBackendError(
-                    "managed Windows shell requires native Windows"
-                )
-            from vibe.core.tools.builtins.managed_shell._windows import (
-                WindowsManagedShellBackend,
-            )
-
-            return WindowsManagedShellBackend(shell_family=family)
-        case _:
-            raise ManagedShellBackendError(f"unknown managed shell family: {family}")
+    return PosixManagedShellBackend()

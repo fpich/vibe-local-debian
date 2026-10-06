@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from vibe.utils.images import IMAGE_EXTENSIONS
-from vibe.utils.platform import is_windows
 
 _QUOTES: frozenset[str] = frozenset({"'", '"'})
 _PATH_ROOTS: frozenset[str] = frozenset({"/", "~"})
@@ -105,8 +104,6 @@ def _quote_if_needed(path: str) -> str:
 
 
 def _unescape_spaces(text: str) -> str:
-    if is_windows():
-        return text
     return text.replace("\\ ", " ")
 
 

@@ -346,12 +346,6 @@ def _set_process_title() -> None:
 def main() -> None:
     _set_process_title()
 
-    from vibe.core.utils.windows_asyncio import (
-        silence_proactor_transport_teardown_warnings,
-    )
-
-    silence_proactor_transport_teardown_warnings()
-
     # Bootstrap the private Vibe home before any logging/config writes.
     from vibe.core.paths import bootstrap_vibe_home
 

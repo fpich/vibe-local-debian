@@ -72,7 +72,6 @@ from vibe.core.tools.utils import (
     shell_path_scope_root,
 )
 from vibe.core.types import ToolResultEvent, ToolStreamEvent
-from vibe.core.utils import is_windows
 from vibe.core.workspace import Workspace
 from vibe.observability.logging import logger
 from vibe.permissions import (
@@ -202,12 +201,9 @@ def _extract_commands(command: str) -> list[str]:
 
 
 def _get_shell_executable() -> str | None:
-    if is_windows():
-        return None
     return os.environ.get("SHELL")
 
 
-_READ_ONLY_COMMANDS_WINDOWS = ["dir", "findstr", "more", "type", "ver", "where"]
 _READ_ONLY_COMMANDS_POSIX = [
     "basename",
     "cat",
@@ -250,9 +246,7 @@ _READ_ONLY_COMMANDS_POSIX = [
 
 
 def default_read_only_commands() -> list[str]:
-    return list(
-        _READ_ONLY_COMMANDS_WINDOWS if is_windows() else _READ_ONLY_COMMANDS_POSIX
-    )
+    return list(_READ_ONLY_COMMANDS_POSIX)
 
 
 def posix_read_only_commands() -> list[str]:
@@ -293,10 +287,6 @@ def _get_default_allowlist() -> list[str]:
 
 def _get_default_denylist() -> list[str]:
     common = ["gdb", "pdb", "passwd"]
-
-    if is_windows():
-        return common + ["cmd /k", "powershell -NoExit", "pwsh -NoExit", "notepad"]
-
     return common + [
         "nano",
         "vim",
@@ -314,10 +304,6 @@ def _get_default_denylist() -> list[str]:
 
 def _get_default_denylist_standalone() -> list[str]:
     common = ["python", "python3", "ipython"]
-
-    if is_windows():
-        return common + ["cmd", "powershell", "pwsh", "notepad"]
-
     return common + ["bash", "sh", "nohup", "vi", "vim", "emacs", "nano", "su"]
 
 
@@ -329,8 +315,6 @@ def _split_command_tokens(
     command: str, *, preserve_backslashes: bool | None = None
 ) -> list[str]:
     try:
-        if preserve_backslashes is None:
-            preserve_backslashes = is_windows()
         if preserve_backslashes:
             lexer = shlex.shlex(command, posix=True)
             lexer.whitespace_split = True
@@ -1011,25 +995,17 @@ class TerminalSessionManager:
 
     def _build_env(self, overrides: dict[str, str] | None) -> dict[str, str]:
         env = dict(os.environ)
-        match self.shell_family:
-            case "powershell" | "windows":
-                env.update({"GIT_PAGER": "more", "PAGER": "more"})
-            case "posix" | "git_bash":
-                env.update({
-                    "TERM": env.get("TERM", "xterm-256color"),
-                    "COLUMNS": env.get("COLUMNS", "120"),
-                    "LINES": env.get("LINES", "40"),
-                    # Keep the PTY interactive (so stdin can drive REPLs/prompts)
-                    # while neutralising pagers such as `less`.
-                    "GIT_PAGER": "cat",
-                    "PAGER": "cat",
-                    "LESS": "-FX",
-                    "DEBIAN_FRONTEND": "noninteractive",
-                })
-            case _:
-                raise ManagedShellError(
-                    f"unknown managed shell family: {self.shell_family}"
-                )
+        env.update({
+            "TERM": env.get("TERM", "xterm-256color"),
+            "COLUMNS": env.get("COLUMNS", "120"),
+            "LINES": env.get("LINES", "40"),
+            # Keep the PTY interactive (so stdin can drive REPLs/prompts)
+            # while neutralising pagers such as `less`.
+            "GIT_PAGER": "cat",
+            "PAGER": "cat",
+            "LESS": "-FX",
+            "DEBIAN_FRONTEND": "noninteractive",
+        })
         if overrides:
             env.update(overrides)
         return env
@@ -1215,7 +1191,7 @@ def _manager(
 
 def _experimental_bash_enabled(config: VibeConfigSchema | None) -> bool:
     _ = config
-    return not is_windows() and managed_shell_backend.managed_shell_supported("posix")
+    return managed_shell_backend.managed_shell_supported("posix")
 
 
 class ExperimentalBashToolConfig(BashToolConfig):
@@ -1834,11 +1810,6 @@ class ExperimentalBash(
     def resolve_permission(
         self, args: ExperimentalBashArgs
     ) -> PermissionContext | None:
-        if is_windows():
-            return PermissionContext(
-                permission=ToolPermission.NEVER,
-                reason="managed bash requires a POSIX-like platform",
-            )
 
         return self._resolve_posix_shell_permission(
             command=args.command,
@@ -2149,42 +2120,18 @@ class BashStdin(
         )
 
     def resolve_permission(self, args: BashStdinArgs) -> PermissionContext | None:
-        if self.shell_family not in {"posix", "git_bash", "powershell", "windows"}:
+        if self.shell_family != "posix":
             return None
         try:
             command = self._session_manager().info(args.session_id).command
         except (ManagedShellError, ManagedShellBackendError):
             return self._pager_input_permission(args.session_id)
 
-        if self.shell_family in {"powershell", "windows"}:
-            # Imported lazily because windows_shell subclasses BashStdin.
-            from vibe.core.tools.builtins.windows_shell import (
-                _split_windows_command_parts,
-                _split_windows_command_tokens,
-                _windows_command_name,
-                _windows_invoked_command,
-            )
-
-            command_parts = _expand_guardrail_commands(
-                _split_windows_command_parts(command)
-            )
-            for part in command_parts:
-                tokens = _split_windows_command_tokens(part)
-                if not tokens:
-                    continue
-                executable, _arguments = _windows_invoked_command(tokens)
-                command_name = _windows_command_name(executable)
-                if command_name in self._PAGER_SESSION_COMMANDS:
-                    return self._pager_input_permission(args.session_id)
-            return None
-
         command_parts = _expand_guardrail_commands(
             list(analyze_shell_command(command).command_parts)
         )
         for part in command_parts:
-            tokens = _split_command_tokens(
-                part, preserve_backslashes=self.shell_family == "git_bash"
-            )
+            tokens = _split_command_tokens(part)
             if tokens:
                 command_name = os.path.basename(tokens[0]).lower().removesuffix(".exe")
                 if command_name in self._PAGER_SESSION_COMMANDS:

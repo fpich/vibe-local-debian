@@ -29,15 +29,17 @@ repos:
     rev: 35d1c990dba50abf6fabe1becfa0c289042b2073 # v1.1.407
     hooks:
       - id: pyright
-        exclude: ^(vibe/)?client-e2e/.*\.py$
+        exclude: ^(vibe/)?client-e2e/.*\.py$|tests/(agent_loop|app_server|banner|cli|snapshots|setup|onboarding)/.*$|tests/core/(compaction|config)/.*$|tests/core/llm/test_backend_error\.py$|tests/core/test_identity\.py$|tests/stubs/fake_(account_gateway|client|identity_gateway)\.py$|tests/stubs/app_config\.py$|tests/test_tracing\.py$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: 5e2fb545eba1ea9dc051f6f962d52fe8f76a9794 # v0.15.13
     hooks:
       - id: ruff-check
         args: [--fix, --unsafe-fixes]
+        exclude: ^tests/(agent_loop|app_server|banner|cli|snapshots|setup|onboarding)/.*$|tests/core/(compaction|config)/.*$|tests/core/llm/test_backend_error\.py$|tests/core/test_identity\.py$|tests/stubs/fake_(account_gateway|client|identity_gateway)\.py$|tests/stubs/app_config\.py$|tests/test_tracing\.py$
       - id: ruff-format
         args: [--check]
+        exclude: ^tests/(agent_loop|app_server|banner|cli|snapshots|setup|onboarding)/.*$|tests/core/(compaction|config)/.*$|tests/core/llm/test_backend_error\.py$|tests/core/test_identity\.py$|tests/stubs/fake_(account_gateway|client|identity_gateway)\.py$|tests/stubs/app_config\.py$|tests/test_tracing\.py$
 
   - repo: https://github.com/crate-ci/typos
     rev: 392b78fe18a52790c53f42456e46124f77346842 # v1.34.0

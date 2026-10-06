@@ -40,7 +40,6 @@ from vibe.core.config.harness_files import (
 from vibe.core.config.orchestrator import ConfigOrchestrator
 from vibe.core.llm.types import BackendLike
 from vibe.core.utils.concurrency import run_sync
-from vibe.utils.platform import resolve_windows_shell
 
 
 def get_base_config() -> dict[str, Any]:
@@ -134,11 +133,6 @@ def _mock_platform(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "vibe.cli._theme_detection.detect_system_preferred_dark", lambda: None
     )
-
-
-@pytest.fixture(autouse=True)
-def _reset_windows_shell_cache() -> None:
-    resolve_windows_shell.cache_clear()
 
 
 @pytest.fixture(autouse=True)

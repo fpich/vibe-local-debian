@@ -43,8 +43,8 @@ from vibe.core.tools.utils import (
     shell_path_scope_root,
 )
 from vibe.core.types import ToolResultEvent, ToolStreamEvent
-from vibe.core.utils import is_windows, kill_async_subprocess
-from vibe.core.utils.shell import spawn_shell_command, uses_posix_shell
+from vibe.core.utils import kill_async_subprocess
+from vibe.core.utils.shell import spawn_shell_command
 from vibe.core.workspace import Workspace
 from vibe.permissions import (
     PathGrantScope,
@@ -60,7 +60,6 @@ def _extract_commands(command: str) -> list[str]:
     return list(analyze_shell_command(command).command_parts)
 
 
-_READ_ONLY_COMMANDS_WINDOWS = ["dir", "findstr", "more", "type", "ver", "where"]
 _READ_ONLY_COMMANDS_POSIX = [
     "basename",
     "cat",
@@ -103,9 +102,7 @@ _READ_ONLY_COMMANDS_POSIX = [
 
 
 def default_read_only_commands() -> list[str]:
-    return list(
-        _READ_ONLY_COMMANDS_POSIX if uses_posix_shell() else _READ_ONLY_COMMANDS_WINDOWS
-    )
+    return list(_READ_ONLY_COMMANDS_POSIX)
 
 
 def _get_default_allowlist() -> list[str]:
@@ -115,9 +112,6 @@ def _get_default_allowlist() -> list[str]:
 
 def _get_default_denylist() -> list[str]:
     common = ["gdb", "pdb", "passwd"]
-
-    if not uses_posix_shell():
-        return common + ["cmd /k", "powershell -NoExit", "pwsh -NoExit", "notepad"]
 
     return common + [
         "nano",
@@ -137,9 +131,6 @@ def _get_default_denylist() -> list[str]:
 def _get_default_denylist_standalone() -> list[str]:
     common = ["python", "python3", "ipython"]
 
-    if not uses_posix_shell():
-        return common + ["cmd", "powershell", "pwsh", "notepad"]
-
     return common + ["bash", "sh", "nohup", "vi", "vim", "emacs", "nano", "su"]
 
 
@@ -156,16 +147,7 @@ _PATH_COMMANDS = _MUTATING_PATH_COMMANDS | set(_READ_ONLY_COMMANDS_POSIX)
 
 def _split_command_tokens(command: str) -> list[str]:
     try:
-        if not is_windows():
-            return shlex.split(command)
-        # On Windows, escape="" keeps backslashes literal so paths like
-        # C:\Users\... survive tokenization; POSIX shlex would otherwise consume
-        # them as escape characters. This must stay Windows-only: on POSIX the
-        # backslash is a real escape and dropping it would corrupt path tokens.
-        lexer = shlex.shlex(command, posix=True)
-        lexer.whitespace_split = True
-        lexer.escape = ""
-        return list(lexer)
+        return shlex.split(command)
     except ValueError:
         return command.split()
 
@@ -682,9 +664,6 @@ class Bash(
         return required
 
     def resolve_permission(self, args: BashArgs) -> PermissionContext | None:
-        if not uses_posix_shell():
-            return None
-
         analysis = analyze_shell_command(args.command)
         command_parts = list(analysis.command_parts)
         if not command_parts and not analysis.requires_approval:

@@ -11,6 +11,16 @@ Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne so
 - `HookConfig.timeout` est borné : un hook ne peut plus déclarer un timeout supérieur à 600 s (défaut 60 s inchangé).
 - `install.sh` : `~/.vibe` créé en mode 0700 et `config.toml` copié en mode 0600, au lieu de suivre l'umask.
 
+### Removed
+- Élagage de la surface Windows (portée Debian-only) : suppression des modules `vibe/core/tools/builtins/windows_shell.py`, `git_bash.py`, `managed_shell/_windows.py`, `vibe/core/utils/windows_asyncio.py` et de leurs tests dédiés. Le bash tool et le shell managé sont désormais POSIX-only ; les gardes `is_windows()` résiduels (locks de session, permissions de `~/.vibe`, détection de thème, paste de chemins) sont retirés du runtime.
+
+### Changed
+- CI : nouvelle étape « Run pre-commit hooks on all files » après la synchronisation des dépendances ; les hooks pre-commit excluent explicitement les suites de tests dormantes (pyright, ruff-check, ruff-format).
+- `docs/testing.md` : nouvelle section « Suites dormantes (dette connue) » cartographiant les suites non collectables et leur cause racine ; description du parcours CI et des vérifications statiques mise à jour.
+
+### Added
+- Couverture de la suite maintenue : `coverage[toml]` ajoutée aux dépendances de dev, configuration `[tool.coverage]` dans `pyproject.toml`, cible `make test-coverage`. Measure de référence : ~35 % global.
+
 ## [1.2.3] - 2026-10-06
 
 ### Security

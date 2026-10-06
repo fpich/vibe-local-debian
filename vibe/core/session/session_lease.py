@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
-from typing import Any, Self, cast
+from typing import Any, Self
 
 _SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 
@@ -138,27 +138,6 @@ def _lease_directory_lock(directory: Path) -> Iterator[None]:
 
 
 def _acquire_file_lock(file: Any, *, blocking: bool = False) -> None:
-    if _is_windows():
-        msvcrt = cast(Any, __import__("msvcrt"))
-
-        # Check the size, not a read, and write through the raw descriptor:
-        # a read or buffered write of the locked byte raises a raw
-        # PermissionError that must not escape this except.
-        descriptor = file.fileno()
-        try:
-            if os.fstat(descriptor).st_size == 0:
-                os.write(descriptor, b"\0")
-        except PermissionError:
-            # Byte 0 is locked by another handle; skip the seed and let the
-            # lock call below report the contention.
-            pass
-        os.lseek(descriptor, 0, os.SEEK_SET)
-        try:
-            mode = msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK
-            msvcrt.locking(file.fileno(), mode, 1)
-        except OSError as exc:
-            raise BlockingIOError from exc
-        return
     import fcntl
 
     try:
@@ -169,20 +148,9 @@ def _acquire_file_lock(file: Any, *, blocking: bool = False) -> None:
 
 
 def _release_file_lock(file: Any) -> None:
-    if _is_windows():
-        msvcrt = cast(Any, __import__("msvcrt"))
-
-        # Raw lseek, matching _acquire_file_lock.
-        os.lseek(file.fileno(), 0, os.SEEK_SET)
-        msvcrt.locking(file.fileno(), msvcrt.LK_UNLCK, 1)
-        return
     import fcntl
 
     fcntl.flock(file.fileno(), fcntl.LOCK_UN)
-
-
-def _is_windows() -> bool:
-    return os.name == "nt"
 
 
 def _timestamp() -> str:

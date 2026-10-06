@@ -172,7 +172,6 @@ class TestInitFileLogging:
 
         assert len(test_logger.handlers) == initial_handler_count + 1
 
-
     def test_creates_log_file(
         self, log_file: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

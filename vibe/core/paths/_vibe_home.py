@@ -6,7 +6,6 @@ import stat
 from vibe import VIBE_ROOT
 from vibe.observability.logging import logger
 from vibe.utils.paths import GlobalPath, get_vibe_home
-from vibe.utils.platform import is_windows
 
 VIBE_HOME = GlobalPath(get_vibe_home)
 GLOBAL_ENV_FILE = GlobalPath(lambda: VIBE_HOME.path / ".env")
@@ -32,8 +31,6 @@ def restrict_vibe_home_permissions() -> None:
     restrictive mode before anything else can, and tightens an existing one.
     Failures never block startup.
     """
-    if is_windows():
-        return
     home = VIBE_HOME.path
     try:
         home.mkdir(mode=0o700, parents=True, exist_ok=True)

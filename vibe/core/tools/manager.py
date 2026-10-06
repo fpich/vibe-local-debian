@@ -18,7 +18,7 @@ from vibe.core.paths import DEFAULT_TOOL_DIR
 from vibe.core.tools.base import BaseTool, BaseToolConfig, ToolPermission
 from vibe.core.tools.terminal_runtime import TerminalRuntime
 from vibe.core.types import AvailableFunction
-from vibe.core.utils import is_windows, name_matches
+from vibe.core.utils import name_matches
 from vibe.observability.logging import logger
 from vibe.utils.io import read_safe
 
@@ -367,11 +367,7 @@ class ToolManager:
             case "managed":
                 return self._config.managed_shell_tools_enabled
             case "legacy":
-                if not self._config.managed_shell_tools_enabled:
-                    return True
-                if not is_windows():
-                    return True
-                return False
+                return True
             case _:
                 return True
 
