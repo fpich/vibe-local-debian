@@ -19,7 +19,7 @@ En plus de `tests/local`, la suite par défaut collecte les suites legacy réint
 - `tests/core/vision` — gestion des images ;
 - `tests/e2e` — tests de caractérisation TUI avec mock server (pexpect, pty réels).
 
-Les suites legacy connues comme échouant sur POSIX (`tests/tools`, `tests/core/git`, `tests/core/paths`, `tests/core/tools`) ne sont pas dans le chemin par défaut ; elles peuvent être exécutées explicitement avec :
+Les suites réintégrées (`tests/tools`, `tests/core/git`, `tests/core/paths`, `tests/core/tools`) couvrent les surfaces sensibles (shell, chemins, Git) et passent désormais sur POSIX ; elles ne sont pas dans le chemin par défaut pour garder la suite rapide, et peuvent être exécutées explicitement avec :
 
 ```bash
 make test-legacy

@@ -31,6 +31,16 @@ Pour du code non fiable :
 - préférer un conteneur/VM si le dépôt peut être hostile ;
 - examiner les commands shell proposées avant approbation.
 
+## Confiance du workspace et code exécutable
+
+Marquer un répertoire comme fiable (`--trust`, ou l'invite de confiance persistée dans `~/.vibe/trusted_folders.toml`) a une conséquence forte : les fichiers de configuration et extensions du projet deviennent actifs. En particulier, les outils Python placés dans `.vibe/tools/*.py` sont importés et exécutés dynamiquement dans le processus de l'agent.
+
+Conséquences pratiques :
+
+- ne marquer comme fiable qu'un dépôt dont le contenu est revu ;
+- un dépôt hostile peut embarquer un outil `.vibe/tools/` malveillant qui s'exécutera avec vos droits dès le démarrage dans un répertoire fiable ;
+- révoquer la confiance (`~/.vibe/trusted_folders.toml`) après audit d'un dépôt suspect.
+
 ## Serveur llama.cpp distant
 
 Pour un serveur sur le LAN :
