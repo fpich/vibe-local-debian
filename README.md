@@ -144,6 +144,7 @@ vibe -p "analyse le dépôt"        # mode one-shot
 vibe --workdir ~/src/projet       # choisit explicitement le workspace
 vibe --agent plan                 # profil lecture/planification
 vibe --auto-approve -p "..."      # sans prompts d'approbation : à utiliser avec prudence
+vibe --answer-auto "implémente X"  # répond automatiquement aux questions du modèle
 ```
 
 Commandes principales dans la TUI : `/help`, `/config`, `/model`, `/thinking`, `/reload`, `/clear`, `/compact`, `/status`, `/resume`, `/rename`, `/todo`, `/rewind`, `/branch`, `/retry`, `/loop`, `/theme`, `/log`, `/log-level` et `/exit`.

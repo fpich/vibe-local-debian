@@ -121,6 +121,12 @@ def parse_arguments() -> argparse.Namespace:
         help="Approves all tool calls without prompting for the selected agent.",
     )
     parser.add_argument(
+        "--answer-auto",
+        action="store_true",
+        help="Answer the model's ask_user_question prompts automatically "
+        "(derived from the initial prompt) instead of waiting for user input.",
+    )
+    parser.add_argument(
         "--workdir",
         type=Path,
         metavar="DIR",

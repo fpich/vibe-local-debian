@@ -2,6 +2,11 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [Unreleased]
+
+### Added
+- Nouvelle option `vibe --answer-auto` : les questions du modèle (`ask_user_question`) reçoivent automatiquement une réponse dérivée du prompt initial (« continuer à implémenter le projet, le durcir, le documenter » par défaut), affichée discrètement dans la TUI. Les permissions d'outils restent inchangées (fail-closed conservé) ; ne s'applique qu'au mode TUI interactif.
+
 ## [1.2.4] - 2026-10-06
 
 ### Security

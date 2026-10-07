@@ -81,6 +81,7 @@ from vibe.app_server.models import (
     TextContentBlock,
     TokenUsage,
     TurnErrorCode,
+    UserAnswer,
     UserInputCallbackDetail,
     UserInputCallbackOutput,
     UserQuestion,
@@ -238,6 +239,10 @@ _RETRYABLE_TURN_ERROR_CODES = {
 }
 
 _MAX_INCOMPLETE_STREAM_RETRIES = 2
+_ANSWER_AUTO_DEFAULT_TEXT = (
+    "Continue à implémenter le projet, le durcir et le documenter."
+)
+_ANSWER_AUTO_PROMPT_CHAR_BUDGET = 200
 
 
 if TYPE_CHECKING:
@@ -422,6 +427,7 @@ class StartupOptions:
     is_resuming_session: bool = False
     prompt_for_workspace_trust: bool = False
     autocopy_to_clipboard: bool = True
+    answer_auto: bool = False
     startup_show_resume_picker: bool | None = None
     startup_prompt_for_workspace_trust: bool | None = None
     resume_session_id: str | None = None
@@ -700,6 +706,7 @@ class VibeApp(App):  # noqa: PLR0904
     def _configure_startup_options(self, startup: StartupOptions | None) -> None:
         opts = startup or StartupOptions()
         self._initial_prompt = opts.initial_prompt
+        self._answer_auto = opts.answer_auto
         self._show_resume_picker = opts.show_resume_picker
         self._startup_show_resume_picker = (
             opts.startup_show_resume_picker
@@ -2321,6 +2328,47 @@ class VibeApp(App):  # noqa: PLR0904
                 self._on_busy_state_changed(self._agent_job_active())
                 await self._switch_to_input_app()
 
+    def _derive_auto_answer_text(self) -> str:
+        prompt = (self._initial_prompt or "").strip()
+        if not prompt:
+            return _ANSWER_AUTO_DEFAULT_TEXT
+        clipped = prompt[:_ANSWER_AUTO_PROMPT_CHAR_BUDGET]
+        return (
+            f"Continue la tâche en course ({clipped}). "
+            "Determine l'implémentation, durcis le code existent et tiens la documentation à jour."
+        )
+
+    def _build_auto_user_question_result(
+        self, request: UserQuestionRequest
+    ) -> UserQuestionResult:
+        text = self._derive_auto_answer_text()
+        answers = [
+            UserAnswer(question=question.question, answer=text, is_other=True)
+            for question in request.questions
+        ]
+        return UserQuestionResult(answers=answers, cancelled=False)
+
+    async def _answer_auto_resolve_callback(
+        self, callback: PublicCallbackEntry
+    ) -> bool:
+        if not self._answer_auto:
+            return False
+        detail = callback.detail
+        if not isinstance(detail, UserInputCallbackDetail):
+            return False
+        request = detail.request
+        if not isinstance(request, UserQuestionRequest):
+            return False
+        result = self._build_auto_user_question_result(request)
+        self.notify(
+            f"--answer-auto : question du modèle répondue automatiquement ({result.answers[0].answer}).",
+            severity="information",
+            markup=False,
+            timeout=10,
+        )
+        await self._respond_to_active_callback(UserInputCallbackOutput(result=result))
+        return True
+
     async def _show_callback(self, callback: PublicCallbackEntry) -> None:
         if (
             self._active_callback is not None
@@ -2340,6 +2388,8 @@ class VibeApp(App):  # noqa: PLR0904
             return
         self._active_callback = callback
         try:
+            if await self._answer_auto_resolve_callback(callback):
+                return
             loading = self._loading_widget
             if loading is None or loading.parent is None:
                 await self._ensure_loading_widget()

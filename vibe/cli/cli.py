@@ -227,6 +227,7 @@ def _run_interactive_mode(
             history_file=HISTORY_FILE.path,
             startup=StartupOptions(
                 initial_prompt=args.initial_prompt or stdin_prompt,
+                answer_auto=bool(getattr(args, "answer_auto", False)),
                 show_resume_picker=args.resume is True,
                 is_resuming_session=(
                     args.continue_session or isinstance(args.resume, str)
