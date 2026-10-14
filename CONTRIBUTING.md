@@ -8,7 +8,7 @@ Toute contribution doit préserver ces invariants :
 
 - aucun backend cloud par défaut ;
 - aucun appel de télémétrie ou update-check distant ;
-- pas de réintroduction de MCP/connecteurs, ACP, Teleport, voice ou runtime Rust sans décision d'architecture explicite ;
+- pas de réintroduction de MCP distant/connecteurs, ACP, Teleport, voice ou runtime Rust sans décision d'architecture explicite ; les serveurs MCP stdio locaux sont couverts par l'ADR 0002 ;
 - sélection des modèles fail-closed ;
 - allowlist d'outils locale et permissions workspace conservées ;
 - Python 3.12/3.13 ;

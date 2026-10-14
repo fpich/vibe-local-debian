@@ -794,6 +794,10 @@ def _session_config_overrides(options: SessionOptions) -> dict[str, object]:
         overrides["enabled_tools"] = options.enabled_tools
     if options.disabled_tools:
         overrides["disabled_tools"] = options.disabled_tools
+    if options.mcp_servers:
+        overrides["mcp_servers"] = [
+            server.model_dump(mode="json") for server in options.mcp_servers
+        ]
     return overrides
 
 

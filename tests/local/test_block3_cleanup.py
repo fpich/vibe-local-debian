@@ -59,14 +59,17 @@ def test_experiment_routing_is_removed_from_config() -> None:
         "routed_model_config",
         "routed_extra_models",
         "ExperimentsConfig",
-        "MCPServer",
+        "MCPHttp",
+        "MCPStreamableHttp",
         "ConnectorConfig",
     ):
         assert removed not in source
+    # ADR 0002: local stdio MCP is supported, but the schema must reject
+    # remote transports at validation time.
+    assert "_reject_remote_mcp_transports" in source
 
 
 def test_remote_tool_registry_is_a_local_compatibility_noop() -> None:
     source = (REPO_ROOT / "vibe/core/tools/manager.py").read_text()
-    assert "remote MCP registries are not part of Vibe Local" in source
     assert "remote connector registries are not part of Vibe Local" in source
     assert "from vibe.core.tools.remote import MCPTool" not in source

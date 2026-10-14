@@ -34,7 +34,11 @@ from vibe.app_server.models import (
     GenericEffectDetail,
     ImageAttachment,
     ImageContentBlock,
+    MCPSourceKind,
+    MCPSourceStatus,
+    MCPSourceSummary,
     MCPState,
+    MCPToolSummary,
     PublicCheckpointEntry,
     PublicEffectEntry,
     PublicEntryGenerationStatus,
@@ -64,6 +68,7 @@ from vibe.core.types import (
 )
 from vibe.core.utils import CANCELLATION_TAG, TOOL_ERROR_TAG, TaggedText, name_matches
 from vibe.user_content import UserResource
+from vibe.utils.mcp import format_tool_display_description
 from vibe.utils.tool_presentation import ToolCallPresentation
 
 
@@ -310,8 +315,35 @@ def project_connectors(agent_loop: AgentLoop) -> ConnectorCounts:
 def project_mcp(
     agent_loop: AgentLoop, *, discovery_errors: Mapping[str, str] | None = None
 ) -> MCPState:
-    del agent_loop, discovery_errors
-    return MCPState()
+    pool = getattr(agent_loop, "_mcp_pool", None)
+    if pool is None:
+        return MCPState(discovery_errors=dict(discovery_errors or {}))
+    sources = [
+        MCPSourceSummary(
+            name=client.name,
+            kind=MCPSourceKind.SERVER,
+            transport="stdio",
+            status=(
+                MCPSourceStatus.ENABLED
+                if not client.server.disabled
+                else MCPSourceStatus.DISABLED
+            ),
+            tools=[
+                MCPToolSummary(
+                    name=tool.name,
+                    description=format_tool_display_description(
+                        tool.description, source_name=client.name
+                    ),
+                    enabled=tool.name not in client.server.disabled_tools,
+                )
+                for tool in client.tools
+            ],
+            error=pool.errors.get(client.name),
+        )
+        for client in pool.clients
+    ]
+    errors = {**pool.errors, **dict(discovery_errors or {})}
+    return MCPState(sources=sources, discovery_errors=errors)
 
 
 def project_session_log(agent_loop: AgentLoop) -> SessionLogSummary:

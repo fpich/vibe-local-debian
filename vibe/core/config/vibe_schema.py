@@ -32,6 +32,8 @@ from vibe.core.config._defaults import (
 from vibe.core.config.harness_files import get_harness_files_manager
 from vibe.core.config.layers.admin import AdminConfigLayer
 from vibe.core.config.models import (
+    MCPServer,
+    MCPStdio,
     MissingAPIKeyError,
     ModelConfig,
     ProjectContextConfig,
@@ -149,6 +151,17 @@ def _expand_paths(v: Any) -> list[Path]:
     return [Path(p).expanduser().resolve() for p in v]
 
 
+def _reject_remote_mcp_transports(servers: list[MCPServer]) -> list[MCPServer]:
+    """ADR 0002: only local stdio MCP servers are inside the product boundary."""
+    remote = [s.name for s in servers if not isinstance(s, MCPStdio)]
+    if remote:
+        raise ValueError(
+            "Only stdio MCP servers are supported in this fork; "
+            f"HTTP transports are not allowed for: {', '.join(remote)}."
+        )
+    return servers
+
+
 def _normalize_tool_configs(v: Any) -> dict[str, dict[str, Any]]:
     if not isinstance(v, dict):
         return {}
@@ -262,6 +275,18 @@ class VibeConfigSchema(ConfigSchema):
             "Paths may be absolute or relative to the current working directory. "
             "Directories are shallow-searched for tool definition files, "
             "while files are loaded directly if valid."
+        ),
+    )
+    mcp_servers: Annotated[
+        list[MCPServer],
+        WithUnionMerge(merge_key="name"),
+        AfterValidator(_reject_remote_mcp_transports),
+    ] = Field(
+        default_factory=list,
+        description=(
+            "Local MCP servers (stdio transport only). Each entry spawns a "
+            "subprocess speaking newline-delimited JSON-RPC on stdin/stdout. "
+            "HTTP transports are not supported in this fork."
         ),
     )
     enabled_tools: Annotated[list[str], WithReplaceMerge()] = Field(

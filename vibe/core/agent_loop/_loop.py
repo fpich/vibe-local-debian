@@ -35,7 +35,7 @@ from vibe.core.compaction.context import (
     reorder_for_tool_adjacency,
     select_model_context,
 )
-from vibe.core.config import ModelConfig, ProviderConfig, VibeConfigSchema
+from vibe.core.config import MCPStdio, ModelConfig, ProviderConfig, VibeConfigSchema
 from vibe.core.config.harness_files import (
     HarnessFilesManager,
     get_harness_files_manager,
@@ -63,6 +63,7 @@ from vibe.core.local_runtime import (
     RequestMetadata,
     build_request_metadata,
 )
+from vibe.core.mcp.pool import MCPClientPool
 from vibe.core.middleware import (
     PLAN_AGENT_EXIT,
     AutoCompactMiddleware,
@@ -515,6 +516,16 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         self.skill_manager = SkillManager(
             lambda: self.config, harness_files=self.harness_files
         )
+        self._mcp_pool: MCPClientPool | None = None
+        if config.mcp_servers:
+            self._mcp_pool = MCPClientPool(
+                lambda: [
+                    server
+                    for server in self.config.mcp_servers
+                    if isinstance(server, MCPStdio)
+                ]
+            )
+            self.tool_manager.set_mcp_registry(self._mcp_pool)
         self._max_turns = max_turns
         self._max_price = max_price
         self._max_tokens = max_tokens
@@ -526,7 +537,6 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         self._injected_backend = backend
         self.backend = self.backend_factory()
         self._sampling_handler = None
-        self._mcp_pool = None
 
         self.enable_streaming = enable_streaming
         self.middleware_pipeline = MiddlewarePipeline()
@@ -1101,6 +1111,9 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         tool_io: ToolIOPort | None = None,
         turn_options: AgentTurnOptions | None = None,
     ) -> AsyncGenerator[BaseEvent, None]:
+        if self._mcp_pool is not None:
+            with contextlib.suppress(Exception):
+                await self.tool_manager._integrate_mcp_async()
         try:
             active_model = self.config.get_active_model()
             model_name = active_model.name
@@ -3131,6 +3144,9 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         skill_manager = SkillManager(
             config_source.get, harness_files=self.harness_files
         )
+        if self._mcp_pool is not None:
+            tool_manager.set_mcp_registry(self._mcp_pool)
+            tool_manager.integrate_mcp()
         system_prompt = self._render_system_prompt(
             skill_manager, target_config, tool_manager
         )

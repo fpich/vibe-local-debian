@@ -62,6 +62,22 @@ enabled_tools = [
 
 Ajouter un outil élargit explicitement les capacités du modèle. Ne pas réintroduire un outil réseau par défaut.
 
+## Serveurs MCP stdio locaux
+
+Les serveurs MCP locaux en transport `stdio` sont supportés (ADR 0002) ; les transports HTTP ne le sont pas. Chaque entrée `[[mcp_servers]]` lance un sous-processus qui parle JSON-RPC sur stdin/stdout :
+
+```toml
+[[mcp_servers]]
+name = "rea"
+transport = "stdio"
+command = "rea-mcp"          # ou ["uvx", "rea-mcp"]
+args = []
+startup_timeout_sec = 10.0
+tool_timeout_sec = 60.0
+```
+
+Les outils du serveur sont exposés au modèle sous la forme `mcp_<serveur>_<outil>` (par exemple `mcp_rea_search`) et suivent la politique de permissions existante. Un serveur qui échoue au démarrage apparaît comme erreur de découverte dans `/mcp` sans interrompre la session.
+
 ## Compaction
 
 Les deux modèles fournis utilisent :

@@ -117,11 +117,13 @@ class ToolManager:
         self._tool_descriptions: dict[str, str] = dict(
             self._iter_tool_descriptions(self._search_paths)
         )
+        self._mcp_pool: Any | None = None
         if not defer_mcp:
             self.integrate_all()
 
     def set_mcp_registry(self, mcp_registry: Any | None) -> None:
-        """Compatibility no-op: remote MCP registries are not part of Vibe Local."""
+        """Adopt an MCP client pool; remote MCP registries stay out of scope."""
+        self._mcp_pool = mcp_registry
 
     def set_connector_registry(self, connector_registry: Any | None) -> None:
         """Compatibility no-op: remote connector registries are not part of Vibe Local."""
@@ -437,10 +439,31 @@ class ToolManager:
         return False
 
     def integrate_mcp(self, *, raise_on_failure: bool = False) -> None:
-        return None
+        """Register local stdio MCP tools from the adopted pool (ADR 0002)."""
+        del raise_on_failure
+        self._unregister_mcp_tools()
+        if self._mcp_pool is None:
+            return
+        for tool_class in self._mcp_pool.iter_tool_classes():
+            self._register_discovered_tool_variant(tool_class, is_custom=False)
 
     async def _integrate_mcp_async(self, *, raise_on_failure: bool = False) -> None:
-        return None
+        if self._mcp_pool is None:
+            return
+        try:
+            await self._mcp_pool.integrate()
+        except Exception:
+            if raise_on_failure:
+                raise
+        self.integrate_mcp()
+
+    def _unregister_mcp_tools(self) -> None:
+        for name in [n for n in self._all_tools if n.startswith("mcp_")]:
+            self._all_tools.pop(name, None)
+            self._tool_variants_by_name.pop(name, None)
+            self._custom_tool_variants_by_name.pop(name, None)
+            self._instances.pop(name, None)
+            self._tool_descriptions.pop(name, None)
 
     def integrate_connectors(self, *, force_refresh: bool = False) -> None:
         return None
@@ -452,10 +475,24 @@ class ToolManager:
         return None
 
     async def reconfigure_mcp_async(self) -> None:
-        return None
+        await self._integrate_mcp_async()
 
     def suspend_mcp(self, name: str, tool_name: str | None = None) -> None:
-        return None
+        """Drop one server's tools (whole server when no tool is named)."""
+        if self._mcp_pool is None:
+            return
+        client = self._mcp_pool.get_client(name)
+        if client is None:
+            return
+        tool_names = (
+            [tool.name for tool in client.tools] if tool_name is None else [tool_name]
+        )
+        for tool in tool_names:
+            self._all_tools.pop(f"mcp_{name}_{tool}", None)
+            self._tool_variants_by_name.pop(f"mcp_{name}_{tool}", None)
+            self._custom_tool_variants_by_name.pop(f"mcp_{name}_{tool}", None)
+            self._instances.pop(f"mcp_{name}_{tool}", None)
+        del tool_name
 
     def suspend_connector(self, name: str, tool_name: str | None = None) -> None:
         return None
@@ -545,7 +582,9 @@ class ToolManager:
         return instance
 
     def pop_mcp_errors(self) -> dict[str, str]:
-        return {}
+        if self._mcp_pool is None:
+            return {}
+        return self._mcp_pool.pop_errors()
 
     def reset_all(self) -> None:
         self._instances.clear()

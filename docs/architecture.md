@@ -63,7 +63,7 @@ La 1.2.x ne contient plus :
 - ACP ;
 - auth/onboarding cloud Mistral ;
 - backend Mistral ;
-- MCP/connecteurs distants ;
+- MCP distant/connecteurs (les serveurs MCP stdio locaux restent supportés, ADR 0002) ;
 - plugins distants ;
 - web search/fetch ;
 - Teleport/Vibe Code ;

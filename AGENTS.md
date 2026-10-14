@@ -10,6 +10,7 @@ Maintenir un agent de code CLI local-first pour Debian 13, Python 3.12/3.13, ave
 
 - L'inférence passe uniquement par les providers génériques configurés par l'utilisateur (`llama.cpp` par défaut).
 - Ne pas réintroduire de backend cloud Mistral, authentication cloud, MCP/connecteurs distants, ACP, Teleport/Vibe Code, voice/narration, Sentry/OTEL/télémétrie ou update notifier sans décision explicite.
+- Les serveurs MCP **stdio locaux** sont supportés (ADR 0002) ; les transports HTTP/MCP distants et les connecteurs restent interdits.
 - Le profil par défaut expose seulement `bash`, `read_file`, `write_file`, `edit`, `grep`, `ask_user_question`, `todo`.
 - `allowed_models` doit rester fail-closed.
 - Les permissions et la frontière du workspace sont des functions de sécurité : ne pas les contourner pour simplifier un flux.

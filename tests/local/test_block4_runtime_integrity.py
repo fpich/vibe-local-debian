@@ -49,7 +49,10 @@ def test_agent_loop_keeps_required_legacy_runtime_surface() -> None:
     }
     assert required <= methods
     source = path.read_text()
-    assert "self._mcp_pool = None" in source
+    # ADR 0002: the pool is real again, but only for local stdio servers;
+    # the config source is still filtered to MCPStdio at construction.
+    assert "isinstance(server, MCPStdio)" in source
+    assert "vibe.core.tools.remote" not in source
 
 
 def test_legacy_session_controller_keeps_open_attach_helpers() -> None:
