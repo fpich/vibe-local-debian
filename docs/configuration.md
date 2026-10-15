@@ -27,10 +27,10 @@ reasoning_field_name = "reasoning_content"
 emits_finish_reason = true
 ```
 
-Pour un serveur distant sur le LAN, modifier uniquement `api_base`, par exemple :
+Pour un serveur distant sur le LAN, modifier uniquement `api_base` (exemple générique — ne jamais coder en dur une IP privée utilisateur) :
 
 ```toml
-api_base = "http://192.168.1.116:8080/v1"
+api_base = "http://192.168.1.50:8080/v1"
 ```
 
 ## Provider externe compatible OpenAI (API Albert, etc.)

@@ -70,23 +70,19 @@ api_base = "http://127.0.0.1:8080/v1"  # worker1
 api_base = "http://127.0.0.1:8081/v1"  # worker2
 ```
 
-Pour un serveur LAN, par exemple `192.168.1.116` :
+Pour un serveur LAN, remplacer uniquement `api_base` (exemple générique `192.168.1.50` — ne jamais coder en dur une IP privée utilisateur) :
 
 ```toml
 [[providers]]
 name = "llamacpp-worker1"
-api_base = "http://192.168.1.116:8080/v1"
-
-[[providers]]
-name = "llamacpp-worker2"
-api_base = "http://192.168.1.116:8081/v1"
+api_base = "http://192.168.1.50:8080/v1"
 ```
 
 Vérification :
 
 ```bash
-curl -s http://192.168.1.116:8080/v1/models
-curl -s http://192.168.1.116:8081/v1/models
+curl -s http://127.0.0.1:8080/v1/models
+curl -s http://127.0.0.1:8081/v1/models
 ```
 
 Chaque serveur doit exposer son modèle (par exemple `worker1` côté client), typiquement avec :
@@ -111,7 +107,16 @@ La config du dépôt expose deux aliases côté client :
 | `worker1` | KAT / analyse et refactoring | 8080 | `high` |
 | `worker2` | Qwen3.5 / tâches rapides | 8081 | `off` |
 
-Chaque serveur expose un nom distinct (`worker1`, `worker2`). Depuis la 1.2.6, le template inclut aussi six modèles de l'API Albert (accès enseignant, endpoint OpenAI-compatible) sélectionnables via `/model` : `albert-coder`, `albert-small`, `albert-large`, `albert-deepseek`, `albert-gemma`, `albert-ministral`. La clé va dans `~/.vibe/.env` (chargé automatiquement au démarrage, jamais dans `config.toml`).
+Chaque serveur expose un nom distinct (`worker1`, `worker2`). Depuis la 1.2.6, le template inclut aussi six modèles de l'API Albert (accès enseignant, endpoint OpenAI-compatible) sélectionnables via `/model` : `albert-coder`, `albert-small`, `albert-large`, `albert-deepseek`, `albert-gemma`, `albert-ministral`.
+
+**Connexion** : la clé va dans `~/.vibe/.env`, jamais dans `config.toml` ni dans `~/.bashrc` :
+
+```bash
+install -m 600 /dev/null ~/.vibe/.env
+echo 'ALBERT_API_KEY="votre_jeton"' > ~/.vibe/.env
+```
+
+Le fichier est chargé automatiquement au démarrage de vibe, quel que soit le mode de lancement (terminal, XFCE, SSH).
 
 `allowed_models` est appliqué en mode **fail-closed** : si aucun modèle autorisé n'est disponible, le client ne retombe pas sur une liste cloud.
 
