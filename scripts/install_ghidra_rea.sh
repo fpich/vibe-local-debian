@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Installateur optionnel : Ghidra 12.1.4 + JDK 21 + serveur MCP REA (rea-agents).
-# REA (Reverse Engineer Anything) est un serveur MCP stdio qui utilise Ghidra
-# comme provider d'analyse native. Ce script est idempotent et peut être
-# relancé sans risque.
+# Installateur optionnel : Ghidra 12.1.4 + JDK 21 + radare2 + serveur MCP REA
+# (rea-agents). REA (Reverse Engineer Anything) est un serveur MCP stdio qui
+# utilise Ghidra comme provider d'analyse native et radare2 comme moteur
+# d'analyse nat rapide. Ce script est idempotent et peut être relancé sans
+# risque.
 #
 # Usage :
 #   scripts/install_ghidra_rea.sh            # installe tout (JDK, Ghidra, REA)
@@ -24,6 +25,11 @@ GHIDRA_TAG="Ghidra_12.1.4_build"
 GHIDRA_ZIP="ghidra_12.1.4_PUBLIC_20260921.zip"
 GHIDRA_URL="https://github.com/NationalSecurityAgency/ghidra/releases/download/${GHIDRA_TAG}/${GHIDRA_ZIP}"
 GHIDRA_INSTALL_DIR="/opt/ghidra_${GHIDRA_VERSION}_PUBLIC"
+# radare2 : retiré des dépôts Debian trixie, d'où le .deb épinglé depuis les
+# releases officielles. REA l'utilise comme moteur d'analyse nat rapide.
+RADARE2_VERSION="6.2.4"
+RADARE2_DEB="radare2_${RADARE2_VERSION}_amd64.deb"
+RADARE2_URL="https://github.com/radareorg/radare2/releases/download/${RADARE2_VERSION}/${RADARE2_DEB}"
 JDK_HOME="/usr/lib/jvm/java-21-openjdk-amd64"
 NODE_MAJOR_MIN=18
 # Version npm épinglée : la doc REA indique que la prochaine mineure peut
@@ -61,6 +67,28 @@ check_ghidra() {
   return 1
 }
 
+check_radare2() {
+  if command -v radare2 >/dev/null 2>&1; then
+    say "radare2 $(radare2 -v 2>/dev/null | head -1 | awk '{print $2}') présent."
+    return 0
+  fi
+  return 1
+}
+
+install_radare2() {
+  say "Installation de radare2 ${RADARE2_VERSION} (absent des dépôts trixie)…"
+  local tmp
+  tmp="$(mktemp --suffix=.deb)"
+  trap 'rm -f -- "$tmp"' RETURN
+  if ! curl -LsSf "$RADARE2_URL" -o "$tmp"; then
+    die "téléchargement de ${RADARE2_URL} impossible."
+  fi
+  sudo apt install -y "$tmp"
+  if ! command -v radare2 >/dev/null 2>&1; then
+    die "radare2 ne s'est pas installé correctement."
+  fi
+}
+
 install_ghidra() {
   say "Téléchargement de Ghidra ${GHIDRA_VERSION}…"
   local tmp
@@ -93,6 +121,10 @@ doctor() {
   fi
   if check_ghidra; then :; else
     warn "Ghidra ${GHIDRA_VERSION} absent — lancer ce script sans --doctor."
+    failed=1
+  fi
+  if check_radare2; then :; else
+    warn "radare2 absent — lancer ce script sans --doctor pour l'installer."
     failed=1
   fi
   if check_node; then
@@ -139,6 +171,7 @@ main() {
   fi
   check_jdk || install_jdk
   check_ghidra || install_ghidra
+  check_radare2 || install_radare2
   check_node || install_node
 
   say "Écriture des variables d'environnement dans ~/.bashrc…"

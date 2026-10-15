@@ -78,7 +78,7 @@ tool_timeout_sec = 60.0
 
 Les outils du serveur sont exposés au modèle sous la forme `mcp_<serveur>_<outil>` (par exemple `mcp_rea_search`) et suivent la politique de permissions existante. Un serveur qui échoue au démarrage apparaît comme erreur de découverte dans `/mcp` sans interrompre la session.
 
-Pour le cas d'usage REA (Reverse Engineer Anything) avec Ghidra comme provider d'analyse native, `scripts/install_ghidra_rea.sh` installe et vérifie la chaîne complète (JDK 21, Ghidra 12.1.4 épinglé, `rea-agents` npm épinglé) :
+Pour le cas d'usage REA (Reverse Engineer Anything) avec Ghidra comme provider d'analyse native, `scripts/install_ghidra_rea.sh` installe et vérifie la chaîne complète (JDK 21, Ghidra 12.1.4 épinglé, radare2 épinglé — absent des dépôts trixie —, `rea-agents` npm épinglé) :
 
 ```bash
 scripts/install_ghidra_rea.sh --doctor   # vérifier l'état
