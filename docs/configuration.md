@@ -35,12 +35,22 @@ api_base = "http://192.168.1.116:8080/v1"
 
 ## Provider externe compatible OpenAI (API Albert, etc.)
 
-Le template du dépôt inclut depuis la 1.2.6 un provider Albert préconfiguré (clé via `ALBERT_API_KEY` uniquement, jamais en dur). Pour ajouter un autre endpoint distant compatible OpenAI — par exemple l'API Albert (https://albert.api.etalab.gouv.fr/v1) avec un accès enseignant — ajoutez dans `~/.vibe/config.toml` :
+Le template du dépôt inclut depuis la 1.2.6 un provider Albert préconfiguré. La clé API ne va **jamais** dans `config.toml` ni dans `~/.bashrc` : vibe charge automatiquement `~/.vibe/.env` au démarrage.
+
+### Clé API : `~/.vibe/.env` (recommandé)
+
+```bash
+install -m 600 /dev/null ~/.vibe/.env
+echo 'ALBERT_API_KEY="votre_jeton"' > ~/.vibe/.env
+```
+
+Le fichier est lu par vibe quel que soit le mode de lancement (terminal, XFCE, SSH) ; une variable déjà exportée dans le shell courant reste prioritaire. Permissions 600 : seule votre utilisateur peut le lire. Les solutions de coffre type 1Password (FIFO) sont aussi supportées.
+
+### Configuration
+
+Le provider et les modèles (déjà dans le template ; à adapter pour un autre endpoint) :
 
 ```toml
-# Clé dans l'environnement, jamais dans le fichier :
-#   export ALBERT_API_KEY="votre_jeton"   # dans ~/.bashrc
-
 [[providers]]
 name = "albert"
 api_base = "https://albert.api.etalab.gouv.fr/v1"
@@ -57,20 +67,9 @@ display_name = "Albert Coder (Qwen3 30B)"
 temperature = 0.15
 thinking = "off"
 auto_compact_threshold = 196000          # ~75 % de la fenêtre du modèle
-
-# … répéter [[models]] pour chaque modèle ; exemples Albert :
-#   mistral-small-3-2-24b-instruct-2506 (131072), ministral-3-8b-instruct-2512 (262144),
-#   gpt-oss-120b (131072), qwen3-coder-30b-a3b-instruct (262144),
-#   deepseek-v4-flash-0731 (131072, expérimental), gemma-4-31b-it (262144, expérimental)
 ```
 
-Puis autorisez-les dans l'allowlist (elle agit sur `name`, pas sur l'alias) :
-
-```toml
-allowed_models = ["worker*", "mistral-small*", "ministral*", "gpt-oss*", "qwen3-coder*", "deepseek*", "gemma*"]
-```
-
-Basculer de modèle : `active_model = "albert-coder"` ou via `/model` dans la TUI. Un provider `api_base` distant reste autorisé par la frontière du fork (comme un serveur llama.cpp sur le LAN) ; les modèles OCR (ex. `lightonocr-2-1b`) ne sont pas des modèles de chat et ne sont pas déclarables comme LLM principal.
+L'allowlist agit sur `name` (pas sur l'alias) — le template couvre déjà chaque modèle déclaré. Les modèles OCR (ex. `lightonocr-2-1b`) ne sont pas des modèles de chat et ne sont pas déclarables comme LLM principal.
 
 ## Modèles
 

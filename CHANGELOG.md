@@ -2,6 +2,18 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [1.2.6] - 2026-10-16
+
+### Added
+
+- Template `.vibe/config.toml` : le défaut embarque désormais, en plus des deux workers llama.cpp locaux, un provider **API Albert** (endpoint OpenAI-compatible de l'État, accès enseignant) et six modèles de chat : `albert-coder` (Qwen3 Coder 30B), `albert-small` (Mistral Small 3.2), `albert-large` (GPT-OSS 120B), `albert-deepseek` (exp.), `albert-gemma` (exp.) et `albert-ministral`. L'allowlist couvre chaque modèle déclaré (globs sur les `name`, pas les alias).
+- `install.sh` crée `~/.vibe/.env` (mode 600) lors de la première installation et indique comment y placer `ALBERT_API_KEY`.
+- Documentation : section « Provider externe compatible OpenAI » dans `docs/configuration.md` avec `~/.vibe/.env` comme méthode recommandée pour les clés (chargé automatiquement au démarrage, priorité à une variable déjà exportée, support des FIFO type coffre 1Password) ; README et en-tête du template mis à jour.
+
+### Changed
+
+- Invariant de release (`test_default_config_uses_only_generic_local_providers`) : continue d'interdire toute clé API en dur ; autorise le provider Albert via la variable d'environnement `ALBERT_API_KEY` et vérifie que l'allowlist couvre tous les modèles déclarés.
+
 ## [1.2.5] - 2026-10-15
 
 ### Added

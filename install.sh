@@ -107,6 +107,11 @@ if [[ -f "$SCRIPT_DIR/.vibe/config.toml" && ! -f "$HOME/.vibe/config.toml" ]]; t
   cp "$SCRIPT_DIR/.vibe/config.toml" "$HOME/.vibe/config.toml"
   chmod 600 "$HOME/.vibe/config.toml"
   echo "    Config copiée."
+  if [[ ! -f "$HOME/.vibe/.env" ]]; then
+    install -m 600 /dev/null "$HOME/.vibe/.env"
+    echo "    ~/.vibe/.env créé (vide). Pour l'API Albert :"
+    echo "      echo 'ALBERT_API_KEY="votre_jeton"' > ~/.vibe/.env"
+  fi
 else
   echo "    Config globale déjà présente ou config de projet absente; inchangée."
 fi

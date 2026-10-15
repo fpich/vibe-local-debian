@@ -1,7 +1,8 @@
 # vibe — configuration locale : 2 workers llama.cpp + 6 modèles API Albert (enseignant)
 # Fichier de projet : modèle copié vers ~/.vibe/config.toml lors de la première
-# installation. Clé Albert dans l'environnement (~/.bashrc), jamais ici :
-#   export ALBERT_API_KEY="votre_jeton"
+# installation. Clé Albert dans ~/.vibe/.env (chargé automatiquement), jamais ici :
+#   install -m 600 /dev/null ~/.vibe/.env
+#   echo 'ALBERT_API_KEY="votre_jeton"' > ~/.vibe/.env
 # Modèles via active_model ou /model : worker1, worker2 (llama.cpp local) ;
 #   albert-coder, albert-small, albert-large, albert-deepseek, albert-gemma,
 #   albert-ministral (API Albert, OpenAI-compatible).
@@ -65,8 +66,8 @@ reasoning_field_name = "reasoning_content"
 emits_finish_reason = true
 
 # ── API Albert (enseignant) : modèles hébergés par l'État français, OpenAI-compatible ──
-# Clé dans l'environnement, jamais dans ce fichier :
-#   export ALBERT_API_KEY="votre_jeton"   (~/.bashrc)
+# Clé dans ~/.vibe/.env (chargé automatiquement), jamais dans ce fichier :
+#   echo 'ALBERT_API_KEY="votre_jeton"' > ~/.vibe/.env
 # Catalogue : https://guides.ia.numerique.gouv.fr/albert-api/modeles/available-models
 [[providers]]
 name = "albert"

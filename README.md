@@ -111,7 +111,9 @@ La config du dépôt expose deux aliases côté client :
 | `worker1` | KAT / analyse et refactoring | 8080 | `high` |
 | `worker2` | Qwen3.5 / tâches rapides | 8081 | `off` |
 
-Chaque serveur expose un nom distinct (`worker1`, `worker2`). `allowed_models = ["worker*"]` est appliqué en mode **fail-closed** : si aucun modèle autorisé n'est disponible, le client ne retombe pas sur une liste cloud.
+Chaque serveur expose un nom distinct (`worker1`, `worker2`). Depuis la 1.2.6, le template inclut aussi six modèles de l'API Albert (accès enseignant, endpoint OpenAI-compatible) sélectionnables via `/model` : `albert-coder`, `albert-small`, `albert-large`, `albert-deepseek`, `albert-gemma`, `albert-ministral`. La clé va dans `~/.vibe/.env` (chargé automatiquement au démarrage, jamais dans `config.toml`).
+
+`allowed_models` est appliqué en mode **fail-closed** : si aucun modèle autorisé n'est disponible, le client ne retombe pas sur une liste cloud.
 
 La compaction automatique est configurée à **80 000 tokens** pour les deux workers.
 
