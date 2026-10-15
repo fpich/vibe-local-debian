@@ -78,23 +78,20 @@ backend = "generic"
 emits_finish_reason = true
 
 # ── Worker 1 : KAT (127.0.0.1:8080) ────────────────────────────────────
-# Paramètres serveur llama.cpp : top_p 0.95, top_k 20, min_p 0,
-# presence_penalty 1.5, repetition_penalty 1.0.
+# Serveur : llama-server -c 262144 --temp 0.6 --top-p 0.95 --top-k 20
+#   -fa on -ctk q8_0 -ctv q8_0 -b 8192 -ub 2048 -t 8 -tb 8 --jinja
 # thinking ON, preserve_thinking ON (agent / multi-turn).
 [[models]]
 name = "worker1"
 provider = "llamacpp-worker1"
 alias = "worker1"
-display_name = "worker1 (KAT, local)"
-temperature = 1.0
+display_name = "worker1 (KAT Coder V2.5 APEX, local 262k)"
+temperature = 0.6
 thinking = "high"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 80000
+auto_compact_threshold = 200000
 
-# ── Worker 2 : Qwen3.5 (127.0.0.1:8081) ────────────────────────────────
-# Paramètres serveur llama.cpp : top_p 0.8, top_k 20, min_p 0,
-# presence_penalty 1.5, repetition_penalty 1.0. thinking OFF.
 [[models]]
 name = "worker2"
 provider = "llamacpp-worker2"
