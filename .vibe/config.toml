@@ -15,6 +15,8 @@ allowed_models = ["worker*"]
 # Allowlist stricte : seuls les outils nécessaires au coding agent local sont
 # visible par le modèle. Les outils réseau web_fetch/web_search ont été supprimés ;
 # task et skill ne sont pas exposés dans ce profil minimal.
+# "mcp_rea_*" expose les outils du serveur MCP local REA (décommenter le bloc
+# [[mcp_servers]] en fin de fichier pour l'activer).
 enabled_tools = [
   "bash",
   "read_file",
@@ -23,6 +25,7 @@ enabled_tools = [
   "grep",
   "ask_user_question",
   "todo",
+  "mcp_rea_*",
 ]
 
 
@@ -76,6 +79,20 @@ input_price = 0.0
 output_price = 0.0
 auto_compact_threshold = 80000
 
+
+# ── Serveur MCP local REA (analyse de binaires via Ghidra) ──────────────────────
+#
+# Transport stdio uniquement (ADR 0002) ; l'installation se fait avec
+# scripts/install_ghidra_rea.sh. Décommenter après installation.
+
+#[[mcp_servers]]
+#name = "rea"
+#transport = "stdio"
+#command = "npx"
+#args = ["-y", "rea-agents@6.4.0", "mcp"]
+#env = { GHIDRA_INSTALL_DIR = "/opt/ghidra_12.1.4_PUBLIC", JAVA_HOME = "/usr/lib/jvm/java-21-openjdk-amd64" }
+#startup_timeout_sec = 30.0
+#tool_timeout_sec = 300.0
 
 # ── Titres de session ─────────────────────────────────────────────────────
 # "first_message" : titre dérivé du premier message utilisateur, zéro appel LLM
