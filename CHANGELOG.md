@@ -2,6 +2,23 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [1.2.5] - 2026-10-15
+
+### Added
+
+- Support des serveurs MCP **stdio locaux** (ADR 0002, `docs/adr/0002-local-stdio-mcp.md`) : nouveau module `vibe/core/mcp/` (client JSON-RPC newline-delimited sur stdin/stdout du sous-processus, sans le SDK `mcp` upstream ni aucune dépendance réseau), pool de clients, exposition des outils du serveur sous la forme `mcp_<serveur>_<outil>` via le tool manager et la politique de permissions existante.
+- Champ `mcp_servers` dans `VibeConfigSchema` (union-merge par nom) : transport `stdio` uniquement, les transports HTTP (`http`, `streamable-http`) sont rejetés à la validation de la configuration (fail-closed).
+- Options de session app-server `mcp_servers` stdio relayées dans les overrides de config ; projection `/mcp` (`project_mcp`) alimentée depuis le pool.
+- `scripts/install_ghidra_rea.sh` : installateur idempotent de la chaîne REA (JDK 21 via apt, Ghidra 12.1.4 épinglé depuis la release GitHub officielle, radare2 6.2.4 épinglé — absent des dépôts trixie —, Node.js si absent, `rea-agents@6.4.0` npm épinglé), avec mode `--doctor` qui ne judge que la santé du provider Ghidra (les avis informatifs du doctor REA ne font pas échouer).
+- Template `.vibe/config.toml` : bloc `[[mcp_servers]]` REA documenté en commentaire et glob `mcp_rea_*` ajouté à l'allowlist `enabled_tools`.
+- Tests `tests/local/test_local_stdio_mcp.py` : handshake réel avec un serveur MCP stdio Python en loopback, erreurs par serveur, `disabled_tools`, normalisation des noms d'outils, rejet des transports HTTP.
+- Documentation : section « Serveurs MCP stdio locaux » dans `README.md` et `docs/configuration.md` ; mise à jour de `AGENTS.md`, `CONTRIBUTING.md` et `docs/architecture.md` pour la nouvelle frontière (stdio local supporté, distant toujours interdit).
+
+### Fixed
+
+- Client MCP stdio : l'environnement du serveur (`env` du schéma) est fusionné par-dessus `os.environ` au lieu de le remplacer — les serveurs basés sur `npx` mouraient au spawn sans `PATH`/`HOME`.
+- Client MCP stdio : lecture des réponses JSON-RPC par chunks bornés — `tools/list` d'un serveur riche (REA : 170 outils, réponse > 64 KiB) faisait lever `Separator is not found, and chunk exceed the limit` au `readline()` d'asyncio, tué le lecteur et surfacé en erreur trompeuse « closed the connection ». Vérifié contre le serveur réel `rea-agents@6.4.0` (170 outils enregistrés).
+
 ## [1.2.4] - 2026-10-06
 
 ### Security

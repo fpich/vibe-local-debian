@@ -22,7 +22,7 @@ read_file / write_file / edit / grep / bash / todo / ask_user_question
 workspace + permissions
 ```
 
-Ne font plus partie du produit : authentification Mistral, providers cloud Mistral, ACP, CLI Rust, Unified Harness Rust, MCP/connecteurs distants, plugins distants, `web_search`, `web_fetch`, Teleport/Vibe Code, voice/narration, Sentry/OTEL/télémétrie et update notifier.
+Ne font plus partie du produit : authentification Mistral, providers cloud Mistral, ACP, CLI Rust, Unified Harness Rust, MCP/connecteurs distants, plugins distants, `web_search`, `web_fetch`, Teleport/Vibe Code, voice/narration, Sentry/OTEL/télémétrie et update notifier. Les serveurs MCP **stdio locaux** sont supportés (ADR 0002) ; les transports HTTP ne le sont pas.
 
 > **Local-first ne signifie pas sandbox réseau.** Le client ne contient plus d'outil web dédié ni de backend cloud, mais l'outil `bash` peut lancer des programmes ayant eux-mêmes accès au réseau si l'utilisateur les autorise. Le serveur LLM peut également se trouver sur le LAN.
 
@@ -163,6 +163,23 @@ todo
 ```
 
 `task` et `skill` existent encore dans le moteur pour compatibilité interne mais ne sont pas exposés dans le profil minimal. Les outils réseau `web_search` et `web_fetch` ont été supprimés.
+
+Le profil autorise également le glob `mcp_rea_*` : les outils d'un serveur MCP stdio local déclaré dans `[[mcp_servers]]` (voir [docs/configuration.md](docs/configuration.md)). Sans serveur actif, le glob ne correspond à rien.
+
+## Serveurs MCP stdio locaux (REA / Ghidra)
+
+Les serveurs MCP locaux en transport `stdio` sont supportés (ADR 0002) :
+
+```toml
+[[mcp_servers]]
+name = "rea"
+transport = "stdio"
+command = "npx"
+args = ["-y", "rea-agents@6.4.0", "mcp"]
+env = { GHIDRA_INSTALL_DIR = "/opt/ghidra_12.1.4_PUBLIC" }
+```
+
+Pour le cas d'usage REA (Reverse Engineer Anything) avec Ghidra et radare2, `scripts/install_ghidra_rea.sh` installe la chaîne complète (JDK 21, Ghidra 12.1.4 épinglé, radare2 épinglé, `rea-agents` npm épinglé) et propose un mode `--doctor`. Les transports HTTP (`http`, `streamable-` + `http`) sont rejetés à la validation de la configuration.
 
 ## Sécurité et workspace
 
