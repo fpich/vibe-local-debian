@@ -108,6 +108,40 @@ check_node() {
   [[ "$major" -ge "$NODE_MAJOR_MIN" ]]
 }
 
+install_ghidra_desktop_entry() {
+  # Entrée du menu d'applications (portée utilisateur, pas de sudo).
+  # ~/.local/share/applications prime sur /usr/share/applications.
+  local desktop_dir="$HOME/.local/share/applications"
+  local desktop_file="$desktop_dir/ghidra.desktop"
+  local icon_line=""
+  if [[ -f "${GHIDRA_INSTALL_DIR}/support/ghidra.ico" ]]; then
+    icon_line="Icon=${GHIDRA_INSTALL_DIR}/support/ghidra.ico"
+  fi
+  install -d "$desktop_dir"
+  if [[ -f "$desktop_file" ]] && grep -q "^Exec=${GHIDRA_INSTALL_DIR}/ghidraRun$" "$desktop_file"; then
+    say "Entrée de menu Ghidra déjà présente ($desktop_file)."
+    return 0
+  fi
+  cat > "$desktop_file" <<DESKTOP_EOF
+[Desktop Entry]
+Name=Ghidra
+Comment=Reverse engineering tool (Ghidra ${GHIDRA_VERSION})
+Exec=${GHIDRA_INSTALL_DIR}/ghidraRun
+${icon_line}
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+DESKTOP_EOF
+  # Wayland pur : le GUI Swing peut rester gris sans cette variable.
+  if ! grep -q '_JAVA_AWT_WM_NONREPARENTING' "$HOME/.bashrc" 2>/dev/null; then
+    printf 'export _JAVA_AWT_WM_NONREPARENTING=1\n' >> "$HOME/.bashrc"
+  fi
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$desktop_dir" >/dev/null 2>&1 || true
+  fi
+  say "Entrée de menu Ghidra créée ($desktop_file)."
+}
+
 install_node() {
   say "Installation de Node.js/npm (apt)…"
   sudo apt install -y nodejs npm
@@ -173,6 +207,7 @@ main() {
   check_ghidra || install_ghidra
   check_radare2 || install_radare2
   check_node || install_node
+  install_ghidra_desktop_entry
 
   say "Écriture des variables d'environnement dans ~/.bashrc…"
   local rc="$HOME/.bashrc"
