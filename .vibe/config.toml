@@ -1,6 +1,10 @@
-# vibe — configuration locale, backend llama.cpp uniquement
-# Fichier de project : modèle copié vers ~/.vibe/config.toml lors de la première installation
-
+# vibe — configuration locale : 2 workers llama.cpp + 6 modèles API Albert (enseignant)
+# Fichier de projet : modèle copié vers ~/.vibe/config.toml lors de la première
+# installation. Clé Albert dans l'environnement (~/.bashrc), jamais ici :
+#   export ALBERT_API_KEY="votre_jeton"
+# Modèles via active_model ou /model : worker1, worker2 (llama.cpp local) ;
+#   albert-coder, albert-small, albert-large, albert-deepseek, albert-gemma,
+#   albert-ministral (API Albert, OpenAI-compatible).
 # Deux serveurs llama.cpp locaux ou LAN (alias serveur « worker » sure chaque port).
 # Côté client, chaque modèle a son alias distinct : basculer = changer
 # uniquement active_model.
@@ -8,7 +12,17 @@
 active_model = "worker1"
 # Seuls les modèles llama.cpp locaux sont sélectionnables (exclut les
 # modèles cloud par défaut mistral/devstral du sélecteur /config).
-allowed_models = ["worker*"]
+allowed_models = [
+  "worker*",
+  # API Albert : globs sur les noms réels des modèles (name_matches agit
+  # sur model.name, pas sur l'alias)
+  "mistral-small*",
+  "ministral*",
+  "gpt-oss*",
+  "qwen3-coder*",
+  "deepseek*",
+  "gemma*",
+]
 
 
 # ── Outils exposés à l’agent ───────────────────────────────────────────────
@@ -50,6 +64,18 @@ backend = "generic"
 reasoning_field_name = "reasoning_content"
 emits_finish_reason = true
 
+# ── API Albert (enseignant) : modèles hébergés par l'État français, OpenAI-compatible ──
+# Clé dans l'environnement, jamais dans ce fichier :
+#   export ALBERT_API_KEY="votre_jeton"   (~/.bashrc)
+# Catalogue : https://guides.ia.numerique.gouv.fr/albert-api/modeles/available-models
+[[providers]]
+name = "albert"
+api_base = "https://albert.api.etalab.gouv.fr/v1"
+api_key_env_var = "ALBERT_API_KEY"
+api_style = "openai"
+backend = "generic"
+emits_finish_reason = true
+
 # ── Worker 1 : KAT (127.0.0.1:8080) ────────────────────────────────────
 # Paramètres serveur llama.cpp : top_p 0.95, top_k 20, min_p 0,
 # presence_penalty 1.5, repetition_penalty 1.0.
@@ -79,6 +105,83 @@ input_price = 0.0
 output_price = 0.0
 auto_compact_threshold = 80000
 
+
+# ── Modèles API Albert (basculer via active_model ou /model) ───────────────────────
+# Les contexts distants (131k-262k) acceptent le sous-ensemble d'outils REA
+# et de longues conversations. Les modèles OCR (lightonocr-2-1b) ne sont pas
+# des modèles de chat et ne sont pas déclarés ici.
+
+# Code / agentic coding, MoE 30B, 262144 (alias openweight-code)
+[[models]]
+name = "qwen3-coder-30b-a3b-instruct"
+provider = "albert"
+alias = "albert-coder"
+display_name = "Albert Coder (Qwen3 Coder 30B)"
+temperature = 0.15
+thinking = "off"
+input_price = 0.0
+output_price = 0.0
+auto_compact_threshold = 196000
+
+# Chat généraliste + vision, 24B, 131072 (alias openweight-medium)
+[[models]]
+name = "mistral-small-3-2-24b-instruct-2506"
+provider = "albert"
+alias = "albert-small"
+display_name = "Albert Small (Mistral 3.2 24B)"
+temperature = 0.15
+thinking = "off"
+input_price = 0.0
+output_price = 0.0
+auto_compact_threshold = 98000
+
+# Gros MoE généraliste avec reasoning, 117B, 131072 (alias openweight-large)
+[[models]]
+name = "gpt-oss-120b"
+provider = "albert"
+alias = "albert-large"
+display_name = "Albert Large (GPT-OSS 120B)"
+temperature = 1.0
+thinking = "high"
+input_price = 0.0
+output_price = 0.0
+auto_compact_threshold = 98000
+
+# Code MoE, expérimental (26/07 → 31/10/2026), 131072 — tool_choice: auto requis
+[[models]]
+name = "deepseek-v4-flash-0731"
+provider = "albert"
+alias = "albert-deepseek"
+display_name = "Albert DeepSeek V4 Flash (exp.)"
+temperature = 1.0
+thinking = "off"
+input_price = 0.0
+output_price = 0.0
+auto_compact_threshold = 98000
+
+# Chat modéré + vision, expérimental (31/08 → 01/12/2026), 262144
+[[models]]
+name = "gemma-4-31b-it"
+provider = "albert"
+alias = "albert-gemma"
+display_name = "Albert Gemma 4 31B (exp.)"
+temperature = 1.0
+thinking = "off"
+input_price = 0.0
+output_price = 0.0
+auto_compact_threshold = 196000
+
+# Petit multimodal rapide, 8.9B, 262144 (alias openweight-small)
+[[models]]
+name = "ministral-3-8b-instruct-2512"
+provider = "albert"
+alias = "albert-ministral"
+display_name = "Albert Ministral 3 8B"
+temperature = 0.1
+thinking = "off"
+input_price = 0.0
+output_price = 0.0
+auto_compact_threshold = 196000
 
 # ── Serveur MCP local REA (analyse de binaires via Ghidra) ──────────────────────
 #

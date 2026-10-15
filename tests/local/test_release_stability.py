@@ -66,14 +66,23 @@ def test_archived_upstream_docs_are_not_in_active_index() -> None:
 def test_default_config_uses_only_generic_local_providers() -> None:
     config = tomllib.loads((REPO_ROOT / ".vibe/config.toml").read_text())
     assert config["active_model"] in {"worker1", "worker2"}
-    assert config["allowed_models"] == ["worker*"]
+    allowed = config["allowed_models"]
+    assert "worker*" in allowed
     for provider in config["providers"]:
         assert provider["backend"] == "generic"
         assert provider["api_style"] == "openai"
-        assert provider["api_key_env_var"] == ""
+        # Aucune clé en dur : les providers distants passent par une variable
+        # d'environnement (ex. ALBERT_API_KEY), les locaux n'en ont pas.
+        assert provider["api_key_env_var"] in ("", "ALBERT_API_KEY")
         assert provider["api_base"].startswith("http://") or provider[
             "api_base"
         ].startswith("https://")
+    # L'allowlist couvre chaque modèle déclaré (garanti aussi par
+    # test_template_allowlist_covers_every_model).
+    from vibe.core.utils import name_matches
+
+    for model in config["models"]:
+        assert name_matches(model["name"], allowed), model["name"]
 
 
 def test_no_active_builtin_agent_injects_a_cloud_provider() -> None:

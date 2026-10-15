@@ -35,7 +35,7 @@ api_base = "http://192.168.1.116:8080/v1"
 
 ## Provider externe compatible OpenAI (API Albert, etc.)
 
-Le template du dépôt reste 100 % local sans clé API (invariant de release). Pour ajouter un endpoint distant compatible OpenAI — par exemple l'API Albert (https://albert.api.etalab.gouv.fr/v1) avec un accès enseignant — ajoutez dans `~/.vibe/config.toml` :
+Le template du dépôt inclut depuis la 1.2.6 un provider Albert préconfiguré (clé via `ALBERT_API_KEY` uniquement, jamais en dur). Pour ajouter un autre endpoint distant compatible OpenAI — par exemple l'API Albert (https://albert.api.etalab.gouv.fr/v1) avec un accès enseignant — ajoutez dans `~/.vibe/config.toml` :
 
 ```toml
 # Clé dans l'environnement, jamais dans le fichier :
