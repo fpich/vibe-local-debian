@@ -14,6 +14,9 @@ EXPECTED_TOOLS = {
     "grep",
     "ask_user_question",
     "todo",
+    # ADR 0002 : le profil autorise les outils du serveur MCP stdio local
+    # REA ; sans serveur [[mcp_servers]] actif, le glob ne match rien.
+    "mcp_rea_*",
 }
 
 

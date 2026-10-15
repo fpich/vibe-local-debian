@@ -103,11 +103,23 @@ doctor() {
   fi
   if command -v npx >/dev/null 2>&1; then
     say "Vérification du provider Ghidra côté REA (doctor)…"
+    local doctor_json
     if GHIDRA_INSTALL_DIR="$GHIDRA_INSTALL_DIR" JAVA_HOME="$JDK_HOME" \
-      npx -y "rea-agents@${REA_VERSION}" doctor --provider ghidra; then
+      doctor_json="$(npx -y "rea-agents@${REA_VERSION}" doctor --provider ghidra --json 2>/dev/null)"
+    then
+      :
+    fi
+    # Le doctor REA sort non-zéro pour des avis informatifs (skill manquant,
+    # hôte non listé…). La santé réelle du provider est dans providerInspections.
+    local ghidra_ok
+    ghidra_ok="$(printf '%s' "$doctor_json" \
+      | tr -d '\n' \
+      | sed -n 's/.*"id":"ghidra","configured":true,"available":\(true\|false\).*/\1/p')"
+    if [[ "$ghidra_ok" == "true" ]]; then
       say "REA (rea-agents@${REA_VERSION}) opérationnel avec Ghidra."
     else
-      warn "doctor REA a échoué — voir les messages ci-dessus."
+      warn "provider Ghidra non configuré côté REA — GHIDRA_INSTALL_DIR=${GHIDRA_INSTALL_DIR}"
+      warn "Sortie doctor (extrait) : $(printf '%s' "$doctor_json" | head -c 400)"
       failed=1
     fi
   else
