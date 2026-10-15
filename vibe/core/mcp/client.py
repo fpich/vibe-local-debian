@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 import itertools
+import os
 from typing import Any
 
 from vibe.core.config.models import MCPStdio
@@ -17,6 +18,7 @@ from vibe.core.config.models import MCPStdio
 _JSONRPC_VERSION = "2.0"
 _PROTOCOL_VERSION = "2024-11-05"
 _MAX_LINE_BYTES = 4 * 1024 * 1024
+_READ_CHUNK_BYTES = 64 * 1024
 
 _id_counter = itertools.count(1)
 
@@ -36,6 +38,28 @@ class MCPToolDescriptor:
 class _ServerInfo:
     name: str
     version: str = ""
+
+
+async def _read_json_line(stream: asyncio.StreamReader, buffer: list[bytes]) -> bytes:
+    """Read one newline-delimited JSON-RPC message of arbitrary size.
+
+    ``StreamReader.readline()`` raises once a line exceeds its 64 KiB stream
+    buffer; MCP servers routinely send multi-hundred-KiB tool lists, so read
+    in bounded chunks until the delimiter instead. Leftover bytes after the
+    delimiter are kept in ``buffer`` for the next call.
+    """
+    pending = buffer[0] if buffer else b""
+    while True:
+        newline = pending.find(b"\n")
+        if newline != -1:
+            line = pending[:newline]
+            buffer[0] = pending[newline + 1 :]
+            return line
+        chunk = await stream.read(_READ_CHUNK_BYTES)
+        if not chunk:
+            buffer[0] = b""
+            return pending
+        pending += chunk
 
 
 class StdioMCPClient:
@@ -78,7 +102,7 @@ class StdioMCPClient:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
                 cwd=self._server.cwd or None,
-                env={**self._server.env} or None,
+                env={**os.environ, **self._server.env},
             )
         except (OSError, ValueError) as exc:
             raise MCPClientError(
@@ -206,9 +230,10 @@ class StdioMCPClient:
         process = self._process
         if process is None or process.stdout is None:
             return
+        leftover: list[bytes] = [b""]
         try:
             while not self._closed:
-                line = await process.stdout.readline()
+                line = await _read_json_line(process.stdout, leftover)
                 if not line:
                     break
                 if len(line) > _MAX_LINE_BYTES:
