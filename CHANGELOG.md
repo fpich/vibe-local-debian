@@ -8,6 +8,8 @@ Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne so
 
 - Template `.vibe/config.toml` : le défaut embarque désormais, en plus des deux workers llama.cpp locaux, un provider **API Albert** (endpoint OpenAI-compatible de l'État, accès enseignant) et six modèles de chat : `albert-coder` (Qwen3 Coder 30B), `albert-small` (Mistral Small 3.2), `albert-large` (GPT-OSS 120B), `albert-deepseek` (exp.), `albert-gemma` (exp.) et `albert-ministral`. L'allowlist couvre chaque modèle déclaré (globs sur les `name`, pas les alias).
 - `install.sh` crée `~/.vibe/.env` (mode 600) lors de la première installation et indique comment y placer `ALBERT_API_KEY`.
+- Template `.vibe/config.toml` : `enabled_tools` expose un sous-ensemble explicite de 22 outils REA (~42k tokens de définitions) au lieu du glob `mcp_rea_*` — le catalogue complet (170 outils, ~529k tokens) dépassait même un contexte 262k et provoquait des 400 `exceed_context_size_error` sur llama.cpp. L'invariant de profil (`test_block1_hardening`) épingle la liste.
+- Template : worker2 devient Ministral-3-3B-Instruct-2512 (Q6_K_L, contexte 262144, compaction 200k, température 0.1) ; worker1 documenté avec sa commande llama-server réelle (262k, temp 0.6).
 - Documentation : section « Provider externe compatible OpenAI » dans `docs/configuration.md` avec `~/.vibe/.env` comme méthode recommandée pour les clés (chargé automatiquement au démarrage, priorité à une variable déjà exportée, support des FIFO type coffre 1Password) ; README et en-tête du template mis à jour.
 
 ### Changed

@@ -14,9 +14,31 @@ EXPECTED_TOOLS = {
     "grep",
     "ask_user_question",
     "todo",
-    # ADR 0002 : le profil autorise les outils du serveur MCP stdio local
-    # REA ; sans serveur [[mcp_servers]] actif, le glob ne match rien.
-    "mcp_rea_*",
+    # ADR 0002 : sous-ensemble explicite des outils REA. Le catalogue
+    # complet (170 outils ~ 529k tokens) ne tient pas dans un contexte
+    # 262k ; ces 22 outils en font ~42k.
+    "mcp_rea_open_binary",
+    "mcp_rea_binary_overview",
+    "mcp_rea_binary_session",
+    "mcp_rea_close_binary",
+    "mcp_rea_search_procedures",
+    "mcp_rea_search_strings",
+    "mcp_rea_procedure_info",
+    "mcp_rea_procedure_pseudo_code",
+    "mcp_rea_procedure_assembly",
+    "mcp_rea_procedure_callers",
+    "mcp_rea_procedure_callees",
+    "mcp_rea_procedure_references",
+    "mcp_rea_xrefs",
+    "mcp_rea_address_name",
+    "mcp_rea_set_address_name",
+    "mcp_rea_set_comment",
+    "mcp_rea_read_bytes",
+    "mcp_rea_read_function_instructions",
+    "mcp_rea_resolve_containing_procedure",
+    "mcp_rea_list_unknowns",
+    "mcp_rea_record_unknown",
+    "mcp_rea_trace_feature",
 }
 
 

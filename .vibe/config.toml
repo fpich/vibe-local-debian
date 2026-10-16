@@ -40,7 +40,31 @@ enabled_tools = [
   "grep",
   "ask_user_question",
   "todo",
-  "mcp_rea_*",
+  # REA : sous-ensemble reverse-engineering (22 outils ≈ 42k tokens de
+  # définitions). Le catalogue complet (170 outils) en fait ~529k et dépasse
+  # même un contexte 262k ; la liste explicite protège le prompt.
+  "mcp_rea_open_binary",
+  "mcp_rea_binary_overview",
+  "mcp_rea_binary_session",
+  "mcp_rea_close_binary",
+  "mcp_rea_search_procedures",
+  "mcp_rea_search_strings",
+  "mcp_rea_procedure_info",
+  "mcp_rea_procedure_pseudo_code",
+  "mcp_rea_procedure_assembly",
+  "mcp_rea_procedure_callers",
+  "mcp_rea_procedure_callees",
+  "mcp_rea_procedure_references",
+  "mcp_rea_xrefs",
+  "mcp_rea_address_name",
+  "mcp_rea_set_address_name",
+  "mcp_rea_set_comment",
+  "mcp_rea_read_bytes",
+  "mcp_rea_read_function_instructions",
+  "mcp_rea_resolve_containing_procedure",
+  "mcp_rea_list_unknowns",
+  "mcp_rea_record_unknown",
+  "mcp_rea_trace_feature",
 ]
 
 
