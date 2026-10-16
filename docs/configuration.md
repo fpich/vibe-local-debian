@@ -71,6 +71,29 @@ auto_compact_threshold = 196000          # ~75 % de la fenêtre du modèle
 
 L'allowlist agit sur `name` (pas sur l'alias) — le template couvre déjà chaque modèle déclaré. Les modèles OCR (ex. `lightonocr-2-1b`) ne sont pas des modèles de chat et ne sont pas déclarables comme LLM principal.
 
+## Paramètres optimaux par modèle (référence)
+
+La température envoyée par le client **écrase** les défauts du serveur dans chaque requête : le réglage qui compte est `temperature` dans les blocs `[[models]]`. Les valeurs ci-dessous suivent les recommandations officielles des éditeurs, vérifiées pour un usage **coding agent** (function calling, sessions longues, outils MCP).
+
+| Modèle (alias) | `temperature` | Recommendation éditeur | Source |
+|---|---|---|---|
+| `worker1` — KAT-Coder-V2.5-Dev-APEX | `0.3` | temp 0.3, min_p 0.05, top_p 0.90, top_k 40 — profil coding déterministe | Communauté r/LocalLLaMA (config APEX-I-Quality) |
+| `worker2` — Ministral-3-3B-Instruct-2512 | `0.1` | « temperature below 0.1 for daily-driver and production » | Fiche officielle Mistral (Hugging Face) |
+| `albert-coder` — Qwen3-Coder-30B-A3B | `0.7` | temp 0.7, top_p 0.8, top_k 20, repeat_penalty 1.05 | Fiche officielle Qwen (reco « agentic coding ») |
+| `albert-small` — Mistral-Small-3.2-24B | `0.15` | temp 0.15 — usage instruct général | Fiche officielle Mistral Small 3.2 |
+| `albert-large` — GPT-OSS-120B | `1.0` | temp 1.0, top_p 1.0 ; reasoning effort low/medium/high | Fiche officielle OpenAI gpt-oss |
+| `albert-deepseek` — DeepSeek-V4-Flash-0731 | `1.0` | temp 1.0, top_p 0.95 (agentic) / 1.0 sinon | Fiche officielle DeepSeek (V4-Flash-0731) |
+| `albert-gemma` — Gemma-4-31B-It | `1.0` | temp 1.0, top_p 0.95, top_k 64 | Fiche officielle Google Gemma 4 (NVIDIA NIM) |
+| `albert-ministral` — Ministral-3-8B-Instruct-2512 | `0.1` | « temperature below 0.1 » (reco famille Ministral 3) | Fiche officielle Mistral (Hugging Face) |
+
+Notes d'usage :
+
+- **GPT-OSS (albert-large)** : le budget `max_tokens` doit être généreux — les tokens de raisonnement le consomment (prévoir > 1024 même pour une réponse courte). Le thinking `high` côté vibe exploite le mode raisonnement du modèle.
+- **DeepSeek (albert-deepseek)** : exiger `tool_choice: auto` pour les appels d'outils — c'est le défaut du backend générique de vibe. Modèle expérimental sur Albert (jusqu'au 31/10/2026).
+- **Gemma 4 (albert-gemma)** : thinking activable via `chat_template_kwargs` (`enable_thinking`), non nécessaire côté vibe qui gère `thinking` par champ dédié. Modèle expérimental (jusqu'au 01/12/2026).
+- **Qwen3-Coder (albert-coder)** : conçu pour l'agentic coding (format de function call dédié) — le choix recommandé pour le coding agent avec le contexte 262k.
+- Uniquement `temperature` est envoyé par vibe ; top_p/top_k restent les défauts de l'endpoint (llama.cpp côté local, Albert côté distant). Les recommandations éditeur qui incluent top_p/top_k sont documentées pour un usage curl/Playground direct.
+
 ## Modèles
 
 Chaque serveur llama.cpp expose un nom distinct : `worker1` (port 8080) et `worker2` (port 8081). L'alias client correspond au nom du modèle.
