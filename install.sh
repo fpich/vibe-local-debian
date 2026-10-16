@@ -103,17 +103,36 @@ uv tool install --force "$SCRIPT_DIR"
 
 echo "==> Configuration globale (~/.vibe/config.toml)"
 install -d -m 700 "$HOME/.vibe"
-if [[ -f "$SCRIPT_DIR/.vibe/config.toml" && ! -f "$HOME/.vibe/config.toml" ]]; then
+
+# Garde : ne copier le template que s'il est identique à la version du
+# dépôt (git HEAD). Un clone avec des modifications locales non commitées
+# du template (ex. api_base personnalisées) serait copié tel quel — on
+# préfère avertir et ne rien copier qu'installer une config modifiée.
+TEMPLATE_OK=1
+if command -v git >/dev/null 2>&1 && git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if ! git -C "$SCRIPT_DIR" diff --quiet HEAD -- .vibe/config.toml 2>/dev/null \
+     || ! git -C "$SCRIPT_DIR" diff --cached --quiet HEAD -- .vibe/config.toml 2>/dev/null; then
+    TEMPLATE_OK=0
+  fi
+fi
+
+if [[ "$TEMPLATE_OK" -ne 1 ]]; then
+  echo "    ATTENTION: .vibe/config.toml du dépôt a des modifications locales."
+  echo "    Lancez: git -C $SCRIPT_DIR checkout -- .vibe/config.toml"
+  echo "    (ou git stash), puis relancez ./install.sh pour une config propre."
+fi
+
+if [[ -f "$SCRIPT_DIR/.vibe/config.toml" && ! -f "$HOME/.vibe/config.toml" && "$TEMPLATE_OK" -eq 1 ]]; then
   cp "$SCRIPT_DIR/.vibe/config.toml" "$HOME/.vibe/config.toml"
   chmod 600 "$HOME/.vibe/config.toml"
   echo "    Config copiée."
   if [[ ! -f "$HOME/.vibe/.env" ]]; then
     install -m 600 /dev/null "$HOME/.vibe/.env"
     echo "    ~/.vibe/.env créé (vide). Pour l'API Albert :"
-    echo "      echo 'ALBERT_API_KEY="votre_jeton"' > ~/.vibe/.env"
+    echo "      echo 'ALBERT_API_KEY=\"votre_jeton\"' > ~/.vibe/.env"
   fi
 else
-  echo "    Config globale déjà présente ou config de projet absente; inchangée."
+  echo "    Config globale déjà présente ou template non copiable; inchangée."
 fi
 
 if ! grep -q '.local/bin' <<<"$USER_PATH"; then
