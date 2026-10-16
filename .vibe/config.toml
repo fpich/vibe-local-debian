@@ -55,7 +55,7 @@ reasoning_field_name = "reasoning_content"
 # llama-server determine correctement les streams avec un finish_reason
 emits_finish_reason = true
 
-# ── Serveur 2 : 127.0.0.1:8081 (Qwen3.5) ──────────────────────────────
+# ── Serveur 2 : 127.0.0.1:8081 (Ministral-3-3B-Instruct-2512, Q6_K_L, 262144)
 [[providers]]
 name = "llamacpp-worker2"
 api_base = "http://127.0.0.1:8081/v1"
@@ -80,6 +80,10 @@ emits_finish_reason = true
 # ── Worker 1 : KAT (127.0.0.1:8080) ────────────────────────────────────
 # Serveur : llama-server -c 262144 --temp 0.6 --top-p 0.95 --top-k 20
 #   -fa on -ctk q8_0 -ctv q8_0 -b 8192 -ub 2048 -t 8 -tb 8 --jinja
+# ── Worker 1 : KAT-Coder-V2.5-Dev-APEX (127.0.0.1:8080) ──────────────────────────
+# Serveur : llama-server -m KAT-Coder-V2.5-Dev-APEX-i-quality-v2.gguf
+#   --port 8080 -c 262144 --temp 0.6 --top-p 0.95 --top-k 20 -fa on
+#   -ctk q8_0 -ctv q8_0 -b 8192 -ub 2048 -t 8 -tb 8 --jinja
 # thinking ON, preserve_thinking ON (agent / multi-turn).
 [[models]]
 name = "worker1"
@@ -92,24 +96,19 @@ input_price = 0.0
 output_price = 0.0
 auto_compact_threshold = 200000
 
+# Serveur : llama-server -m Ministral-3-3B-Instruct-2512-Q6_K_L.gguf
+#   --port 8081 -c 262144 --jinja (petit modèle rapide, thinking OFF)
 [[models]]
 name = "worker2"
 provider = "llamacpp-worker2"
 alias = "worker2"
-display_name = "worker2 (Qwen3.5, local)"
-temperature = 0.7
+display_name = "worker2 (Ministral 3 3B, local 262k)"
+temperature = 0.1
 thinking = "off"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 80000
+auto_compact_threshold = 200000
 
-
-# ── Modèles API Albert (basculer via active_model ou /model) ───────────────────────
-# Les contexts distants (131k-262k) acceptent le sous-ensemble d'outils REA
-# et de longues conversations. Les modèles OCR (lightonocr-2-1b) ne sont pas
-# des modèles de chat et ne sont pas déclarés ici.
-
-# Code / agentic coding, MoE 30B, 262144 (alias openweight-code)
 [[models]]
 name = "qwen3-coder-30b-a3b-instruct"
 provider = "albert"

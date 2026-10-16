@@ -105,7 +105,7 @@ La config du dépôt expose deux aliases côté client :
 | Alias | Usage prévu | Port par défaut | Thinking |
 |---|---|---:|---|
 | `worker1` | KAT / analyse et refactoring | 8080 | `high` |
-| `worker2` | Qwen3.5 / tâches rapides | 8081 | `off` |
+| `worker2` | Ministral-3-3B-Instruct-2512 (Q6_K_L, 262k) / tâches rapides | 8081 | `off` |
 
 Chaque serveur expose un nom distinct (`worker1`, `worker2`). Depuis la 1.2.6, le template inclut aussi six modèles de l'API Albert (accès enseignant, endpoint OpenAI-compatible) sélectionnables via `/model` : `albert-coder`, `albert-small`, `albert-large`, `albert-deepseek`, `albert-gemma`, `albert-ministral`.
 
