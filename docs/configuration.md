@@ -101,7 +101,7 @@ Notes d'usage :
 
 | Modèle (alias) | Fenêtre (servie) | `auto_compact_threshold` | Note |
 |---|---|---|---|
-| `worker1` — Qwen3-Coder-30B-A3B-Instruct | 262 144 (`-c` llama-server) | 200 000 | Modèle officiel Qwen ; template corrigé froggeric recommandé côté llama.cpp pour les tool calls |
+| `worker1` — Qwen3-Coder-30B-A3B-Instruct | 98 304 (`-c` llama-server) | 75 000 | Modèle officiel Qwen (Q4_K_M) ; template corrigé froggeric côté llama.cpp pour les tool calls ; contexte réduit pour la stabilité/latence sur CPU (voir « Tuning serveur ») |
 | `worker2` — Ministral-3-3B-Instruct-2512 | 262 144 (`-c` llama-server) | 200 000 | Maximum natif Ministral 3 : 262 144 |
 | `albert-coder` — Qwen3-Coder-30B-A3B | 262 144 | 196 000 | Conçu pour l'agentic coding à grande fenêtre |
 | `albert-small` — Mistral-Small-3.2-24B | 131 072 | 98 000 | |
@@ -109,6 +109,18 @@ Notes d'usage :
 | `albert-deepseek` — DeepSeek-V4-Flash-0731 | 131 072 | 98 000 | Natif 1M en direct DeepSeek ; Albert le sert à 131k |
 | `albert-gemma` — Gemma-4-31B-It | 262 144 | 196 000 | |
 | `albert-ministral` — Ministral-3-8B-Instruct-2512 | 262 144 | 196 000 | |
+
+## Tuning serveur llama.cpp (retours d'expérience)
+
+Leçons d'un déploiement réel (RTX 2060 6 Go, i7-9700 8c/8t, 32 Go RAM, Debian 13) :
+
+- **OOM CUDA à la première inférence** : un `--fit-target` trop large (4 Go) ou un batch trop gros (`-b 8192 -ub 2048`) fait échouer l'allocation du workspace cuBLAS (`cudaMalloc(&cublas_workspaces...)` → `ggml_abort` → crash loop systemd). Stabilité éprouvée : `--fit-target 2 -b 4096 -ub 1024`. Le crash survient à la première requête, pas au chargement — valider avec une vraie génération puis `systemctl is-active`.
+- **Plancher de contexte** : le prompt fixe REA (22 outils ≈ 42k) + système ≈ 60k tokens. Ne pas descendre sous `-c 65536` ; comfort : `-c 98304` avec `auto_compact_threshold = 75000` (~76 %).
+- **Latence à contexte long** : sur CPU, la génération s'effondre quand le contexte dépasse ~60-80k (attention sur 82k tokens : ~0,5 t/s). La compaction côté vibe (75k) maintient la session dans la zone rapide ; le cache LCP du serveur rend ensuite les tours suivants quasi gratuits (prompt eval limité aux nouveaux tokens).
+- **Threads** : `-t 8` sur 8 cœurs physiques est le maximum utile ; `-tb 8` pour le prompt processing (massivement parallèle). Testé `-t 7` pour réserver un cœur au système : différence non significative, `-t 8` convient.
+- **KV q4_0** (`-ctk q4_0 -ctv q4_0`) : réduit le KV de moitié, qualité quasi identique pour le coding.
+- **Alias** : `--alias` côté serveur doit correspondre au `name` du bloc `[[models]]` côté vibe (sinon risque de « model not found » selon la tolérance du backend).
+- **Template function calling** : pour les modèles Qwen sur llama.cpp, `--jinja --chat-template-file` avec le template corrigé `froggeric/Qwen-Fixed-Chat-Templates` (v22.5+) donne des `tool_calls` propres (arguments JSON valides, `reasoning_content` séparé) — validé par test direct. Sans lui, les appels d'outils MCP en pâtissent directement.
 
 Le sous-ensemble REA (22 outils, ~42k tokens de définitions) tient dans toutes ces fenêtres avec au moins 50k de marge conversation. Le catalogue complet REA (~529k tokens) ne tient dans **aucune** de ces fenêtres.
 

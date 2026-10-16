@@ -117,17 +117,26 @@ emits_finish_reason = true
 #   --chat-template-file <froggeric/Qwen-Fixed-Chat-Templates (v22.5+)
 #   pour des tool calls fiables côté llama.cpp>
 # Modèle non-thinking ; sampling côté vibe : temp 0.7 (reco officielle
-# Qwen3-Coder : temp 0.7, top_p 0.8, top_k 20, repetition_penalty 1.05).
+# ── Worker 1 : Qwen3-Coder-30B-A3B-Instruct (127.0.0.1:8080) ──────────────────────
+# Serveur éprouvé (RTX 2060 6 Go, i7-9700, 32 Go RAM — voir docs/configuration.md) :
+#   llama-server -m Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf --port 8080
+#   --alias worker1 -c 98304 --fit on --fit-target 2 --load-mode mmap -fa on
+#   -ctk q4_0 -ctv q4_0 -b 4096 -ub 1024 -t 8 -tb 8 --jinja
+#   --chat-template-file <froggeric/Qwen-Fixed-Chat-Templates (v22.5+)>
+# Stabilité : fit-target 2 + batch 4096/1024 obligatoires — un fit plus large
+# fait un OOM CUDA (workspace cuBLAS) à la première inférence.
+# Modèle non-thinking ; sampling côté vibe : temp 0.7 (reco officielle
+# Qwen3-Coder). Compaction 75k ≈ 76 % du contexte serveur 98304.
 [[models]]
 name = "worker1"
 provider = "llamacpp-worker1"
 alias = "worker1"
-display_name = "worker1 (Qwen3 Coder 30B A3B, local 262k)"
+display_name = "worker1 (Qwen3 Coder 30B A3B, local 96k)"
 temperature = 0.7
 thinking = "off"
 input_price = 0.0
 output_price = 0.0
-auto_compact_threshold = 200000
+auto_compact_threshold = 75000
 
 [[models]]
 name = "worker2"

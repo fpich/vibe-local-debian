@@ -2,6 +2,16 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [1.2.9] - 2026-10-16
+
+### Changed
+
+- Template `.vibe/config.toml` : worker1 (Qwen3-Coder local) ajusté au déploiement réel — contexte serveur **98304** et `auto_compact_threshold` **75000** (~76 %) au lieu de 262144/200000 : sur CPU (i7-9700 + RTX 2060), la génération s'effondre au-delà de ~60-80k de contexte, la compaction précoce maintient la session dans la zone rapide. Le commentaire du bloc documente les flags serveur éprouvés (`--fit-target 2`, `-b 4096 -ub 1024` — un fit/batch plus large fait un OOM CUDA du workspace cuBLAS à la première inférence —, KV q4_0, template froggeric).
+
+### Added
+
+- `docs/configuration.md` : nouvelle section « Tuning serveur llama.cpp (retours d'expérience) » — OOM cuBLAS et crash-loop systemd, plancher de contexte REA (~60k incompressible), latence à contexte long et rôle du cache LCP, threads, KV q4_0, alias serveur/vibe, template function calling Qwen.
+
 ## [1.2.8] - 2026-10-16
 
 ### Changed

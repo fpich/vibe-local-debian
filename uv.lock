@@ -570,7 +570,7 @@ wheels = [
 
 [[package]]
 name = "mistral-vibe"
-version = "1.2.8"
+version = "1.2.9"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },
