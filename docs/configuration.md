@@ -94,6 +94,24 @@ Notes d'usage :
 - **Qwen3-Coder (albert-coder)** : conçu pour l'agentic coding (format de function call dédié) — le choix recommandé pour le coding agent avec le contexte 262k.
 - Uniquement `temperature` est envoyé par vibe ; top_p/top_k restent les défauts de l'endpoint (llama.cpp côté local, Albert côté distant). Les recommandations éditeur qui incluent top_p/top_k sont documentées pour un usage curl/Playground direct.
 
+
+## Fenêtres de contexte et compaction par modèle
+
+`auto_compact_threshold` est réglé à ~75 % de la fenêtre effective de chaque modèle : la compaction se déclenche avant l'erreur `exceed_context_size`, en gardant une marge pour les thinking tokens préservés et la réponse en cours. Les fenêtres sont cells servies par Albert (catalogue officiel) et par vos serveurs llama.cpp (`-c`).
+
+| Modèle (alias) | Fenêtre (servie) | `auto_compact_threshold` | Note |
+|---|---|---|---|
+| `worker1` — KAT-Coder-V2.5-Dev-APEX | 262 144 (`-c` llama-server) | 200 000 | Qwen3.5-35B-A3B de base : natif 262k |
+| `worker2` — Ministral-3-3B-Instruct-2512 | 262 144 (`-c` llama-server) | 200 000 | Maximum natif Ministral 3 : 262 144 |
+| `albert-coder` — Qwen3-Coder-30B-A3B | 262 144 | 196 000 | Conçu pour l'agentic coding à grande fenêtre |
+| `albert-small` — Mistral-Small-3.2-24B | 131 072 | 98 000 | |
+| `albert-large` — GPT-OSS-120B | 131 072 | 98 000 | Les tokens de raisonnement consomment la fenêtre ; contexte natif 131k |
+| `albert-deepseek` — DeepSeek-V4-Flash-0731 | 131 072 | 98 000 | Natif 1M en direct DeepSeek ; Albert le sert à 131k |
+| `albert-gemma` — Gemma-4-31B-It | 262 144 | 196 000 | |
+| `albert-ministral` — Ministral-3-8B-Instruct-2512 | 262 144 | 196 000 | |
+
+Le sous-ensemble REA (22 outils, ~42k tokens de définitions) tient dans toutes ces fenêtres avec au moins 50k de marge conversation. Le catalogue complet REA (~529k tokens) ne tient dans **aucune** de ces fenêtres.
+
 ## Modèles
 
 Chaque serveur llama.cpp expose un nom distinct : `worker1` (port 8080) et `worker2` (port 8081). L'alias client correspond au nom du modèle.
