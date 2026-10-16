@@ -2,6 +2,17 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [1.2.7] - 2026-10-16
+
+### Added
+
+- `docs/configuration.md` : deux nouvelles sections de référence — « Paramètres optimaux par modèle » (température par modèle sourcée des recommandations éditeurs : Qwen3-Coder 0.7, Ministral 0.1, Mistral Small 0.15, GPT-OSS 1.0 + reasoning effort, DeepSeek V4-Flash 1.0/top_p 0.95 agentic, Gemma 4 1.0/top_p 0.95/top_k 64, KAT Coder 0.3 communautaire) et « Fenêtres de contexte et compaction par modèle » (fenêtre servie par modèle, seuil `auto_compact_threshold` à ~75 %, DeepSeek V4-Flash natif 1M vs 131k servi par Albert, note de fit du sous-ensemble REA).
+- Template `.vibe/config.toml` : chaque bloc `[[models]]` Albert porte un commentaire inline citant sa source de température ; le rappel que seule `temperature` est envoyée par le client (top_p/top_k restent les défauts de l'endpoint).
+
+### Changed
+
+- `albert-coder` (Qwen3-Coder-30B) : `temperature` 0.15 → **0.7** — correction alignée sur la recommandation officielle Qwen pour l'agentic coding (temp 0.7, top_p 0.8, top_k 20) ; la valeur précédente était inadaptée à ce modèle.
+
 ## [1.2.6] - 2026-10-16
 
 ### Added
