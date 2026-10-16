@@ -2,6 +2,14 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [1.2.8] - 2026-10-16
+
+### Changed
+
+- Template `.vibe/config.toml` : **worker1 passe de KAT-Coder-V2.5-Dev-APEX à Qwen3-Coder-30B-A3B-Instruct** (poids officiels Qwen, quant Q4_K_M, contexte 262144, compaction 200k inchangée). `temperature` 0.3 → **0.7** (reco officielle Qwen3-Coder agentic coding : temp 0.7, top_p 0.8, top_k 20, repetition_penalty 1.05) et `thinking` high → **off** (le modèle est non-thinking uniquement). Le commentaire du bloc documente la commande llama-server, y compris `--chat-template-file` avec le template corrigé `froggeric/Qwen-Fixed-Chat-Templates` (v22.5+) — validé par test function calling direct : `tool_calls` propres avec arguments JSON valides, `reasoning_content` correctement séparé.
+- `install.sh` : refuse désormais de copier un template `.vibe/config.toml` modifié localement dans le clone — vérification d'identité avec `git HEAD`, avertissement avec la commande de restoration, copie annulée plutôt qu'installer des défauts modifiés silencieusement.
+- README et `docs/configuration.md` : tableaux de référence (modèles, sampling, fenêtres) mis à jour pour le nouveau worker1.
+
 ## [1.2.7] - 2026-10-16
 
 ### Added

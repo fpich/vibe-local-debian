@@ -2,7 +2,7 @@
 
 Agent de code CLI **local-first** pour Debian 13, dérivé de Mistral Vibe et simplifié pour utiliser exclusivement des serveurs `llama.cpp` compatibles avec l'API OpenAI.
 
-La branche stable **1.2.7** conserve le moteur agentique Python, la TUI Textual, les sessions, la compaction, les worktrees Git et les permissions d'outils. Les surfaces cloud et les runtimes alternatifs de l'amont ont été retirés.
+La branche stable **1.2.8** conserve le moteur agentique Python, la TUI Textual, les sessions, la compaction, les worktrees Git et les permissions d'outils. Les surfaces cloud et les runtimes alternatifs de l'amont ont été retirés.
 
 ## Périmètre du fork
 
@@ -104,7 +104,7 @@ La config du dépôt expose deux aliases côté client :
 
 | Alias | Usage prévu | Port par défaut | Thinking |
 |---|---|---:|---|
-| `worker1` | KAT / analyse et refactoring | 8080 | `high` |
+| `worker1` | Qwen3-Coder 30B A3B (Q4_K_M) / coding agent + REA | 8080 | `off` |
 | `worker2` | Ministral-3-3B-Instruct-2512 (Q6_K_L, 262k) / tâches rapides | 8081 | `off` |
 
 Chaque serveur expose un nom distinct (`worker1`, `worker2`). Depuis la 1.2.6, le template inclut aussi six modèles de l'API Albert (accès enseignant, endpoint OpenAI-compatible) sélectionnables via `/model` : `albert-coder`, `albert-small`, `albert-large`, `albert-deepseek`, `albert-gemma`, `albert-ministral`.

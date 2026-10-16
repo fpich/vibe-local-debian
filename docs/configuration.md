@@ -77,7 +77,7 @@ La température envoyée par le client **écrase** les défauts du serveur dans 
 
 | Modèle (alias) | `temperature` | Recommendation éditeur | Source |
 |---|---|---|---|
-| `worker1` — KAT-Coder-V2.5-Dev-APEX | `0.3` | temp 0.3, min_p 0.05, top_p 0.90, top_k 40 — profil coding déterministe | Communauté r/LocalLLaMA (config APEX-I-Quality) |
+| `worker1` — Qwen3-Coder-30B-A3B (local) | `0.7` | temp 0.7, top_p 0.8, top_k 20, repetition_penalty 1.05 | Fiche officielle Qwen3-Coder (reco « agentic coding ») |
 | `worker2` — Ministral-3-3B-Instruct-2512 | `0.1` | « temperature below 0.1 for daily-driver and production » | Fiche officielle Mistral (Hugging Face) |
 | `albert-coder` — Qwen3-Coder-30B-A3B | `0.7` | temp 0.7, top_p 0.8, top_k 20, repeat_penalty 1.05 | Fiche officielle Qwen (reco « agentic coding ») |
 | `albert-small` — Mistral-Small-3.2-24B | `0.15` | temp 0.15 — usage instruct général | Fiche officielle Mistral Small 3.2 |
@@ -101,7 +101,7 @@ Notes d'usage :
 
 | Modèle (alias) | Fenêtre (servie) | `auto_compact_threshold` | Note |
 |---|---|---|---|
-| `worker1` — KAT-Coder-V2.5-Dev-APEX | 262 144 (`-c` llama-server) | 200 000 | Qwen3.5-35B-A3B de base : natif 262k |
+| `worker1` — Qwen3-Coder-30B-A3B-Instruct | 262 144 (`-c` llama-server) | 200 000 | Modèle officiel Qwen ; template corrigé froggeric recommandé côté llama.cpp pour les tool calls |
 | `worker2` — Ministral-3-3B-Instruct-2512 | 262 144 (`-c` llama-server) | 200 000 | Maximum natif Ministral 3 : 262 144 |
 | `albert-coder` — Qwen3-Coder-30B-A3B | 262 144 | 196 000 | Conçu pour l'agentic coding à grande fenêtre |
 | `albert-small` — Mistral-Small-3.2-24B | 131 072 | 98 000 | |
