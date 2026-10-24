@@ -18,6 +18,7 @@ from vibe.core.config.layers.overrides import OverridesLayer
 from vibe.core.config.layers.project import ProjectConfigLayer
 from vibe.core.config.layers.user import UserConfigLayer
 from vibe.core.config.orchestrator import ConfigOrchestrator
+from vibe.core.config.profiles import ConfigProfiles
 from vibe.core.config.vibe_schema import VibeConfigSchema
 from vibe.utils.http import configure_ssl_context
 
@@ -26,6 +27,7 @@ async def build_default_orchestrator(
     data: dict[str, Any] | None = None,
     *,
     harness_files: HarnessFilesManager | None = None,
+    profile: str | None = None,
 ) -> ConfigOrchestrator[VibeConfigSchema]:
     """Build the CLI ConfigOrchestrator with the standard layer stack.
 
@@ -38,6 +40,11 @@ async def build_default_orchestrator(
     their sources are enabled, so a trusted project config inherits unspecified
     values from the user config. The default persistence target is the user layer, otherwise a
     trusted project layer, otherwise an ephemeral fallback.
+
+    Args:
+        data: Optional runtime override data.
+        harness_files: Optional harness files manager.
+        profile: Optional profile name to apply (from ConfigProfiles).
     """
     manager = harness_files or get_harness_files_manager()
     user_layer = (
@@ -53,6 +60,19 @@ async def build_default_orchestrator(
         else None
     )
     override_layer = OverridesLayer(data=data or {})
+
+    # Apply profile if specified
+    if profile:
+        try:
+            profile_config = ConfigProfiles.get_profile(profile)
+            # Merge profile config into overrides
+            override_data = (data or {}).copy()
+            override_data.update(profile_config)
+            override_layer = OverridesLayer(data=override_data)
+        except ValueError as e:
+            from vibe.observability.logging import logger
+
+            logger.warning(f"Unknown profile '{profile}': {e}")
 
     def default_layer_resolver() -> ConfigLayer[RawConfig]:
         # User config wins by default: a project config discovered by walking up

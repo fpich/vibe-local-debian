@@ -170,6 +170,17 @@ def parse_arguments() -> argparse.Namespace:
         metavar="SESSION_ID",
         help="Resume a session. Without SESSION_ID, shows an interactive picker.",
     )
+
+    # Profile selection for 2.0
+    parser.add_argument(
+        "--profile",
+        type=str,
+        metavar="NAME",
+        default=None,
+        help="Use a predefined configuration profile. Available profiles: "
+        "default, coding, minimal, full, rea, secure. Overrides config.profiles.active.",
+    )
+
     args = parser.parse_args(sys.argv[1:])
     return args
 

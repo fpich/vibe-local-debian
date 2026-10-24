@@ -50,9 +50,11 @@ def _format_config_validation_error(exc: ValidationError) -> str:
     return "\n".join(lines)
 
 
-def load_config_orchestrator_or_exit() -> ConfigOrchestrator[VibeConfigSchema]:
+def load_config_orchestrator_or_exit(
+    profile: str | None = None,
+) -> ConfigOrchestrator[VibeConfigSchema]:
     try:
-        return asyncio.run(build_default_orchestrator())
+        return asyncio.run(build_default_orchestrator(profile=profile))
     except ValidationError as e:
         rprint(f"[yellow]{_format_config_validation_error(e)}[/]")
         sys.exit(1)
@@ -251,9 +253,16 @@ def run_cli(args: argparse.Namespace) -> None:
 
     try:
         is_interactive = args.prompt is None
-        orchestrator = load_config_orchestrator_or_exit()
+        orchestrator = load_config_orchestrator_or_exit(profile=args.profile)
         config = orchestrator.config
         stdin_prompt = get_prompt_from_stdin()
+
+        # Log profile selection for debugging
+        if args.profile:
+            from vibe.observability.logging import logger
+
+            logger.info(f"Using profile: {args.profile}")
+
         if is_interactive:
             _run_interactive_mode(
                 args=args,
