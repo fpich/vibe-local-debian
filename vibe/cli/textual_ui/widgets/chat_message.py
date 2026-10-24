@@ -90,7 +90,7 @@ class StreamingMessage(Static):
         """
         return self._full_content
 
-    def is_empty(self) -> bool:
+    def is_content_empty(self) -> bool:
         """Check if the message content is empty.
 
         Returns:

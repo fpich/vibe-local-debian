@@ -111,4 +111,5 @@ class CachedMessageRenderer:
         Returns:
             A tuple of (hits, misses, maxsize, currsize).
         """
-        return CachedMessageRenderer.render_content.cache_info()
+        info = CachedMessageRenderer.render_content.cache_info()
+        return (info.hits, info.misses, info.maxsize or 0, info.currsize)
