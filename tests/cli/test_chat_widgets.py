@@ -63,16 +63,16 @@ class TestStreamingMessage:
         msg.finalize()
         assert msg.get_full_content() == "short"
 
-    def test_is_empty(self) -> None:
+    def test_is_content_empty(self) -> None:
         """Test is_empty method."""
         msg = StreamingMessage()
-        assert msg.is_empty()
+        assert msg.is_content_empty()
 
         msg.add_chunk(" ")
-        assert msg.is_empty()
+        assert msg.is_content_empty()
 
         msg.add_chunk("content")
-        assert not msg.is_empty()
+        assert not msg.is_content_empty()
 
     def test_clear(self) -> None:
         """Test clear method."""
@@ -80,7 +80,7 @@ class TestStreamingMessage:
         msg.add_chunk(" World")
         msg.clear()
         assert msg.get_full_content() == ""
-        assert msg.is_empty()
+        assert msg.is_content_empty()
 
 
 class TestVirtualizedMessage:
