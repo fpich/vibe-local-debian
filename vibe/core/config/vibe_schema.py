@@ -410,6 +410,11 @@ class VibeConfigSchema(ConfigSchema):
     enable_notifications: Annotated[bool, WithReplaceMerge()] = True
     experimental_enable_tab_status: Annotated[bool, WithReplaceMerge()] = True
     enable_system_trust_store: Annotated[bool, WithReplaceMerge()] = False
+
+    # Experimental features for 2.0
+    experimental: Annotated[dict[str, Any], WithShallowMerge()] = Field(
+        default_factory=dict, description="Experimental feature flags for version 2.0."
+    )
     api_timeout: Annotated[float, WithReplaceMerge()] = DEFAULT_API_TIMEOUT
     api_retry_max_elapsed_time: Annotated[float, WithReplaceMerge()] = (
         DEFAULT_API_RETRY_MAX_ELAPSED_TIME

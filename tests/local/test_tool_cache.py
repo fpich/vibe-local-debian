@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import tempfile
 from pathlib import Path
-from typing import Any
-
-import pytest
+import tempfile
 
 from vibe.core.tools.cache import ToolResultCache
 
@@ -34,11 +30,11 @@ class TestToolResultCache:
         """Test basic set and get operations."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
-            
+
             # Test with simple data
             cache.set("read_file", {"path": "test.py"}, "file content")
             assert cache.get("read_file", {"path": "test.py"}) == "file content"
-            
+
             # Test with complex data
             test_data = {"lines": ["line1", "line2"], "count": 2}
             cache.set("grep", {"pattern": "test"}, test_data)
@@ -54,25 +50,27 @@ class TestToolResultCache:
         """Test that the same arguments produce the same key."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
-            
+
             # Set with one order of args
             cache.set("grep", {"pattern": "test", "path": "file.py"}, "result1")
-            
+
             # Get with different order (should still work due to JSON sorting)
-            assert cache.get("grep", {"path": "file.py", "pattern": "test"}) == "result1"
+            assert (
+                cache.get("grep", {"path": "file.py", "pattern": "test"}) == "result1"
+            )
 
     def test_cache_persistence(self) -> None:
         """Test that cache persists to disk and reloads."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir)
-            
+
             # Create cache and add entry
             cache1 = ToolResultCache(cache_dir=cache_dir, enabled=True)
             cache1.set("read_file", {"path": "test.py"}, "persistent content")
-            
+
             # Create new cache instance with same directory
             cache2 = ToolResultCache(cache_dir=cache_dir, enabled=True)
-            
+
             # Should load from disk
             assert cache2.get("read_file", {"path": "test.py"}) == "persistent content"
 
@@ -80,17 +78,17 @@ class TestToolResultCache:
         """Test that cache evicts old entries when max_size is reached."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True, max_size=3)
-            
+
             # Add 4 entries
             cache.set("tool1", {}, "result1")
             cache.set("tool2", {}, "result2")
             cache.set("tool3", {}, "result3")
             assert len(cache) == 3
-            
+
             # Add 4th entry - should evict oldest
             cache.set("tool4", {}, "result4")
             assert len(cache) == 3
-            
+
             # First entry should be evicted
             assert cache.get("tool1", {}) is None
 
@@ -98,10 +96,10 @@ class TestToolResultCache:
         """Test invalidating specific cache entries."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
-            
+
             cache.set("read_file", {"path": "test.py"}, "content")
             assert cache.get("read_file", {"path": "test.py"}) == "content"
-            
+
             # Invalidate
             cache.invalidate("read_file", {"path": "test.py"})
             assert cache.get("read_file", {"path": "test.py"}) is None
@@ -110,14 +108,14 @@ class TestToolResultCache:
         """Test clearing the entire cache."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
-            
+
             cache.set("tool1", {}, "result1")
             cache.set("tool2", {}, "result2")
             assert len(cache) == 2
-            
+
             cache.clear()
             assert len(cache) == 0
-            
+
             # Verify disk files are also cleared
             assert len(list(cache.cache_dir.glob("*.json"))) == 0
 
@@ -125,14 +123,14 @@ class TestToolResultCache:
         """Test that unserializable data is handled gracefully."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
-            
+
             # Data with a lambda (not JSON serializable)
             unserializable_data = {"func": lambda x: x}
             cache.set("test", {}, unserializable_data)
-            
+
             # Should not crash, but won't persist to disk
             assert cache.get("test", {}) == unserializable_data
-            
+
             # Create new cache - should not load from disk
             cache2 = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
             assert cache2.get("test", {}) is None
@@ -141,11 +139,11 @@ class TestToolResultCache:
         """Test that different tools have separate cache entries."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
-            
+
             cache.set("read_file", {"path": "a.py"}, "content a")
             cache.set("read_file", {"path": "b.py"}, "content b")
             cache.set("grep", {"pattern": "test"}, "grep result")
-            
+
             assert cache.get("read_file", {"path": "a.py"}) == "content a"
             assert cache.get("read_file", {"path": "b.py"}) == "content b"
             assert cache.get("grep", {"pattern": "test"}) == "grep result"
@@ -154,7 +152,7 @@ class TestToolResultCache:
         """Test cache with nested argument structures."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ToolResultCache(cache_dir=Path(tmpdir), enabled=True)
-            
+
             complex_args = {
                 "path": "test.py",
                 "options": {
@@ -164,7 +162,7 @@ class TestToolResultCache:
                 },
             }
             cache.set("complex_tool", complex_args, "complex result")
-            
+
             # Same args in different order
             complex_args_2 = {
                 "options": {

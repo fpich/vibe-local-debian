@@ -247,7 +247,7 @@ auto_compact_threshold = 196000
 [session_logging]
 auto_title = "first_message"
 
-# ---- Parametres experimentaux (2.0) ----
+# ---- Parameters experimentaux (2.0) ----
 # Ces options permettent d'activer/desactiver les nouvelles fonctionnalites de la version 2.0.
 [experimental]
 # Active le cache des resultats des outils (read_file, grep, etc.)

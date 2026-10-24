@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class ToolResultCache:
@@ -19,10 +19,7 @@ class ToolResultCache:
     """
 
     def __init__(
-        self,
-        cache_dir: Path | None = None,
-        enabled: bool = True,
-        max_size: int = 100,
+        self, cache_dir: Path | None = None, enabled: bool = True, max_size: int = 100
     ) -> None:
         """Initialize the tool result cache.
 
@@ -54,7 +51,7 @@ class ToolResultCache:
         sorted_args = json.dumps({"tool": tool, "args": args}, sort_keys=True)
         return hashlib.sha256(sorted_args.encode()).hexdigest()[:16]
 
-    def get(self, tool: str, args: dict[str, Any]) -> Optional[Any]:
+    def get(self, tool: str, args: dict[str, Any]) -> Any | None:
         """Retrieve a cached result for a tool call.
 
         Args:
@@ -115,7 +112,7 @@ class ToolResultCache:
         if len(self._cache) > self.max_size:
             # Simple FIFO eviction - remove from both memory and disk
             oldest_key = next(iter(self._cache))
-            oldest_result = self._cache.pop(oldest_key)
+            self._cache.pop(oldest_key)
             # Remove from disk
             try:
                 (self.cache_dir / f"{oldest_key}.json").unlink()
