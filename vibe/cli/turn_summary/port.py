@@ -21,11 +21,7 @@ class TurnSummaryResult(BaseModel):
 
 class TurnSummaryGenerator(Protocol):
     async def summarize(
-        self,
-        *,
-        user_message: str,
-        error: str | None,
-        message_id: str | None,
+        self, *, user_message: str, error: str | None, message_id: str | None
     ) -> str | None: ...
 
 
