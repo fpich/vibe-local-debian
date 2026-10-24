@@ -2,6 +2,44 @@
 
 Historique du fork `vibe-local-debian`. Les versions amont de Mistral Vibe ne sont plus recopiées ici afin d'éviter de présenter des functions supprimées comme faisant partie du produit.
 
+## [2.0.0] - 2026-10-24 (WIP)
+
+### Added
+
+- **Performance** :
+  - Cache des résultats des outils (`read_file`, `grep`, etc.) via `ToolResultCache` pour éviter les exécutions redondantes.
+  - Exécution asynchrone de `bash` et `grep` pour ne pas bloquer le streaming des réponses.
+  - Parallélisation des appels d'outils indépendants (configurable via `max_concurrent_tools`).
+  - Utilisation de `ripgrep` (si disponible) pour des recherches plus rapides.
+
+- **TUI** :
+  - Rendu incrémental des messages (`StreamingMessage`) pour une interface plus réactive.
+  - Virtualisation des messages (`VirtualizedChatHistory`) pour optimiser l'affichage des grands historiques.
+  - Cache des rendus (`CachedMessageRenderer`) pour éviter de recalculer la mise en forme.
+
+- **Configuration** :
+  - Système de profils prédéfinis (`--profile coding`, `--profile minimal`, etc.).
+  - Chargement hiérarchique de la configuration (base + profil + overrides locaux).
+  - Feature flags dans `experimental` pour activer/désactiver les nouvelles fonctionnalités.
+
+- **Tests** :
+  - Tests par tags (`@pytest.mark.performance`, `@pytest.mark.smoke`, etc.).
+  - Fixtures partagées dans `tests/conftest.py`.
+  - Tests de fumée pour valider le démarrage et les fonctionnalités de base.
+
+- **Simplification** :
+  - Suppression du code mort identifié via `vulture`.
+  - Fusion des modules redondants (ex: `vibe/app_server/_model.py` → `vibe/core/llm/`).
+
+### Changed
+
+- Optimisation globale des performances des outils et de l'interface.
+- Réorganisation du code pour une meilleure maintenabilité.
+
+### Removed
+
+- Code mort identifié par `vulture` (modules Windows, etc.).
+
 ## [1.2.9] - 2026-10-16
 
 ### Changed

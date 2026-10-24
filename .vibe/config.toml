@@ -246,3 +246,17 @@ auto_compact_threshold = 196000
 # (défaut local). "llm" : génération en arrière-plan. "off" : aperçu.
 [session_logging]
 auto_title = "first_message"
+
+# ---- Parametres experimentaux (2.0) ----
+# Ces options permettent d'activer/desactiver les nouvelles fonctionnalites de la version 2.0.
+[experimental]
+# Active le cache des resultats des outils (read_file, grep, etc.)
+tool_cache_enabled = true
+# Nombre maximal d'outils a executer en parallele
+max_concurrent_tools = 3
+# Active le rendu incremental des messages dans la TUI
+streaming_render_enabled = true
+# Active la virtualisation des messages dans la TUI
+virtualized_chat_enabled = true
+# Active le cache des rendus (coloration syntaxique, etc.)
+cached_render_enabled = true
