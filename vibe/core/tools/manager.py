@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncGenerator, Callable, Iterator
 import hashlib
 import importlib.util
 import inspect
@@ -16,8 +16,9 @@ from vibe.core.config.harness_files import (
 )
 from vibe.core.paths import DEFAULT_TOOL_DIR
 from vibe.core.tools.base import BaseTool, BaseToolConfig, ToolPermission
+from vibe.core.tools.cache import ToolResultCache
 from vibe.core.tools.terminal_runtime import TerminalRuntime
-from vibe.core.types import AvailableFunction
+from vibe.core.types import AvailableFunction, ToolStreamEvent
 from vibe.core.utils import name_matches
 from vibe.observability.logging import logger
 from vibe.utils.io import read_safe
@@ -104,6 +105,11 @@ class ToolManager:
         self._instances: dict[str, BaseTool] = {}
         self._search_paths: list[Path] = self._compute_search_paths(self._config)
         self._lock = threading.Lock()
+        
+        # Initialize tool result cache
+        self._tool_cache = ToolResultCache(
+            enabled=self._config.experimental.get("tool_cache_enabled", True)
+        )
 
         self._tool_variants_by_name: dict[str, list[type[BaseTool]]] = {}
         self._custom_tool_variants_by_name: dict[str, list[bool]] = {}
@@ -588,3 +594,12 @@ class ToolManager:
 
     def reset_all(self) -> None:
         self._instances.clear()
+        self._tool_cache.clear()
+    
+    def get_tool_cache(self) -> ToolResultCache:
+        """Return the tool result cache instance."""
+        return self._tool_cache
+    
+    def invalidate_tool_cache(self, tool_name: str, args: dict[str, Any]) -> None:
+        """Invalidate a specific tool cache entry."""
+        self._tool_cache.invalidate(tool_name, args)
