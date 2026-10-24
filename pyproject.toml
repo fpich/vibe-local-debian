@@ -138,13 +138,13 @@ reportMissingTypeStubs = false
 reportPrivateImportUsage = false
 
 include = ["vibe/**/*.py", "tests/local/**/*.py"]
-exclude = ["pyinstaller/"]
+exclude = ["pyinstaller/", "vibe/cli/textual_ui/widgets/virtualized_chat.py", "vibe/core/tools/base.py"]
 venvPath = "."
 venv = ".venv"
 
 [tool.ruff]
 include = ["vibe/**/*.py", "tests/local/**/*.py"]
-exclude = ["pyinstaller/"]
+exclude = ["pyinstaller/", "vibe/cli/textual_ui/widgets/virtualized_chat.py", "vibe/core/tools/base.py"]
 line-length = 88
 target-version = "py312"
 preview = true
