@@ -19,11 +19,11 @@ Ce document décrit les améliorations de performance introduites dans la versio
 
 **Fichier**: `vibe/core/tools/cache.py`
 
-Le `ToolResultCache` est un système de cache persistant qui stocke les résultats des appels d'outils pour éviter les exécutions redondantes. Il est particulièrement utile pour les outils comme `read_file` et `grep` qui sont fréquemment appelés avec les mêmes paramètres.
+Le `ToolResultCache` est un système de cache persistent qui stocke les résultats des appels d'outils pour éviter les exécutions redondantes. Il est particulièrement utile pour les outils comme `read_file` et `grep` qui sont fréquemment appelés avec les mêmes paramètres.
 
 #### Caractéristiques
 
-- **Persistance sur disque**: Les résultats sont stockés dans `~/.vibe/cache/tools/` sous forme de fichiers JSON
+- **Persistence sur disque**: Les résultats sont stockés dans `~/.vibe/cache/tools/` sous forme de fichiers JSON
 - **Cache LRU en mémoire**: Limite configurable (100 entrées par défaut)
 - **Clé unique**: Basée sur le nom de l'outil et un hash SHA-256 de ses arguments
 - **Sérialisation JSON**: Seuls les résultats sérialisables sont mis en cache
@@ -60,7 +60,7 @@ self._tool_cache = ToolResultCache(
 )
 ```
 
-### Avantages
+### Advantages
 
 - **Réduction des I/O disque**: Les fichiers lus plusieurs fois ne sont pas relus
 - **Réduction des exécutions de commandes**: Les commandes `grep` identiques ne sont pas réexécutées
@@ -78,9 +78,9 @@ Widget pour le rendu incrémental des messages avec buffer intelligent.
 
 #### Fonctionnalités
 
-- **Buffering intelligent**: Accumule les petits chunks avant rafraîchissement
+- **Buffering intelligent**: Accumulate les petits chunks avant rafraîchissement
 - **Rafraîchissement par lots**: Seulement lorsque le buffer atteint une taille minimale (100 caractères par défaut)
-- **Détection des points naturels**: Rafraîchit aussi sur les sauts de ligne et la ponctuation
+- **Détection des points natures**: Rafraîchit aussi sur les sauts de ligne et la punctuation
 - **Finalisation automatique**: Garantit que tout le contenu est affiché à la fin
 
 #### Exemple
@@ -103,14 +103,14 @@ msg.finalize()
 
 **Fichier**: `vibe/cli/textual_ui/widgets/virtualized_chat.py`
 
-Widget qui n'affiche que les messages visibles à l'écran, optimisant ainsi la mémoire et les performances.
+Widget qui n'affiche que les messages visible à l'écran, optimisant ainsi la mémoire et les performances.
 
 #### Fonctionnalités
 
-- **Rendu à la demande**: Seuls les messages visibles sont rendus
+- **Rendu à la demande**: Seuls les messages visible sont rendus
 - **Buffer intelligent**: Garde des messages en mémoire au-dessus et au-dessous de la zone visible
 - **Scrolling fluide**: Réutilise les widgets existants lors du défilement
-- **Gestion dynamique**: Ajoute/supprime des widgets en fonction de la position de défilement
+- **Gestion dynamique**: Ajoute/supprime des widgets en function de la position de défilement
 
 #### Paramètres
 
@@ -127,7 +127,7 @@ Cache pour le rendu syntaxique des messages.
 
 - **Cache LRU**: 500 entrées maximum
 - **Clé unique**: Basée sur le contenu + la largeur du terminal
-- **Support multi-langage**: Coloration syntaxique pour Python et autres langages
+- **Support multi-language**: Coloration syntaxique pour Python et autres languages
 - **Cache des rendus simples**: Pour le texte sans coloration syntaxique
 
 #### Exemple
@@ -149,11 +149,11 @@ rendered = CachedMessageRenderer.render_plain_text("Hello World", width=80)
 hits, misses, maxsize, currsize = CachedMessageRenderer.get_cache_info()
 ```
 
-### Avantages
+### Advantages
 
-- **Réduction des calculs de rendu**: La coloration syntaxique n'est pas recalculée pour le même contenu
+- **Réduction des calculus de rendu**: La coloration syntaxique n'est pas recalculée pour le même contenu
 - **Amélioration des performances de défilement**: Les messages déjà rendus sont réutilisés
-- **Réduction de l'utilisation mémoire**: Seuls les messages visibles consomment des ressources
+- **Réduction de l'utilisation mémoire**: Seuls les messages visible consomment des resources
 
 ---
 
@@ -189,7 +189,7 @@ config = loader.load(profile="coding")
 loader.save(config, path=Path("~/.vibe/config.toml"))
 ```
 
-### Avantages
+### Advantages
 
 - **Flexibilité**: Permet des configurations spécifiques par projet, par profil, et par utilisateur
 - **Maintenabilité**: Les modifications sont localisées dans des fichiers spécifiques
@@ -254,10 +254,10 @@ profiles = ConfigProfiles.list_profiles()
 description = ConfigProfiles.get_profile_description("coding")
 ```
 
-### Avantages
+### Advantages
 
 - **Simplicité**: Pas besoin de reconfigurer pour chaque projet
-- **Sécurité**: Profil `secure` pour les environnements sensibles
+- **Sécurité**: Profil `secure` pour les environments sensibles
 - **Performance**: Profil `coding` optimisé pour le développement
 - **Spécialisation**: Profil `rea` pour le reverse engineering
 
@@ -265,9 +265,9 @@ description = ConfigProfiles.get_profile_description("coding")
 
 ## Benchmarks et Résultats
 
-### Mesures de Performance
+### Measures de Performance
 
-| Opération | Avant | Après | Amélioration |
+| Opération | Avant | Apr�ss | Amélioration |
 |-----------|-------|-------|-------------|
 | Lecture de fichier (10x identique) | 100ms | 10ms | **10x plus rapide** |
 | Recherche grep (5x identique) | 50ms | 5ms | **10x plus rapide** |
@@ -276,7 +276,7 @@ description = ConfigProfiles.get_profile_description("coding")
 
 ### Utilisation Mémoire
 
-| Composant | Avant | Après | Réduction |
+| Component | Avant | Apr�ss | Réduction |
 |-----------|-------|-------|-----------|
 | Historique de 1000 messages | 100MB | 10MB | **90% de réduction** |
 | Cache des outils (100 entrées) | 0MB | 5MB | **5MB supplémentaire** |
@@ -399,7 +399,7 @@ Si un profil n'est pas reconnu:
 
 ## Contribution
 
-Pour contribuer aux optimisations de performance:
+Pour contribute aux optimisations de performance:
 
 1. Identifier les goulots d'étranglement avec `pyinstrument`
 2. Ajouter des tests de performance dans `tests/local/`
