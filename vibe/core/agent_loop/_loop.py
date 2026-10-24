@@ -80,6 +80,12 @@ from vibe.core.middleware import (
     make_plan_agent_reminder,
 )
 from vibe.core.plan_session import PlanSession
+from vibe.core.prompts import (
+    DynamicPromptDependencies,
+    TokenEstimator,
+    prompt_cache,
+    prompt_selector,
+)
 from vibe.core.review import ReviewManager
 from vibe.core.rewind import RewindManager
 from vibe.core.scratchpad import cleanup_scratchpad, init_scratchpad
@@ -904,8 +910,134 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             tool_manager=tool_manager or self.tool_manager,
         )
 
+    def _compute_system_prompt_dependencies_hash(self) -> str:
+        """Calcule un hash des dépendances du prompt système.
+
+        Ce hash permet de détecter si le prompt système doit être
+        régénéré en function des changements de configuration, skills, agents, etc.
+
+        Returns:
+            Hash SHA256 tronqué à 16 caractères.
+        """
+        try:
+            # Récupérer les information de configuration
+            config = self.config
+
+            # Skills
+            skills_sorted = []
+            if self.skill_manager:
+                try:
+                    available_skills = self.skill_manager.available_skills
+                    model_invocable = {
+                        name: skill for name, skill in available_skills.items()
+                        if skill.model_invocable
+                    }
+                    skills_sorted = sorted(model_invocable.keys())
+                except Exception:
+                    pass
+
+            # Agents
+            agents_sorted = []
+            if self.agent_manager:
+                try:
+                    agents = self.agent_manager.get_subagents()
+                    agents_sorted = sorted(a.name for a in agents)
+                except Exception:
+                    pass
+
+            # Tools
+            tools_sorted = []
+            if self.tool_manager:
+                try:
+                    tools = self.tool_manager.get_available_tools()
+                    tools_sorted = sorted(t.name for t in tools)
+                except Exception:
+                    pass
+
+            # Calculer le hash
+            return DynamicPromptDependencies.compute_hash(
+                config_system_prompt=str(config.system_prompt) if config else "",
+                include_commit_signature=getattr(config, 'include_commit_signature', True),
+                include_model_info=getattr(config, 'include_model_info', True),
+                include_prompt_detail=getattr(config, 'include_prompt_detail', True),
+                include_project_context=getattr(config, 'include_project_context', True),
+                skills_sorted_names=skills_sorted,
+                agents_sorted_names=agents_sorted,
+                tools_sorted_names=tools_sorted,
+                headless=self._headless,
+                model_name=getattr(self.config.get_active_model(), 'name', None) if config else None,
+                cwd=str(self.cwd) if self.cwd else None,
+                scratchpad_dir=str(self.scratchpad_dir) if self.scratchpad_dir else None,
+            )
+        except Exception:
+            # En cas d'erreur, retourner un hash vide
+            return ""
+
     def _build_system_prompt(self) -> str:
-        return self._render_system_prompt(self.skill_manager)
+        """Construire le prompt système avec cache et détection des changements.
+
+        Cette méthode utilise le cache des prompts pour éviter de régénérer
+        le prompt système si les dépendances n'ont pas changé.
+
+        Returns:
+            Le prompt système optimisé.
+        """
+        # Calculer le hash des dépendances
+        deps_hash = self._compute_system_prompt_dependencies_hash()
+
+        # Utiliser le cache pour les prompts dynamiques
+        # Le prompt_id est vide car c'est un prompt dynamique
+        prompt, should_send = prompt_cache.get_or_store_dynamic_prompt(
+            prompt_id="",
+            model_name=self.config.get_active_model().name if self.config else "unknown",
+            dependencies_hash=deps_hash,
+            prompt_builder=lambda: self._render_system_prompt(self.skill_manager),
+            force_send=False,
+        )
+
+        return prompt
+
+    def _get_optimal_prompt_id(self) -> str:
+        """Sélectionne l'ID du prompt optimal en function du contexte.
+
+        Cette méthode utilise PromptSelector pour choisir le prompt
+        le plus adapté à la situation actuelle.
+
+        Returns:
+            ID du prompt à utiliser.
+        """
+        try:
+            model = self.config.get_active_model()
+            model_context = model.context_length if model else None
+
+            return prompt_selector.select(
+                task_type=self._detect_current_task_type(),
+                model_context=model_context,
+                is_headless=self._headless,
+            )
+        except Exception:
+            # En cas d'erreur, retourner le prompt par défaut
+            return self.config.system_prompt_id if self.config else "cli"
+
+    def _detect_current_task_type(self) -> str:
+        """Détecte le type de tâche actuel à partir de l'historique.
+
+        Returns:
+            Type de tâche détecté.
+        """
+        try:
+            # Si on a des messages, analyser le dernier message utilisateur
+            if self.messages:
+                # Parcourir les messages à l'envers pour trouver le dernier message utilisateur
+                for msg in reversed(self.messages):
+                    if hasattr(msg, 'role') and msg.role == 'user':
+                        if hasattr(msg, 'content') and msg.content:
+                            return prompt_selector.detect_task_type(msg.content)
+
+            # Par défaut, retourner DEFAULT
+            return "default"
+        except Exception:
+            return "default"
 
     def _available_tools_snapshot(self) -> list[AvailableTool]:
         """Memoized ``get_available_tools`` keyed on the serialized descriptors.
@@ -939,8 +1071,64 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
     @requires_init
     async def refresh_system_prompt(self) -> None:
         """Rebuild and replace the system prompt with current tool/skill state."""
-        prompt = await asyncio.to_thread(self._build_system_prompt)
+        # Forcer le rafraîchissement en utilisant le cache
+        deps_hash = self._compute_system_prompt_dependencies_hash()
+        model_name = self.config.get_active_model().name if self.config else "unknown"
+
+        # Générer le nouveau prompt
+        prompt = self._render_system_prompt(self.skill_manager)
+
+        # Compressor si nécessaire
+        if prompt_cache.compress:
+            prompt = prompt_cache._compress_prompt(prompt)
+
+        # Stocker dans le cache dynamique et forcer l'envoi
+        cache_key = f"{model_name}:{deps_hash}"
+        prompt_cache._dynamic_prompt_cache[cache_key] = prompt
+
+        # Forcer le marquage comme "non envoyé" pour que la prochaine requête l'envoie
+        if model_name in prompt_cache._last_sent:
+            del prompt_cache._last_sent[model_name]
+
+        # Mettre à jour le message système
         self.messages.update_system_prompt(prompt)
+
+    def _check_context_limits(self, messages: list[LLMMessage]) -> tuple[bool, dict[str, Any]]:
+        """Vérifie si la requête peut être envoyée sans dépasser le contexte.
+
+        Args:
+            messages: Liste des messages à envoyer.
+
+        Returns:
+            Tuple de (peut_être_envoyé, statistiques).
+        """
+        try:
+            model = self.config.get_active_model()
+            model_context = getattr(model, "context_length", 8192)
+
+            # Récupérer le prompt système actuel
+            system_prompt = ""
+            if self.messages and len(self.messages) > 0:
+                first_msg = self.messages[0]
+                if hasattr(first_msg, 'role') and first_msg.role == 'system':
+                    system_prompt = str(first_msg.content) if hasattr(first_msg, 'content') and first_msg.content else ""
+
+            # Convertir les messages en format dict pour l'estimation
+            messages_dict = [
+                {"role": msg.role, "content": msg.content}
+                for msg in messages
+                if hasattr(msg, 'role') and hasattr(msg, 'content')
+            ]
+
+            return TokenEstimator.can_send_request(
+                system_prompt=system_prompt,
+                messages=messages_dict,
+                model_context=model_context,
+                reserved_tokens=1000,
+            )
+        except Exception:
+            # En cas d'erreur, autoriser l'envoi
+            return True, {}
 
     @property
     def _turn(self) -> _ActiveTurn:

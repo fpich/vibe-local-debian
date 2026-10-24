@@ -10,6 +10,15 @@ from vibe.utils.io import read_safe
 
 PROMPTS_DIR = VIBE_ROOT / "core" / "prompts"
 
+# Importer les modules d'optimisation
+from vibe.core.prompts.cache import PromptCache, prompt_cache
+from vibe.core.prompts.dependencies import (
+    DynamicPromptDependencies,
+    SystemPromptDependencies,
+)
+from vibe.core.prompts.selector import PromptSelector, TaskType, prompt_selector
+from vibe.core.prompts.token_estimator import ContextMonitor, TokenEstimator
+
 
 class Prompt(StrEnum):
     @property
@@ -107,10 +116,20 @@ def load_system_prompt(prompt_id: str) -> str:
 
 __all__ = [
     "PROMPTS_DIR",
+    "ContextMonitor",
+    "DynamicPromptDependencies",
     "MissingPromptFileError",
     "Prompt",
+    # Optimisation des prompts
+    "PromptCache",
+    "PromptSelector",
     "SystemPrompt",
+    "SystemPromptDependencies",
+    "TaskType",
+    "TokenEstimator",
     "UtilityPrompt",
     "load_prompt",
     "load_system_prompt",
+    "prompt_cache",
+    "prompt_selector",
 ]
