@@ -124,7 +124,6 @@ class MCPAuthorizationProvider(Protocol):
         self,
         reference: MCPAuthorizationRef,
         *,
-        observed_connection_revision: str,
         reason: Literal["http_unauthorized", "mcp_unauthorized"],
     ) -> MCPAuthorizationResult: ...
 

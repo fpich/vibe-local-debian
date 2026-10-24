@@ -471,10 +471,10 @@ class ToolManager:
             self._instances.pop(name, None)
             self._tool_descriptions.pop(name, None)
 
-    def integrate_connectors(self, *, force_refresh: bool = False) -> None:
+    def integrate_connectors(self) -> None:
         return None
 
-    async def integrate_connectors_async(self, *, force_refresh: bool = False) -> None:
+    async def integrate_connectors_async(self) -> None:
         return None
 
     async def refresh_remote_tools_async(self) -> None:
@@ -506,15 +506,11 @@ class ToolManager:
     def refresh_remote_tools(self) -> None:
         return None
 
-    def integrate_all(
-        self, *, raise_on_mcp_failure: bool = False, force_refresh: bool = False
-    ) -> None:
+    def integrate_all(self) -> None:
         """Local-only build: builtin/custom filesystem tools are already discovered."""
         return None
 
-    async def _integrate_all_async(
-        self, *, raise_on_mcp_failure: bool = False, force_refresh: bool = False
-    ) -> None:
+    async def _integrate_all_async(self) -> None:
         return None
 
     def available_tool_specs(self) -> list[AvailableFunction]:

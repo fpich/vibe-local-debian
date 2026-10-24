@@ -24,7 +24,6 @@ class TurnSummaryGenerator(Protocol):
         self,
         *,
         user_message: str,
-        assistant_text: str,
         error: str | None,
         message_id: str | None,
     ) -> str | None: ...
