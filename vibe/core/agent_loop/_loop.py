@@ -929,7 +929,8 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
                 try:
                     available_skills = self.skill_manager.available_skills
                     model_invocable = {
-                        name: skill for name, skill in available_skills.items()
+                        name: skill
+                        for name, skill in available_skills.items()
                         if skill.model_invocable
                     }
                     skills_sorted = sorted(model_invocable.keys())
@@ -957,17 +958,25 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             # Calculer le hash
             return DynamicPromptDependencies.compute_hash(
                 config_system_prompt=str(config.system_prompt) if config else "",
-                include_commit_signature=getattr(config, 'include_commit_signature', True),
-                include_model_info=getattr(config, 'include_model_info', True),
-                include_prompt_detail=getattr(config, 'include_prompt_detail', True),
-                include_project_context=getattr(config, 'include_project_context', True),
+                include_commit_signature=getattr(
+                    config, "include_commit_signature", True
+                ),
+                include_model_info=getattr(config, "include_model_info", True),
+                include_prompt_detail=getattr(config, "include_prompt_detail", True),
+                include_project_context=getattr(
+                    config, "include_project_context", True
+                ),
                 skills_sorted_names=skills_sorted,
                 agents_sorted_names=agents_sorted,
                 tools_sorted_names=tools_sorted,
                 headless=self._headless,
-                model_name=getattr(self.config.get_active_model(), 'name', None) if config else None,
+                model_name=getattr(self.config.get_active_model(), "name", None)
+                if config
+                else None,
                 cwd=str(self.cwd) if self.cwd else None,
-                scratchpad_dir=str(self.scratchpad_dir) if self.scratchpad_dir else None,
+                scratchpad_dir=str(self.scratchpad_dir)
+                if self.scratchpad_dir
+                else None,
             )
         except Exception:
             # En cas d'erreur, retourner un hash vide
@@ -986,10 +995,19 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         optimal_prompt_id = self._get_optimal_prompt_id()
 
         # Pour les prompts statiques
-        if optimal_prompt_id in {"cli", "lean", "minimal", "explore", "tests", "compact"}:
+        if optimal_prompt_id in {
+            "cli",
+            "lean",
+            "minimal",
+            "explore",
+            "tests",
+            "compact",
+        }:
             prompt, _ = prompt_cache.get_prompt(
                 prompt_id=optimal_prompt_id,
-                model_name=self.config.get_active_model().name if self.config else "unknown",
+                model_name=self.config.get_active_model().name
+                if self.config
+                else "unknown",
             )
             return prompt
 
@@ -997,7 +1015,9 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         deps_hash = self._compute_system_prompt_dependencies_hash()
         prompt, should_send = prompt_cache.get_or_store_dynamic_prompt(
             prompt_id=optimal_prompt_id,
-            model_name=self.config.get_active_model().name if self.config else "unknown",
+            model_name=self.config.get_active_model().name
+            if self.config
+            else "unknown",
             dependencies_hash=deps_hash,
             prompt_builder=lambda: self._render_system_prompt(self.skill_manager),
             force_send=False,
@@ -1038,8 +1058,8 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             if self.messages:
                 # Parcourir les messages à l'envers pour trouver le dernier message utilisateur
                 for msg in reversed(self.messages):
-                    if hasattr(msg, 'role') and msg.role == 'user':
-                        if hasattr(msg, 'content') and msg.content:
+                    if hasattr(msg, "role") and msg.role == "user":
+                        if hasattr(msg, "content") and msg.content:
                             return prompt_selector.detect_task_type(msg.content)
 
             # Par défaut, retourner DEFAULT
@@ -1101,7 +1121,9 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         # Mettre à jour le message système
         self.messages.update_system_prompt(prompt)
 
-    def _check_context_limits(self, messages: list[LLMMessage]) -> tuple[bool, dict[str, Any]]:
+    def _check_context_limits(
+        self, messages: list[LLMMessage]
+    ) -> tuple[bool, dict[str, Any]]:
         """Vérifie si la requête peut être envoyée sans dépasser le contexte.
 
         Args:
@@ -1118,14 +1140,18 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
             system_prompt = ""
             if self.messages and len(self.messages) > 0:
                 first_msg = self.messages[0]
-                if hasattr(first_msg, 'role') and first_msg.role == 'system':
-                    system_prompt = str(first_msg.content) if hasattr(first_msg, 'content') and first_msg.content else ""
+                if hasattr(first_msg, "role") and first_msg.role == "system":
+                    system_prompt = (
+                        str(first_msg.content)
+                        if hasattr(first_msg, "content") and first_msg.content
+                        else ""
+                    )
 
             # Convertir les messages en format dict pour l'estimation
             messages_dict = [
                 {"role": msg.role, "content": msg.content}
                 for msg in messages
-                if hasattr(msg, 'role') and hasattr(msg, 'content')
+                if hasattr(msg, "role") and hasattr(msg, "content")
             ]
 
             return TokenEstimator.can_send_request(
