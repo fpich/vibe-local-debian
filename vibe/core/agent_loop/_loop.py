@@ -982,13 +982,21 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         Returns:
             Le prompt système optimisé.
         """
-        # Calculer le hash des dépendances
-        deps_hash = self._compute_system_prompt_dependencies_hash()
+        # Sélectionner le prompt optimal
+        optimal_prompt_id = self._get_optimal_prompt_id()
 
-        # Utiliser le cache pour les prompts dynamiques
-        # Le prompt_id est vide car c'est un prompt dynamique
+        # Pour les prompts statiques
+        if optimal_prompt_id in {"cli", "lean", "minimal", "explore", "tests", "compact"}:
+            prompt, _ = prompt_cache.get_prompt(
+                prompt_id=optimal_prompt_id,
+                model_name=self.config.get_active_model().name if self.config else "unknown",
+            )
+            return prompt
+
+        # Pour les prompts dynamiques
+        deps_hash = self._compute_system_prompt_dependencies_hash()
         prompt, should_send = prompt_cache.get_or_store_dynamic_prompt(
-            prompt_id="",
+            prompt_id=optimal_prompt_id,
             model_name=self.config.get_active_model().name if self.config else "unknown",
             dependencies_hash=deps_hash,
             prompt_builder=lambda: self._render_system_prompt(self.skill_manager),
@@ -2637,6 +2645,22 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
 
         start_time = time.perf_counter()
         try:
+            # Verify context limits before the call
+            can_send, stats = self._check_context_limits(list(backend_messages))
+            if not can_send:
+                logger.warning(
+                    f"Context limit reached: {stats.get('total_tokens', 0)}/"
+                    f"{stats.get('model_context', 0)} tokens. Auto-compacting..."
+                )
+                await self._auto_compact()
+                # Recalculate after compaction
+                backend_messages = self._messages_for_backend(messages, model)
+                can_send, stats = self._check_context_limits(list(backend_messages))
+                if not can_send:
+                    from vibe.core.types import ContextTooLongError
+
+                    raise ContextTooLongError(provider.name, model.name)
+
             logger.debug(
                 "Model call starting model=%s provider=%s messages=%d tools=%d thinking=%s",
                 model.alias,
@@ -3335,9 +3359,25 @@ class AgentLoop(AgentLoopHooksMixin):  # noqa: PLR0904
         if self._mcp_pool is not None:
             tool_manager.set_mcp_registry(self._mcp_pool)
             tool_manager.integrate_mcp()
-        system_prompt = self._render_system_prompt(
-            skill_manager, target_config, tool_manager
-        )
+        # Use cache for system prompt
+        # Save current state
+        old_config = self.config
+        old_skill_manager = self.skill_manager
+        old_tool_manager = self.tool_manager
+
+        try:
+            # Temporarily use new objects for cache
+            self.config = target_config
+            self.skill_manager = skill_manager
+            self.tool_manager = tool_manager
+
+            # Use _build_system_prompt() which goes through cache
+            system_prompt = self._build_system_prompt()
+        finally:
+            # Always restore state
+            self.config = old_config
+            self.skill_manager = old_skill_manager
+            self.tool_manager = old_tool_manager
         hook_config_result = (
             load_hooks_from_fs(harness_files=self.harness_files)
             if reload_hooks
